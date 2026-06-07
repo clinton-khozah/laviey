@@ -1,0 +1,47 @@
+.messages-header {
+  padding: calc(var(--safe-top) + 8px) 12px 8px;
+  background: linear-gradient(to bottom, var(--bg-deep) 85%, transparent);
+}
+
+.messages-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.messages-header__title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 2px;
+}
+
+.messages-header__subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.messages-header__unread {
+  color: var(--accent-flame-end);
+  font-weight: 600;
+}
+
+.messages-header__compose {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--gradient-flame);
+  box-shadow: 0 2px 12px rgba(255, 77, 109, 0.35);
+  color: white;
+}
+
+.messages-header__compose svg {
+  width: 18px;
+  height: 18px;
+}

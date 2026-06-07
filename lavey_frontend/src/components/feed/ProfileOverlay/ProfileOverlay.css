@@ -1,0 +1,123 @@
+.profile-overlay {
+  position: absolute;
+  left: 12px;
+  right: 68px;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 24px);
+  z-index: 8;
+  pointer-events: none;
+}
+
+.profile-overlay__identity {
+  margin-bottom: 8px;
+}
+
+.profile-overlay__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-overlay__name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.profile-overlay__age {
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* Discover feed stays "night-like" even in light theme (video background). */
+[data-theme='light'] .profile-overlay__name,
+[data-theme='light'] .profile-overlay__age {
+  color: #38bdf8;
+}
+
+.profile-overlay__verified {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gradient-vibe);
+  flex-shrink: 0;
+}
+
+.profile-overlay__verified svg {
+  width: 11px;
+  height: 11px;
+  color: white;
+}
+
+.profile-overlay__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.profile-overlay__distance {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.profile-overlay__vibe {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--accent-mint);
+}
+
+.profile-overlay__vibe-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-mint);
+  box-shadow: 0 0 6px var(--accent-mint);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+.profile-overlay__bio {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.94);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='light'] .profile-overlay__bio {
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.profile-overlay__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.profile-overlay__tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 99px;
+  background: var(--surface-glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}

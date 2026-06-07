@@ -1,0 +1,153 @@
+.email-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.email-auth__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email-auth__anim {
+  overflow: hidden;
+}
+
+.email-auth__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.email-auth__input {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 11px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.email-auth__input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.email-auth__input--with-icon {
+  padding-right: 40px;
+}
+
+.email-auth__icon-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.email-auth__icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.email-auth__icon-btn:active:not(:disabled) {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.25);
+  color: var(--text-primary);
+}
+
+.email-auth__icon-btn:disabled {
+  opacity: 0.55;
+}
+
+.email-auth__input::placeholder {
+  color: var(--text-muted);
+}
+
+.email-auth__input:focus {
+  border-color: rgba(124, 58, 237, 0.45);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.email-auth__input:disabled {
+  opacity: 0.6;
+}
+
+.email-auth__submit {
+  margin-top: 2px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: var(--gradient-vibe);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.28);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.email-auth__submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.email-auth__submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.email-auth__resend {
+  padding: 11px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.email-auth__resend:hover:not(:disabled) {
+  border-color: rgba(124, 58, 237, 0.35);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.email-auth__resend:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.email-auth__toggle {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.email-auth__link {
+  color: var(--accent-violet);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.email-auth__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.email-auth__link:disabled {
+  opacity: 0.6;
+}

@@ -1,0 +1,49 @@
+.message-search {
+  position: relative;
+  margin: 0 16px 12px;
+}
+
+.message-search__icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.message-search__input {
+  width: 100%;
+  padding: 12px 40px 12px 42px;
+  border-radius: 14px;
+  font-size: 15px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  outline: none;
+}
+
+.message-search__input::placeholder {
+  color: var(--text-muted);
+}
+
+.message-search__input:focus {
+  border-color: rgba(255, 77, 109, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 77, 109, 0.12);
+}
+
+.message-search__clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
+}

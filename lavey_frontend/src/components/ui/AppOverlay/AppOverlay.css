@@ -1,0 +1,29 @@
+#overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.app-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.app-overlay > * {
+  pointer-events: auto;
+}
+
+@media (min-width: 481px) {
+  .app-overlay {
+    top: 12px;
+    bottom: 12px;
+    height: calc(100% - 24px);
+    border-radius: 24px;
+    overflow: hidden;
+  }
+}

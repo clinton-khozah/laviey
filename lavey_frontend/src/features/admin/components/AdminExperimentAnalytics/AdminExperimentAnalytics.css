@@ -1,0 +1,306 @@
+.admin-experiment-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.admin-experiment-analytics__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.admin-experiment-analytics__periods {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.admin-experiment-analytics__periods button {
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 14px;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.admin-experiment-analytics__periods button.is-active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
+}
+
+.admin-experiment-analytics__periods button[data-period='monthly-revenue'].is-active {
+  color: #047857;
+}
+
+.admin-experiment-analytics__periods button[data-period='active-users'].is-active {
+  color: #4338ca;
+}
+
+.admin-experiment-analytics__periods button[data-period='new-users'].is-active {
+  color: #1d4ed8;
+}
+
+.admin-experiment-analytics__toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.admin-experiment-analytics__year-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.admin-experiment-analytics__year-select {
+  height: 34px;
+  min-width: 96px;
+  border-radius: 10px;
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+}
+
+.admin-experiment-analytics__toolbar-stats {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+
+.admin-experiment-analytics__toolbar-stats span {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.admin-experiment-analytics__toolbar-stats em {
+  font-style: normal;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.admin-experiment-analytics__toolbar-stats strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.admin-experiment-analytics__panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: admin-experiment-analytics-fade-in 220ms ease;
+}
+
+@keyframes admin-experiment-analytics-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-experiment-analytics__card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 280px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.admin-experiment-analytics__card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.admin-experiment-analytics__card-head h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.admin-experiment-analytics__card-head p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #64748b;
+  max-width: 360px;
+}
+
+.admin-experiment-analytics__card-head p strong {
+  color: #0f172a;
+}
+
+.admin-experiment-analytics__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.admin-experiment-analytics__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.admin-experiment-analytics__legend-item::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.admin-experiment-analytics__legend-item--men::before {
+  background: linear-gradient(180deg, #60a5fa 0%, #2563eb 100%);
+}
+
+.admin-experiment-analytics__legend-item--women::before {
+  background: linear-gradient(180deg, #f472b6 0%, #db2777 100%);
+}
+
+.admin-experiment-analytics__legend-item--active::before {
+  background: linear-gradient(180deg, #a5b4fc 0%, #6366f1 100%);
+}
+
+.admin-experiment-analytics__legend-item--hours::before {
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: #059669;
+}
+
+.admin-experiment-analytics__chart-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.admin-experiment-analytics__chart {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-height: 240px;
+  max-height: min(420px, 52vh);
+  display: block;
+}
+
+.admin-experiment-analytics__grid-line {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.admin-experiment-analytics__axis-label {
+  fill: #94a3b8;
+  font-size: 10px;
+  text-anchor: end;
+}
+
+.admin-experiment-analytics__axis-label--right {
+  text-anchor: start;
+  fill: #059669;
+  font-weight: 600;
+}
+
+.admin-experiment-analytics__month-label {
+  fill: #64748b;
+  font-size: 10px;
+  text-anchor: middle;
+}
+
+.admin-experiment-analytics__month-label--current {
+  fill: #3730a3;
+  font-weight: 700;
+}
+
+.admin-experiment-analytics__bar--current {
+  filter: drop-shadow(0 4px 8px rgba(5, 150, 105, 0.28));
+}
+
+.admin-experiment-analytics__bar--men {
+  fill: #2563eb;
+}
+
+.admin-experiment-analytics__bar--women {
+  fill: #db2777;
+}
+
+.admin-experiment-analytics__bar--active {
+  fill: #a5b4fc;
+}
+
+.admin-experiment-analytics__line {
+  stroke: #059669;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-experiment-analytics__line-dot {
+  fill: #ffffff;
+  stroke: #059669;
+  stroke-width: 2;
+}
+
+@media (max-width: 720px) {
+  .admin-experiment-analytics__periods {
+    width: 100%;
+  }
+
+  .admin-experiment-analytics__periods button {
+    flex: 1 1 auto;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+
+  .admin-experiment-analytics__toolbar-stats {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .admin-experiment-analytics__chart {
+    min-height: 200px;
+    max-height: 36vh;
+  }
+}

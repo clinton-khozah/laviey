@@ -1,0 +1,17 @@
+.page-scroller {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 8px);
+}
+
+.page-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.page-scroller--with-header {
+  padding-top: calc(var(--safe-top) + 72px);
+}

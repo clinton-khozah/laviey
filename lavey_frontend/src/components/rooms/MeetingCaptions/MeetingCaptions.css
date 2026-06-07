@@ -1,0 +1,108 @@
+.meeting-captions__toolbar {
+  position: absolute;
+  top: calc(var(--safe-top) + 8px);
+  right: 12px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meeting-captions__icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.meeting-captions__icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.meeting-captions__icon-btn--on {
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  border-color: transparent;
+}
+
+.meeting-captions__lang-wrap {
+  position: relative;
+}
+
+.meeting-captions__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  background: transparent;
+  border: none;
+  cursor: default;
+}
+
+.meeting-captions__lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 7;
+  list-style: none;
+  min-width: 148px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: rgba(18, 18, 26, 0.98);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  scrollbar-width: none;
+}
+
+.meeting-captions__lang-menu::-webkit-scrollbar {
+  display: none;
+}
+
+.meeting-captions__lang-menu button {
+  width: 100%;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.meeting-captions__lang-menu button:hover,
+.meeting-captions__lang-menu [aria-selected='true'] button {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+.meeting-captions__display {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--safe-bottom) + 118px);
+  z-index: 4;
+  text-align: center;
+  pointer-events: none;
+}
+
+.meeting-captions__text {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+  text-shadow:
+    0 0 8px rgba(0, 0, 0, 0.95),
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 1px 2px #000;
+}
+
+.meeting-captions__source {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}

@@ -1,0 +1,1 @@
+export { ZoomPage } from './ZoomPage';

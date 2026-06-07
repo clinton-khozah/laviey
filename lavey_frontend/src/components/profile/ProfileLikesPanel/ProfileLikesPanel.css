@@ -1,0 +1,124 @@
+.profile-likes-panel__intro {
+  margin-bottom: 16px;
+}
+
+.profile-likes-panel__title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.profile-likes-panel__hint {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.profile-likes-panel__section {
+  margin-bottom: 16px;
+}
+
+.profile-likes-panel__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.profile-likes-panel__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-likes-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.profile-likes-panel__row--revealed {
+  border-color: rgba(255, 77, 109, 0.25);
+  background: rgba(255, 77, 109, 0.06);
+}
+
+.profile-likes-panel__row--locked {
+  opacity: 0.95;
+}
+
+.profile-likes-panel__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+.profile-likes-panel__avatar--blur {
+  overflow: hidden;
+  padding: 0;
+  border: none;
+  background: var(--bg-deep);
+}
+
+.profile-likes-panel__avatar--blur img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(10px) brightness(0.7);
+  transform: scale(1.15);
+}
+
+.profile-likes-panel__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-likes-panel__name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.profile-likes-panel__name--blur {
+  color: var(--text-muted);
+}
+
+.profile-likes-panel__meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.profile-likes-panel__flame,
+.profile-likes-panel__lock {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.profile-likes-panel__thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.profile-likes-panel__thumb--blur {
+  filter: blur(6px) brightness(0.75);
+}
+
+.profile-likes-panel__empty {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 12px 0;
+}

@@ -1,0 +1,199 @@
+@import './styles/chatTypingStyles.css';
+
+[data-theme='night'] {
+  --bg-deep: #08080c;
+  --bg-elevated: #12121a;
+  --surface-glass: rgba(18, 18, 26, 0.55);
+  --surface-muted: rgba(255, 255, 255, 0.04);
+  --surface-active: rgba(255, 77, 109, 0.08);
+  --glass-bg: rgba(0, 0, 0, 0.35);
+  --glass-bg-strong: rgba(0, 0, 0, 0.45);
+  --tab-indicator-bg: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.06);
+  --chip-bg: rgba(255, 255, 255, 0.06);
+  --feed-scrim-top: linear-gradient(
+    to bottom,
+    rgba(8, 8, 12, 0.75) 0%,
+    rgba(8, 8, 12, 0.2) 60%,
+    transparent 100%
+  );
+  --feed-scrim-bottom: linear-gradient(
+    to top,
+    rgba(8, 8, 12, 0.95) 0%,
+    rgba(8, 8, 12, 0.5) 45%,
+    transparent 100%
+  );
+  --text-primary: #f8f8fc;
+  --text-secondary: rgba(248, 248, 252, 0.72);
+  --text-muted: rgba(248, 248, 252, 0.48);
+  --accent-flame: #ff4d6d;
+  --accent-flame-end: #ff8a5c;
+  --accent-violet: #a855f7;
+  --accent-mint: #34d399;
+  --gradient-flame: linear-gradient(135deg, var(--accent-flame) 0%, var(--accent-flame-end) 100%);
+  --gradient-vibe: linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f97316 100%);
+  --shadow-glow: 0 0 40px rgba(255, 77, 109, 0.35);
+  --shell-shadow: 0 0 80px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+:root,
+[data-theme='light'] {
+  --bg-deep: #f4f4f8;
+  --bg-elevated: #ffffff;
+  --surface-glass: rgba(255, 255, 255, 0.88);
+  --surface-muted: rgba(0, 0, 0, 0.04);
+  --surface-active: rgba(255, 77, 109, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --tab-indicator-bg: rgba(0, 0, 0, 0.06);
+  --border-subtle: rgba(0, 0, 0, 0.1);
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --chip-bg: rgba(0, 0, 0, 0.05);
+  --feed-scrim-top: linear-gradient(
+    to bottom,
+    rgba(244, 244, 248, 0.92) 0%,
+    rgba(244, 244, 248, 0.35) 55%,
+    transparent 100%
+  );
+  --feed-scrim-bottom: linear-gradient(
+    to top,
+    rgba(8, 8, 12, 0.88) 0%,
+    rgba(8, 8, 12, 0.42) 45%,
+    transparent 100%
+  );
+  --text-primary: #12121a;
+  --text-secondary: rgba(18, 18, 26, 0.72);
+  --text-muted: rgba(18, 18, 26, 0.48);
+  --accent-flame: #ff4d6d;
+  --accent-flame-end: #ff8a5c;
+  --accent-violet: #7c3aed;
+  --accent-mint: #059669;
+  --gradient-flame: linear-gradient(135deg, var(--accent-flame) 0%, var(--accent-flame-end) 100%);
+  --gradient-vibe: linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f97316 100%);
+  --shadow-glow: 0 8px 28px rgba(255, 77, 109, 0.22);
+  --shell-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+  color-scheme: light;
+}
+
+:root {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 58px;
+  --top-bar-height: 46px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+body {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+img,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+.app-shell {
+  position: relative;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg-deep);
+  overflow: hidden;
+  box-shadow: var(--shell-shadow);
+}
+
+@media (min-width: 481px) {
+  body {
+    background: #e4e4ec;
+  }
+
+  [data-theme='night'] body {
+    background: #030306;
+  }
+
+  .app-shell {
+    border-radius: 24px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    height: calc(100% - 24px);
+  }
+}
+
+/* Discover feed: video stays dark — keep overlay chrome readable in light theme */
+[data-theme='light'] .feed-item {
+  --text-primary: #f8f8fc;
+  --text-secondary: rgba(248, 248, 252, 0.85);
+  --text-muted: rgba(248, 248, 252, 0.62);
+  --surface-glass: rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='light'] .feed-item__progress-track {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='light'] .bottom-nav__inner {
+  background: linear-gradient(
+    to top,
+    rgba(244, 244, 248, 0.98) 0%,
+    rgba(244, 244, 248, 0.88) 70%,
+    transparent 100%
+  ) !important;
+}
+
+.profile-sheet,
+.match-profile-modal {
+  background: var(--bg-elevated);
+}
+
+/* Privacy: block dragging/saving media only; text remains selectable */
+.privacy-protected img,
+.privacy-protected video {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.privacy-protected input,
+.privacy-protected textarea,
+.privacy-protected select,
+.privacy-protected [contenteditable='true'],
+.privacy-protected [contenteditable=''] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}

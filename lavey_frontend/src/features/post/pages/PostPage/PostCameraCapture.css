@@ -1,0 +1,468 @@
+.post-camera {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  overflow: hidden;
+}
+
+.post-camera__header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: calc(var(--safe-top) + 8px) 10px 10px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.45) 85%, transparent);
+}
+
+.post-camera__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  color: white;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.post-camera__title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: white;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.post-camera__spacer {
+  width: 36px;
+}
+
+.post-camera__viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  overflow: hidden;
+}
+
+.post-camera__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.post-camera__video {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.post-camera__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  image-rendering: auto;
+}
+
+.post-camera__hd-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: white;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  line-height: 1.2;
+}
+
+.post-camera__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 62%, rgba(0, 0, 0, 0.18) 100%);
+}
+
+.post-camera__template-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.post-camera__template-frame {
+  position: relative;
+  width: min(100%, calc(100vh - 240px));
+  aspect-ratio: 1;
+  max-height: 100%;
+}
+
+.post-camera__template-frame--overlay {
+  width: min(100%, calc(100vh - 240px));
+}
+
+.post-camera__template-frame:not(.post-camera__template-frame--overlay) {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.post-camera__template-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.post-camera__template-sticker {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 8%;
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-size: clamp(11px, 3vw, 14px);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.post-camera__templates {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.post-camera__templates::-webkit-scrollbar {
+  display: none;
+}
+
+.post-camera__template {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 44px;
+  scroll-snap-align: center;
+  opacity: 0.72;
+  transition: opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.post-camera__template--active {
+  opacity: 1;
+}
+
+.post-camera__template-thumb-wrap {
+  display: block;
+  padding: 2px;
+  border-radius: 9px;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.post-camera__template--active .post-camera__template-thumb-wrap {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.post-camera__template-thumb {
+  display: block;
+  width: 40px;
+  height: 40px;
+  max-width: none;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #111;
+}
+
+.post-camera__template-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+.post-camera__template-emoji {
+  flex-shrink: 0;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.post-camera__template-name {
+  font-size: 6px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.post-camera__template--active .post-camera__template-name {
+  color: white;
+  font-weight: 700;
+}
+
+.post-camera__templates-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.post-camera__templates-bar .post-camera__templates {
+  pointer-events: auto;
+}
+
+.post-camera__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.post-camera__bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 calc(var(--safe-bottom) + 12px);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.5) 55%, transparent 100%);
+  pointer-events: none;
+}
+
+.post-camera__bottom > * {
+  pointer-events: auto;
+}
+
+.post-camera__filters {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+  padding: 0 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.post-camera__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.post-camera__filter {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 52px;
+  padding: 0;
+  scroll-snap-align: center;
+  opacity: 0.72;
+  transition: opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.post-camera__filter--active {
+  opacity: 1;
+}
+
+.post-camera__filter-thumb-wrap {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  padding: 2px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.post-camera__filter--active .post-camera__filter-thumb-wrap {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.post-camera__filter--girly.post-camera__filter--active .post-camera__filter-thumb-wrap {
+  border-color: rgba(255, 186, 205, 0.85);
+  background: rgba(255, 140, 175, 0.14);
+}
+
+.post-camera__filter-thumb {
+  display: block;
+  width: 48px;
+  height: 58px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: linear-gradient(145deg, #4a4a4a, #222);
+}
+
+.post-camera__filter-thumb-wash {
+  position: absolute;
+  inset: 2px;
+  border-radius: 7px;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.95;
+}
+
+.post-camera__filter-name {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.post-camera__filter--active .post-camera__filter-name {
+  font-weight: 700;
+  color: white;
+}
+
+.post-camera__filter--girly.post-camera__filter--active .post-camera__filter-name {
+  color: #ffd0e0;
+}
+
+.post-camera--girly .post-camera__title {
+  color: #ffd6e8;
+}
+
+.post-camera--girly .post-camera__shutter {
+  border-color: rgba(255, 192, 210, 0.95);
+  box-shadow:
+    inset 0 0 0 4px rgba(0, 0, 0, 0.35),
+    0 0 16px rgba(255, 120, 160, 0.3);
+}
+
+.post-camera--girly .post-camera__shutter::after {
+  background: linear-gradient(145deg, #fff5f8 0%, #ffc8da 100%);
+}
+
+.post-camera__shutter {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid white;
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 4px rgba(0, 0, 0, 0.35),
+    0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s;
+}
+
+.post-camera__shutter::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: white;
+  transform: scale(0.82);
+}
+
+.post-camera__shutter:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.post-camera__shutter:disabled {
+  opacity: 0.45;
+}
+
+.post-camera__fallback {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.post-camera__fallback p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+}
+
+.post-camera__fallback-btn {
+  padding: 12px 20px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: var(--gradient-flame);
+}
+
+.post-camera__file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}

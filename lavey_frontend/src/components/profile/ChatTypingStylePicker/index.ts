@@ -1,0 +1,1 @@
+export { ChatTypingStylePicker } from './ChatTypingStylePicker';

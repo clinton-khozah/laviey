@@ -1,0 +1,243 @@
+.profile-interest-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-interest-picker__selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.profile-interest-picker__icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.profile-interest-picker__icon-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.profile-interest-picker__chip--active .profile-interest-picker__icon {
+  border-color: rgba(255, 77, 109, 0.28);
+  background: rgba(255, 77, 109, 0.1);
+}
+
+.profile-interest-picker__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.profile-interest-picker__chip--active {
+  background: rgba(255, 77, 109, 0.08);
+  border-color: rgba(255, 77, 109, 0.3);
+}
+
+.profile-interest-picker__chip-label {
+  line-height: 1.2;
+}
+
+.profile-interest-picker__chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+}
+
+.profile-interest-picker__chip-remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+[data-theme='light'] .profile-interest-picker__chip-remove {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.profile-interest-picker__toggle {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-mint, #10b981);
+  background: none;
+  border: none;
+}
+
+.profile-interest-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-interest-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+
+.profile-interest-picker__option:active {
+  transform: scale(0.98);
+}
+
+.profile-interest-picker__option:hover:not(:disabled) {
+  border-color: rgba(124, 58, 237, 0.35);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.profile-interest-picker__option--disabled,
+.profile-interest-picker__option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.profile-interest-picker__option .profile-interest-picker__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+}
+
+.profile-interest-picker__option .profile-interest-picker__icon-emoji {
+  font-size: 17px;
+}
+
+.profile-interest-picker__option-label {
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.profile-interest-picker__empty,
+.profile-interest-picker__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.profile-interest-picker__hint {
+  color: var(--text-muted);
+}
+
+.profile-interest-picker__limit {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+[data-theme='light'] .profile-interest-picker__limit {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+/* Per-interest icon tints */
+.profile-interest-picker__icon[data-interest='travel'] {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.18), rgba(14, 165, 233, 0.1));
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='shopping'] {
+  background: linear-gradient(145deg, rgba(236, 72, 153, 0.18), rgba(244, 114, 182, 0.1));
+  border-color: rgba(236, 72, 153, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='fitness'] {
+  background: linear-gradient(145deg, rgba(249, 115, 22, 0.18), rgba(251, 146, 60, 0.1));
+  border-color: rgba(249, 115, 22, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='music'] {
+  background: linear-gradient(145deg, rgba(168, 85, 247, 0.18), rgba(192, 132, 252, 0.1));
+  border-color: rgba(168, 85, 247, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='food'] {
+  background: linear-gradient(145deg, rgba(234, 88, 12, 0.18), rgba(251, 191, 36, 0.1));
+  border-color: rgba(234, 88, 12, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='nightlife'] {
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.2), rgba(67, 56, 202, 0.1));
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.profile-interest-picker__icon[data-interest='gaming'] {
+  background: linear-gradient(145deg, rgba(124, 58, 237, 0.18), rgba(139, 92, 246, 0.1));
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='reading'] {
+  background: linear-gradient(145deg, rgba(20, 184, 166, 0.18), rgba(45, 212, 191, 0.1));
+  border-color: rgba(20, 184, 166, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='art'] {
+  background: linear-gradient(145deg, rgba(244, 63, 94, 0.18), rgba(251, 113, 133, 0.1));
+  border-color: rgba(244, 63, 94, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='outdoors'] {
+  background: linear-gradient(145deg, rgba(34, 197, 94, 0.18), rgba(74, 222, 128, 0.1));
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='pets'] {
+  background: linear-gradient(145deg, rgba(217, 119, 6, 0.18), rgba(252, 211, 77, 0.1));
+  border-color: rgba(217, 119, 6, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='tech'] {
+  background: linear-gradient(145deg, rgba(6, 182, 212, 0.18), rgba(34, 211, 238, 0.1));
+  border-color: rgba(6, 182, 212, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='movies'] {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.16), rgba(248, 113, 113, 0.1));
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.profile-interest-picker__icon[data-interest='wellness'] {
+  background: linear-gradient(145deg, rgba(52, 211, 153, 0.18), rgba(110, 231, 183, 0.1));
+  border-color: rgba(52, 211, 153, 0.28);
+}
+
+[data-theme='light'] .profile-interest-picker__icon {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}

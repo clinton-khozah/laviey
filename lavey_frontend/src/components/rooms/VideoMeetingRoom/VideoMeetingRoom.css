@@ -1,0 +1,390 @@
+.video-meeting {
+  position: fixed;
+  inset: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 210;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  background: #050508;
+  color: var(--text-primary);
+  isolation: isolate;
+}
+
+[data-theme='light'] .video-meeting {
+  /* Meeting UI is always on a dark stage, even in Bright mode. */
+  --text-primary: #f8f8fc;
+  --text-secondary: rgba(248, 248, 252, 0.78);
+  --text-muted: rgba(248, 248, 252, 0.56);
+  --border-subtle: rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+}
+
+.video-meeting__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: calc(var(--safe-top) + 10px) 100px 10px 12px;
+  background: linear-gradient(to bottom, rgba(8, 8, 12, 0.95), transparent);
+  z-index: 2;
+}
+
+.video-meeting__header-spacer {
+  flex-shrink: 0;
+  width: 1px;
+}
+
+.video-meeting__back {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.video-meeting__back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.video-meeting__header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.video-meeting__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.video-meeting__title {
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.video-meeting__live {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(52, 211, 153, 0.9);
+  color: #042f1a;
+}
+
+.video-meeting__subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.video-meeting__stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 12px;
+}
+
+.video-meeting__love-badge {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: rgba(255, 77, 109, 0.2);
+  border: 1px solid rgba(255, 77, 109, 0.45);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.video-meeting__love-icon {
+  display: flex;
+  color: var(--accent-flame);
+  animation: lovePulse 1.4s ease-in-out infinite;
+}
+
+.video-meeting__love-icon svg {
+  width: 14px;
+  height: 14px;
+  filter: drop-shadow(0 0 6px rgba(255, 77, 109, 0.6));
+}
+
+.video-meeting__love-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fda4af;
+}
+
+@keyframes lovePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.video-meeting__grid {
+  flex: 1;
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  align-content: center;
+}
+
+.video-meeting__grid--solo {
+  grid-template-columns: 1fr;
+  max-width: 360px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.video-meeting__grid--double {
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+}
+
+.video-meeting__tile {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.video-meeting__grid--solo .video-meeting__tile {
+  aspect-ratio: 3 / 4;
+  max-height: min(52vh, 420px);
+  border-color: rgba(255, 77, 109, 0.25);
+  box-shadow: 0 0 0 1px rgba(255, 77, 109, 0.2), 0 8px 40px rgba(255, 77, 109, 0.12);
+}
+
+.video-meeting__grid--double .video-meeting__tile {
+  aspect-ratio: 3 / 4;
+  max-height: min(40vh, 280px);
+}
+
+.video-meeting__tile-cover {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.85);
+}
+
+.video-meeting__tile-heart {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 77, 109, 0.35);
+  pointer-events: none;
+}
+
+.video-meeting__tile-heart svg {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 2px 12px rgba(255, 77, 109, 0.25));
+}
+
+.video-meeting__tile-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, rgba(124, 58, 237, 0.25), var(--bg-elevated));
+}
+
+.video-meeting__tile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.video-meeting__tile-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+}
+
+.video-meeting__tile-name {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-meeting__host-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: rgba(124, 58, 237, 0.5);
+}
+
+.video-meeting__tile-status {
+  font-size: 14px;
+}
+
+.video-meeting__self {
+  position: absolute;
+  right: 12px;
+  bottom: calc(var(--safe-bottom) + 140px);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.video-meeting__self-frame {
+  position: relative;
+  width: 108px;
+  height: 148px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 2px solid rgba(124, 58, 237, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.video-meeting__self-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.video-meeting__self-video--off {
+  opacity: 0;
+}
+
+.video-meeting__self-off {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  background: var(--gradient-vibe);
+}
+
+.video-meeting__self-loading,
+.video-meeting__self-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.video-meeting__spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent-flame);
+  animation: meetingSpin 0.8s linear infinite;
+}
+
+@keyframes meetingSpin {
+  to { transform: rotate(360deg); }
+}
+
+.video-meeting__self-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.video-meeting__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 16px calc(var(--safe-bottom) + 12px);
+  background: linear-gradient(to top, rgba(8, 8, 12, 0.98), rgba(8, 8, 12, 0.85));
+  border-top: 1px solid var(--border-subtle);
+}
+
+.video-meeting__control {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-subtle);
+}
+
+.video-meeting__control svg {
+  width: 22px;
+  height: 22px;
+}
+
+.video-meeting__control--off {
+  background: rgba(255, 77, 109, 0.2);
+  border-color: rgba(255, 77, 109, 0.45);
+  color: #fca5a5;
+}
+
+.video-meeting__control--gift {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.35) 0%, rgba(236, 72, 153, 0.35) 100%);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #fcd34d;
+}
+
+.video-meeting__control--gift-open {
+  background: linear-gradient(135deg, #f59e0b 0%, #ec4899 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.45);
+}
+
+.video-meeting__control--leave {
+  width: auto;
+  min-width: 88px;
+  padding: 0 20px;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: #dc2626;
+  border-color: transparent;
+}

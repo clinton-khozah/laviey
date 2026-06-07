@@ -1,0 +1,119 @@
+.email-verify {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.email-verify__intro {
+  text-align: center;
+}
+
+.email-verify__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.email-verify__copy {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.email-verify__copy strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.email-verify__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email-verify__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.email-verify__input {
+  width: 100%;
+  padding: 14px 12px;
+  border-radius: 11px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-align: center;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  outline: none;
+}
+
+.email-verify__input:focus {
+  border-color: rgba(124, 58, 237, 0.45);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.email-verify__status {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--accent-mint);
+  text-align: center;
+}
+
+.email-verify__submit {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: var(--gradient-vibe);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.28);
+}
+
+.email-verify__submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.email-verify__resend {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.email-verify__resend:hover:not(:disabled) {
+  border-color: rgba(124, 58, 237, 0.35);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.email-verify__resend:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.email-verify__actions {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.email-verify__link {
+  color: var(--accent-violet);
+  font-weight: 700;
+}
+
+.email-verify__link:disabled {
+  opacity: 0.6;
+}

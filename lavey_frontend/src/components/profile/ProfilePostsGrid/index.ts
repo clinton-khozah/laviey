@@ -1,0 +1,1 @@
+export { ProfilePostsGrid } from './ProfilePostsGrid';

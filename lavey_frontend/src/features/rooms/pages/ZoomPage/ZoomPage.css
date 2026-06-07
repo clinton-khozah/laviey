@@ -1,0 +1,102 @@
+.online-dates-page {
+  position: absolute;
+  inset: 0;
+}
+
+.online-dates-page__create-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--gradient-vibe);
+  color: white;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+}
+
+.online-dates-page__create-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.online-dates-page__top {
+  padding: 8px 14px 0;
+}
+
+.online-dates-page__status {
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.online-dates-page__content {
+  padding: 12px 14px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.online-dates-page__section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.online-dates-page__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 99px;
+  font-size: 11px;
+  background: var(--accent-flame);
+  color: white;
+}
+
+.online-dates-page__live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-mint);
+  box-shadow: 0 0 10px var(--accent-mint);
+  animation: dateLivePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dateLivePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.online-dates-page__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.online-dates-page__toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  transform: translateX(-50%);
+  z-index: 300;
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  background: rgba(18, 18, 26, 0.95);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}

@@ -1,0 +1,346 @@
+.create-date-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.create-date-sheet__label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.create-date-sheet__label input,
+.create-date-sheet__label select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.create-date-sheet__label input:focus,
+.create-date-sheet__label select:focus {
+  border-color: rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+
+[data-theme='light'] .create-date-sheet__label input,
+[data-theme='light'] .create-date-sheet__label select {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.create-date-sheet__fieldset {
+  border: none;
+  padding: 0;
+}
+
+.create-date-sheet__fieldset legend {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.create-date-sheet__label--inline {
+  margin-top: 2px;
+}
+
+.create-date-sheet__help {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.create-date-sheet__visibility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+[data-theme='light'] .create-date-sheet__visibility {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.create-date-sheet__visibility-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.create-date-sheet__visibility-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.create-date-sheet__visibility .create-date-sheet__help {
+  margin: 0;
+}
+
+.create-date-sheet__switch {
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border-radius: 99px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  position: relative;
+  transition: background 0.2s;
+}
+
+.create-date-sheet__switch--on {
+  background: var(--accent-violet);
+  border-color: transparent;
+}
+
+.create-date-sheet__switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
+}
+
+.create-date-sheet__switch--on::after {
+  transform: translateX(18px);
+}
+
+.create-date-sheet__invite-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.create-date-sheet__invite-list::-webkit-scrollbar {
+  display: none;
+}
+
+.create-date-sheet__invite {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-align: left;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+[data-theme='light'] .create-date-sheet__invite {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.create-date-sheet__invite--selected {
+  border-color: rgba(124, 58, 237, 0.45);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+[data-theme='light'] .create-date-sheet__invite--selected {
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.create-date-sheet__invite-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+}
+
+.create-date-sheet__invite-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border-subtle);
+}
+
+.create-date-sheet__invite--selected .create-date-sheet__invite-avatar {
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.create-date-sheet__invite-online {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-mint);
+  border: 2px solid var(--bg-elevated);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+}
+
+.create-date-sheet__invite-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.create-date-sheet__invite-check {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--gradient-vibe);
+  color: white;
+  flex-shrink: 0;
+}
+
+.create-date-sheet__invite-check svg {
+  width: 12px;
+  height: 12px;
+}
+
+.create-date-sheet__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.create-date-sheet__toggle-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.create-date-sheet__pill {
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--chip-bg);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+[data-theme='light'] .create-date-sheet__pill {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.create-date-sheet__pill span {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.create-date-sheet__pill--active {
+  border-color: rgba(124, 58, 237, 0.45);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+[data-theme='light'] .create-date-sheet__pill--active {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.35);
+}
+
+.create-date-sheet__seg {
+  display: flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+[data-theme='light'] .create-date-sheet__seg {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.create-date-sheet__seg button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.create-date-sheet__seg--active {
+  background: var(--gradient-vibe);
+  color: white !important;
+}
+
+.create-date-sheet__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.create-date-sheet__chip {
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border-subtle);
+  background: var(--chip-bg);
+  color: var(--text-secondary);
+}
+
+[data-theme='light'] .create-date-sheet__chip {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+}
+
+.create-date-sheet__chip--active {
+  border-color: transparent;
+  background: var(--gradient-flame);
+  color: white;
+}
+
+.create-date-sheet__submit {
+  margin-top: 4px;
+  width: 100%;
+  padding: 11px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  background: var(--gradient-flame);
+  box-shadow: var(--shadow-glow);
+}
+
+.create-date-sheet__submit:disabled {
+  opacity: 0.6;
+}

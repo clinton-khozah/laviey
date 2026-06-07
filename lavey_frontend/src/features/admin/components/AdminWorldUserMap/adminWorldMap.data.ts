@@ -1,0 +1,23 @@
+/** Active Lavey users (30d) by world-atlas country name */
+export const LAVEY_USERS_BY_COUNTRY: Record<string, number> = {
+  'South Africa': 58_400,
+  'United States of America': 7_240,
+  'Nigeria': 6_420,
+  'United Kingdom': 5_890,
+  Brazil: 5_120,
+  'United Arab Emirates': 4_310,
+  Australia: 3_980,
+  Kenya: 2_840,
+  Ghana: 2_210,
+  India: 1_980,
+  Germany: 1_760,
+  France: 1_540,
+  Canada: 1_420,
+  Mexico: 1_180,
+  Egypt: 980,
+  Morocco: 860,
+  Portugal: 720,
+  Spain: 690,
+  Italy: 640,
+  Japan: 510,
+};

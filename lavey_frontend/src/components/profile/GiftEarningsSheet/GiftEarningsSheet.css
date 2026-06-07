@@ -1,0 +1,395 @@
+.profile-sheet--from-top.profile-sheet--compact:has(.gift-earnings-sheet) {
+  max-height: 78vh;
+}
+
+.gift-earnings-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 0;
+  min-height: 80px;
+}
+
+.gift-earnings-sheet__loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+}
+
+.gift-earnings-sheet__error-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 8px;
+  text-align: center;
+}
+
+.gift-earnings-sheet__error {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__retry {
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gift-earnings-sheet__balance {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(252, 211, 77, 0.14) 0%, rgba(255, 77, 109, 0.08) 100%);
+  border: 1px solid rgba(252, 211, 77, 0.28);
+}
+
+.gift-earnings-sheet__balance-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gift-earnings-sheet__label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__amount {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #fbbf24;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.gift-earnings-sheet__sub {
+  font-size: 10px;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+[data-theme='light'] .gift-earnings-sheet__balance {
+  background: linear-gradient(135deg, rgba(252, 211, 77, 0.2) 0%, rgba(255, 77, 109, 0.12) 100%);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+[data-theme='light'] .gift-earnings-sheet__label {
+  color: rgba(18, 18, 26, 0.72);
+}
+
+[data-theme='light'] .gift-earnings-sheet__amount {
+  color: #b45309;
+}
+
+[data-theme='light'] .gift-earnings-sheet__sub {
+  color: #3f3f46;
+}
+
+.gift-earnings-sheet__pending {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-mint);
+  margin-top: 3px;
+}
+
+.gift-earnings-sheet__refresh {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+}
+
+.gift-earnings-sheet__refresh svg {
+  width: 15px;
+  height: 15px;
+}
+
+.gift-earnings-sheet__refresh:active {
+  transform: scale(0.96);
+}
+
+.gift-earnings-sheet__note {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__saved {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+}
+
+.gift-earnings-sheet__saved-logo {
+  width: 52px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.gift-earnings-sheet__saved-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gift-earnings-sheet__saved-bank {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gift-earnings-sheet__saved-meta,
+.gift-earnings-sheet__saved-method {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gift-earnings-sheet__edit-bank {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-mint);
+  padding: 4px 6px;
+}
+
+.gift-earnings-sheet__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gift-earnings-sheet__section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.gift-earnings-sheet__method {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.gift-earnings-sheet__method--selected {
+  border-color: rgba(252, 211, 77, 0.55);
+  background: rgba(252, 211, 77, 0.1);
+}
+
+.gift-earnings-sheet__method-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gift-earnings-sheet__method-meta {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__method-desc {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__banks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.gift-earnings-sheet__bank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 3px;
+  border-radius: 7px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  min-height: 46px;
+}
+
+.gift-earnings-sheet__bank--selected {
+  border-color: rgba(252, 211, 77, 0.55);
+  box-shadow: 0 0 0 1px rgba(252, 211, 77, 0.25);
+}
+
+.gift-earnings-sheet__bank-logo {
+  width: 100%;
+  max-width: 56px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.gift-earnings-sheet__bank-name {
+  font-size: 8px;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.gift-earnings-sheet__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gift-earnings-sheet__field > span {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.gift-earnings-sheet__input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  outline: none;
+}
+
+.gift-earnings-sheet__input:focus {
+  border-color: rgba(252, 211, 77, 0.45);
+}
+
+.gift-earnings-sheet__account-type {
+  display: flex;
+  gap: 6px;
+}
+
+.gift-earnings-sheet__type-btn {
+  flex: 1;
+  padding: 7px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.gift-earnings-sheet__type-btn--on {
+  color: var(--text-primary);
+  border-color: rgba(252, 211, 77, 0.5);
+  background: rgba(252, 211, 77, 0.12);
+}
+
+.gift-earnings-sheet__amount-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+}
+
+.gift-earnings-sheet__amount-input > span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.gift-earnings-sheet__input--amount {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  flex: 1;
+}
+
+.gift-earnings-sheet__save-bank {
+  align-self: flex-start;
+  padding: 7px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+.gift-earnings-sheet__save-bank:disabled {
+  opacity: 0.45;
+}
+
+.gift-earnings-sheet__withdraw {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a1a22;
+  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
+  box-shadow: 0 4px 14px rgba(252, 211, 77, 0.25);
+}
+
+.gift-earnings-sheet__withdraw:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.gift-earnings-sheet__fine {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.gift-earnings-sheet__status {
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--accent-mint);
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}

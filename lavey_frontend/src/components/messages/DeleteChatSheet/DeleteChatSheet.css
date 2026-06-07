@@ -1,0 +1,88 @@
+.delete-chat-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.delete-chat-sheet__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 4px 8px 16px;
+}
+
+.delete-chat-sheet__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 77, 109, 0.35);
+}
+
+.delete-chat-sheet__heading {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  max-width: 300px;
+}
+
+.delete-chat-sheet__heading strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.delete-chat-sheet__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-align: left;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.delete-chat-sheet__option:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.delete-chat-sheet__option:not(:disabled):active {
+  transform: scale(0.99);
+}
+
+.delete-chat-sheet__option--danger {
+  border-color: rgba(255, 77, 109, 0.35);
+  background: rgba(255, 77, 109, 0.08);
+}
+
+.delete-chat-sheet__option-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.delete-chat-sheet__option--danger .delete-chat-sheet__option-title {
+  color: var(--accent-flame-end);
+}
+
+.delete-chat-sheet__option-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.delete-chat-sheet__cancel {
+  width: 100%;
+  padding: 14px;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

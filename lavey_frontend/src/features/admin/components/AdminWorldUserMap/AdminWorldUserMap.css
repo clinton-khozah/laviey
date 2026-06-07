@@ -1,0 +1,143 @@
+.admin-world-map {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.admin-world-map__viewport {
+  position: relative;
+  flex: 1;
+  min-height: min(68vh, 720px);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.admin-world-map__viewport--dragging {
+  cursor: grabbing;
+}
+
+.admin-world-map__viewport--dragging .admin-world-map__country {
+  pointer-events: none;
+}
+
+.admin-world-map__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.admin-world-map__bg {
+  fill: #ffffff;
+}
+
+.admin-world-map__country {
+  cursor: pointer;
+  transition: fill 160ms ease, stroke 160ms ease;
+}
+
+.admin-world-map__country--active {
+  stroke: #ffffff;
+  stroke-width: 1.15;
+}
+
+.admin-world-map__tooltip {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, calc(-100% - 14px));
+  min-width: 128px;
+  max-width: 200px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(145deg, #5b4fd6 0%, #4338ca 100%);
+  box-shadow:
+    0 10px 28px rgba(67, 56, 202, 0.38),
+    0 2px 6px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+  text-align: center;
+  animation: admin-world-map-tooltip-in 140ms ease-out;
+}
+
+.admin-world-map__tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #4338ca;
+}
+
+.admin-world-map__tooltip-country {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.admin-world-map__tooltip-users {
+  margin: 5px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.admin-world-map__tooltip-users span {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.admin-world-map__tooltip-users--muted {
+  color: rgba(255, 255, 255, 0.72);
+  font-style: italic;
+}
+
+.admin-world-map__controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.admin-world-map__controls span {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.admin-world-map__controls button {
+  border-radius: 8px;
+  border: 1px solid #dbe3ee;
+  background: #ffffff;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 10px;
+}
+
+@keyframes admin-world-map-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 8px));
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 14px));
+  }
+}

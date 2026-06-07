@@ -1,0 +1,76 @@
+.admin-login {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg-deep);
+}
+
+.admin-login__card {
+  width: min(100%, 360px);
+  padding: 22px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+[data-theme='light'] .admin-login__card {
+  background: #ffffff;
+}
+
+.admin-login__logo {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 12px;
+}
+
+.admin-login__title {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.admin-login__subtitle {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.admin-login__card .email-auth {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.admin-login__loading {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.admin-login__hint {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.admin-login__status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  text-align: center;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.admin-login__error {
+  margin-top: 12px;
+  color: var(--accent-flame-end);
+  font-size: 13px;
+  text-align: center;
+}

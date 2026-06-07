@@ -1,0 +1,20 @@
+.vertical-feed {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.vertical-feed::-webkit-scrollbar {
+  display: none;
+}
+
+.vertical-feed--locked {
+  overflow: hidden;
+  touch-action: none;
+}

@@ -1,0 +1,95 @@
+.conversation-options-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.conversation-options-sheet__intro {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 4px;
+}
+
+.conversation-options-sheet__intro img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 77, 109, 0.3);
+}
+
+.conversation-options-sheet__intro span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-mint);
+}
+
+.conversation-options-sheet__action {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-align: left;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.conversation-options-sheet__action--danger {
+  border-color: rgba(255, 77, 109, 0.3);
+  background: rgba(255, 77, 109, 0.06);
+}
+
+.conversation-options-sheet__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--accent-flame-end);
+  background: rgba(255, 77, 109, 0.1);
+}
+
+.conversation-options-sheet__action--danger .conversation-options-sheet__icon {
+  color: var(--accent-flame-end);
+}
+
+.conversation-options-sheet__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.conversation-options-sheet__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.conversation-options-sheet__text strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.conversation-options-sheet__text span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.conversation-options-sheet__cancel {
+  width: 100%;
+  padding: 12px;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

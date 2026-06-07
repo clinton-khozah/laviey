@@ -1,0 +1,1 @@
+export { MessagesHeader } from './MessagesHeader';

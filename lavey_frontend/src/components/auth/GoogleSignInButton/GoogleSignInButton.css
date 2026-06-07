@@ -1,0 +1,36 @@
+.google-sign-in {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f1f1f;
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.google-sign-in:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.google-sign-in:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+[data-theme='night'] .google-sign-in {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.google-sign-in__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}

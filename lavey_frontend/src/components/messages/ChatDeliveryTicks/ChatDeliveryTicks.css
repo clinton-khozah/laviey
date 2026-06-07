@@ -1,0 +1,35 @@
+.chat-ticks {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.chat-ticks__icon {
+  width: 16px;
+  height: 12px;
+}
+
+.chat-ticks--sent {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.chat-ticks--delivered {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.chat-ticks--read {
+  color: #7dd3fc;
+}
+
+.chat-bubble-wrap--sticker .chat-ticks--sent {
+  color: #94a3b8;
+}
+
+.chat-bubble-wrap--sticker .chat-ticks--delivered {
+  color: #64748b;
+}
+
+.chat-bubble-wrap--sticker .chat-ticks--read {
+  color: #22c55e;
+}

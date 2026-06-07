@@ -1,0 +1,250 @@
+.online-date-card {
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(124, 58, 237, 0.08) 0%, var(--bg-elevated) 45%);
+  border: 1px solid var(--border-subtle);
+}
+
+.online-date-card--live {
+  border-color: rgba(52, 211, 153, 0.35);
+  box-shadow: 0 8px 32px rgba(52, 211, 153, 0.12);
+}
+
+.online-date-card__cover {
+  position: relative;
+  height: 128px;
+  background-size: cover;
+  background-position: center;
+}
+
+.online-date-card__cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(8, 8, 12, 0.92) 0%, rgba(8, 8, 12, 0.2) 55%);
+}
+
+.online-date-card__badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.online-date-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.online-date-card__status--live {
+  background: rgba(52, 211, 153, 0.95);
+  color: #042f1a;
+}
+
+.online-date-card__status--starting-soon {
+  background: rgba(168, 85, 247, 0.92);
+  color: white;
+}
+
+.online-date-card__status--scheduled {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  backdrop-filter: blur(8px);
+}
+
+.online-date-card__visibility {
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.online-date-card__visibility--public {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  backdrop-filter: blur(8px);
+}
+
+.online-date-card__visibility--private {
+  background: rgba(255, 77, 109, 0.85);
+  color: white;
+}
+
+.online-date-card__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: datePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes datePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.online-date-card__count {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 1;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+}
+
+.online-date-card__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.online-date-card__fill span {
+  display: block;
+  height: 100%;
+  background: var(--gradient-vibe);
+  border-radius: 0 2px 2px 0;
+  transition: width 0.3s ease;
+}
+
+.online-date-card__body {
+  padding: 12px 14px 14px;
+}
+
+.online-date-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.online-date-card__topic {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.online-date-card__host {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.online-date-card__host-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+}
+
+.online-date-card__host-avatar--you {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--gradient-flame);
+  color: white;
+  border: none;
+}
+
+.online-date-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.online-date-card__tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+}
+
+.online-date-card__code-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.online-date-card__code {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--chip-bg);
+  border: 1px dashed var(--border-subtle);
+}
+
+.online-date-card__code-label {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.online-date-card__code-value {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme='light'] .online-date-card__tag {
+  background: rgba(124, 58, 237, 0.12);
+  color: #4c1d95;
+  border: 1px solid rgba(124, 58, 237, 0.22);
+}
+
+.online-date-card__copy {
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+}
+
+.online-date-card__join {
+  width: 100%;
+  padding: 11px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  background: var(--gradient-vibe);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+}
+
+.online-date-card__join:disabled {
+  opacity: 0.65;
+}

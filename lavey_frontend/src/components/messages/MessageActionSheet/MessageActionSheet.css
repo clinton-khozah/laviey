@@ -1,0 +1,114 @@
+.message-action-sheet__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.message-action-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 211;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 20px calc(var(--safe-bottom) + 16px);
+  background: var(--bg-elevated);
+  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border-subtle);
+  border-bottom: none;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.message-action-sheet__handle {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.message-action-sheet__section {
+  margin-bottom: 14px;
+}
+
+.message-action-sheet__section--actions {
+  margin-bottom: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.message-action-sheet__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.message-action-sheet__reactions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.message-action-sheet__emoji {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.message-action-sheet__emoji--active {
+  border-color: rgba(255, 77, 109, 0.45);
+  background: rgba(255, 77, 109, 0.12);
+}
+
+.message-action-sheet__emoji:active {
+  transform: scale(0.92);
+}
+
+.message-action-sheet__icons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.message-action-sheet__icon-btn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+}
+
+.message-action-sheet__icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.message-action-sheet__icon-btn:active {
+  transform: scale(0.94);
+}
+
+.message-action-sheet__icon-btn--danger {
+  color: var(--accent-flame-end);
+  border-color: rgba(255, 77, 109, 0.3);
+  background: rgba(255, 77, 109, 0.08);
+}
