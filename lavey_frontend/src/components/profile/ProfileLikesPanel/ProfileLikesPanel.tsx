@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
+import { usesBackendApi } from '@/config/env';
 import { contentService } from '@/services/content/contentService';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
 import { MOCK_RECEIVED_LIKE_PROFILE_IDS } from '@/services/mocks/likes.mock';
-import { env } from '@/config/env';
 import type { ReceivedPostLike } from '@/types';
 import './ProfileLikesPanel.css';
 
@@ -15,7 +15,7 @@ export function ProfileLikesPanel({ reciprocatedIds }: ProfileLikesPanelProps) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       const mock = MOCK_RECEIVED_LIKE_PROFILE_IDS.map((id) => {
         const profile = MOCK_PROFILES.find((p) => p.id === id);
         if (!profile) return null;

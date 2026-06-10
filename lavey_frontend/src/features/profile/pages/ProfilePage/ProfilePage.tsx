@@ -26,7 +26,6 @@ import { SupportChatSheet } from '@/components/profile/SupportChatSheet';
 import { TrustInfoSheet } from '@/components/profile/TrustInfoSheet';
 import { SheetSaveSuccess } from '@/components/profile/SheetSaveSuccess';
 import { VerifyIdentitySheet } from '@/components/profile/VerifyIdentitySheet';
-import { MOCK_RECEIVED_LIKE_PROFILE_IDS } from '@/services/mocks/likes.mock';
 import { userProfileService } from '@/services/users/userProfileService';
 import { contentService } from '@/services/content/contentService';
 import { prepareImageForUpload } from '@/utils/media/prepareUploadMedia';
@@ -34,6 +33,7 @@ import { nsfwImageUserMessage } from '@/utils/media/nsfwImageCheck';
 import {
   useAuth,
   useMatchActions,
+  useProfilesWhoLikedYou,
   useUserProfile,
 } from '@/hooks';
 import { openChatWithProfile } from '@/utils/navigation/appNav';
@@ -68,6 +68,7 @@ export function ProfilePage() {
   const { signOut, isSubmitting } = useAuth();
   const { profile, isLoading, error, refetch } = useUserProfile();
   const { likedIds, sendFlame } = useMatchActions();
+  const { count: receivedLikeCount } = useProfilesWhoLikedYou();
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [sheet, setSheet] = useState<ProfileSheetId>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -469,7 +470,7 @@ export function ProfilePage() {
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                 </svg>
                 Likes
-                <span className="profile-page__tab-count">{MOCK_RECEIVED_LIKE_PROFILE_IDS.length}</span>
+                <span className="profile-page__tab-count">{receivedLikeCount}</span>
               </button>
             </div>
 

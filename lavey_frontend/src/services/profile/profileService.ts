@@ -1,4 +1,4 @@
-import { env } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { getAppliedAlgorithm, sortProfilesByAlgorithm } from '@/features/admin/algorithm/algorithmConfig';
 import { httpClient } from '@/services/api/httpClient';
@@ -112,13 +112,13 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
 
 /**
  * Profile & discover-feed API.
- * Swap `env.useMockApi` to false when the .NET backend is ready.
+ * Set VITE_USE_MOCK_API=true only for offline UI demos.
  */
 export const profileService = {
   async getDiscoverFeed(request: DiscoverFeedRequest = {}): Promise<DiscoverFeedResponse> {
     const filter = request.filter ?? 'for-you';
 
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(350);
       return buildMockDiscoverFeed(request);
     }
@@ -165,7 +165,7 @@ export const profileService = {
   },
 
   async getProfileById(id: string): Promise<Profile> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(200);
       const profile = MOCK_PROFILES.find((p) => p.id === id);
       if (!profile) throw new Error(`Profile ${id} not found`);
@@ -177,5 +177,23 @@ export const profileService = {
     );
 
     return response.data;
+  },
+
+  /** Profiles that sent you a flame and are waiting for you to like back. */
+  async getProfilesWhoLikedYou(): Promise<Profile[]> {
+    if (!usesBackendApi()) {
+      await sleep(200);
+      return MOCK_PROFILES.filter((profile) => profile.likedYou);
+    }
+
+    const { profiles } = await this.getDiscoverFeed({
+      filter: 'for-you',
+      maxDistanceKm: 500,
+      expandDistance: true,
+      ageMin: 18,
+      ageMax: 99,
+    });
+
+    return profiles.filter((profile) => profile.likedYou);
   },
 };

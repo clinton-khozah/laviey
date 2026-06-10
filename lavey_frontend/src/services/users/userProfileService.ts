@@ -1,4 +1,4 @@
-import { env } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { defaultAvatar } from '@/constants/defaultAvatar';
 import { pickMockFeedImage } from '@/constants/mockMedia';
@@ -92,7 +92,7 @@ export interface UpdateUserLocationInput {
 
 export const userProfileService = {
   async getMyProfile(): Promise<UserProfile> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(300);
       const profile = mockProfileFromSession();
       profile.interests = await mockInterestsFromQuiz();
@@ -103,7 +103,7 @@ export const userProfileService = {
   },
 
   async updateMyProfile(input: UpdateUserProfileInput): Promise<UserProfile> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(250);
       const current = mockProfileFromSession();
       current.interests = await mockInterestsFromQuiz();
@@ -137,7 +137,7 @@ export const userProfileService = {
   },
 
   async updateMyLocation(input: UpdateUserLocationInput): Promise<void> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(120);
       return;
     }

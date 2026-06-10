@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse } from '@/types';
@@ -43,7 +43,7 @@ const MOCK_AUTO_REPLY =
   'Thanks for reaching out. A member of our team has received your message and will get back to you at the email on your account, usually within a few hours.';
 
 function usesBackendSupport(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 export const supportService = {

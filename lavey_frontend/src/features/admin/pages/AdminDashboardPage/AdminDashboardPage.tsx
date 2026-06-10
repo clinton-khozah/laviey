@@ -6,7 +6,6 @@ import { OnlineDateCard } from '@/components/rooms/OnlineDateCard/OnlineDateCard
 import { getAdminSession } from '@/features/admin/session/adminSession';
 import { adminAuthService } from '@/services/admin/adminAuthService';
 import type { AdminAccount } from '@/types/domain/adminAuth.types';
-import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
 import type { OnlineDate } from '@/types';
 import { storePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
@@ -713,6 +712,12 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
     loading: adminUsersLoading,
     error: adminUsersError,
   } = useAdminUsers(usersView, usersPage, activeSection === 'users', usersSearch);
+  const { users: contentReviewUsers } = useAdminUsers(
+    'all',
+    1,
+    activeSection === 'content',
+    contentSearch,
+  );
 
   useEffect(() => {
     const fromPath = sectionFromPath(adminPath);
@@ -1553,23 +1558,22 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                   <section>
                     <h5>Posts</h5>
                     <div className="admin-activity-modal__posts-grid">
-                      {(MOCK_PROFILES.find((profile) =>
-                        activityModalUser.name.toLowerCase().includes(profile.name.toLowerCase()),
-                      )?.posts ??
-                        MOCK_PROFILES[0]?.posts ??
-                        []
-                      ).slice(0, 6).map((post) => (
-                        <article key={post.id} className="admin-activity-modal__post-card">
-                          <img src={post.type === 'image' ? post.src : (post.poster ?? post.src)} alt="" />
+                      {activityModalUser.posts.slice(0, 6).map((src, index) => (
+                        <article key={`${activityModalUser.id}-post-${index}`} className="admin-activity-modal__post-card">
+                          <img src={src} alt="" />
                           <button
                             type="button"
                             className="admin-activity-modal__post-menu-trigger"
-                            onClick={() => setActivePostMenuId((prev) => (prev === post.id ? null : post.id))}
+                            onClick={() =>
+                              setActivePostMenuId((prev) =>
+                                prev === `${activityModalUser.id}-post-${index}` ? null : `${activityModalUser.id}-post-${index}`,
+                              )
+                            }
                             aria-label="Post moderation options"
                           >
                             ⋯
                           </button>
-                          {activePostMenuId === post.id && (
+                          {activePostMenuId === `${activityModalUser.id}-post-${index}` && (
                             <div className="admin-activity-modal__post-menu">
                               <button
                                 type="button"
@@ -1749,58 +1753,31 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       const queueStats = { ai: 86, human: 24, reports: 31, appeals: 9, fakeProfiles: 14 };
 
       const reviewQueue = [
-        ...MOCK_PROFILES.flatMap((profile) =>
-          (profile.posts ?? []).slice(0, 1).map((post) => ({
-            id: `post-${profile.id}-${post.id}`,
+        ...contentReviewUsers.flatMap((user) =>
+          user.posts.slice(0, 1).map((thumb, postIndex) => ({
+            id: `post-${user.id}-${postIndex}`,
             type: 'posts' as const,
-            user: profile.name,
-            handle: `@${profile.name.toLowerCase().replace(/\s+/g, '')}`,
-            thumb: post.type === 'image' ? post.src : (post.poster ?? post.src),
-            preview: `${profile.name} shared a new post`,
-            flags: profile.verified ? ['verified member'] : ['unverified profile'],
-            aiScore: profile.vibeScore ?? 72,
+            user: user.name,
+            handle: user.handle,
+            thumb,
+            preview: `${user.name} shared a new post`,
+            flags: user.subscribed ? ['subscribed member'] : ['member'],
+            aiScore: user.quizCompletion ?? 72,
           })),
         ),
-        ...MOCK_PROFILES.slice(0, 4).map((profile) => ({
-          id: `photo-${profile.id}`,
-          type: 'photos' as const,
-          user: profile.name,
-          handle: `@${profile.name.toLowerCase().replace(/\s+/g, '')}`,
-          thumb: profile.avatar ?? APP_IMAGES.logo,
-          preview: 'Profile photo update pending review',
-          flags: profile.verified ? ['face detected', 'verified'] : ['face unclear', 'needs review'],
-          aiScore: profile.vibeScore ?? 68,
-        })),
-        {
-          id: 'bio-1',
-          type: 'bios' as const,
-          user: 'Marcus Reid',
-          handle: '@marcusreid',
-          thumb: createAvatarDataUri('Marcus Reid', '#334155'),
-          preview: 'Bio contains external payment link',
-          flags: ['scam keyword', 'external link'],
-          aiScore: 41,
-        },
-        {
-          id: 'msg-1',
-          type: 'messages' as const,
-          user: 'Taylor N.',
-          handle: '@taylorn',
-          thumb: createAvatarDataUri('Taylor N', '#be123c'),
-          preview: 'Reported chat: aggressive language after match',
-          flags: ['harassment', 'post-match chat'],
-          aiScore: 38,
-        },
-        {
-          id: 'meet-1',
-          type: 'meetings' as const,
-          user: 'Clara Garcia',
-          handle: '@claragarcia',
-          thumb: createAvatarDataUri('Clara Garcia', '#0ea5e9'),
-          preview: 'Video date room flagged for inappropriate behavior',
-          flags: ['room report', 'safety escalation'],
-          aiScore: 29,
-        },
+        ...contentReviewUsers
+          .filter((user) => user.avatarUrl)
+          .slice(0, 8)
+          .map((user) => ({
+            id: `photo-${user.id}`,
+            type: 'photos' as const,
+            user: user.name,
+            handle: user.handle,
+            thumb: user.avatarUrl ?? APP_IMAGES.logo,
+            preview: 'Profile photo update pending review',
+            flags: user.subscribed ? ['subscribed', 'needs review'] : ['needs review'],
+            aiScore: user.quizCompletion ?? 68,
+          })),
       ];
 
       const reportedItems = [

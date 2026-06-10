@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse } from '@/types';
@@ -90,7 +90,7 @@ const MOCK_CATALOG: PayoutCatalog = {
 };
 
 function usesBackendPayouts(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 function mockUserId(): string {

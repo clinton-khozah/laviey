@@ -1,8 +1,7 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 
-/** Real posts API when auth is backend-backed and profile data is not fully mocked */
 function usesBackendContent(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 const UUID_RE =

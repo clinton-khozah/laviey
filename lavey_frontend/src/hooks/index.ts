@@ -4,6 +4,7 @@ export { useDiscoverSwipeHint } from './feed/useDiscoverSwipeHint';
 export { useInView } from './ui/useInView';
 export { useDoubleTap } from './ui/useDoubleTap';
 export { useDiscoverFeed } from './profile/useDiscoverFeed';
+export { useProfilesWhoLikedYou } from './profile/useProfilesWhoLikedYou';
 export { useDiscoverFilters } from './discover/useDiscoverFilters';
 export { useDiscoverSetupGate } from './discover/useDiscoverSetupGate';
 export { useMatchActions } from './match/useMatchActions';

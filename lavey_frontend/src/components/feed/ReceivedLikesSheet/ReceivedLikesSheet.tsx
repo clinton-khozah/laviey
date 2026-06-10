@@ -1,12 +1,11 @@
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
-import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
-import { MOCK_RECEIVED_LIKE_PROFILE_IDS } from '@/services/mocks/likes.mock';
 import type { Profile } from '@/types';
 import './ReceivedLikesSheet.css';
 
 interface ReceivedLikesSheetProps {
   open: boolean;
   isPremium: boolean;
+  likers: Profile[];
   likedProfileIds: Set<string>;
   onClose: () => void;
   onUpgrade: () => void;
@@ -35,6 +34,7 @@ function LockIcon() {
 export function ReceivedLikesSheet({
   open,
   isPremium,
+  likers,
   likedProfileIds,
   onClose,
   onUpgrade,
@@ -42,10 +42,6 @@ export function ReceivedLikesSheet({
   onChat,
   onProfileClick,
 }: ReceivedLikesSheetProps) {
-  const likers = MOCK_RECEIVED_LIKE_PROFILE_IDS.map((id) =>
-    MOCK_PROFILES.find((p) => p.id === id),
-  ).filter((p): p is Profile => Boolean(p));
-
   const count = likers.length;
   const previewAvatars = likers.slice(0, 5);
 

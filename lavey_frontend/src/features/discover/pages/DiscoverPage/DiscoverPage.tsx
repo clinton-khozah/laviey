@@ -8,8 +8,6 @@ import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { DiscoverFeedContainer } from '@/features/discover/containers/DiscoverFeedContainer';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
-import { MOCK_RECEIVED_LIKE_PROFILE_IDS } from '@/services/mocks/likes.mock';
-import { MOCK_CONVERSATIONS } from '@/services/mocks/message.mock';
 import { messageService } from '@/services';
 import {
   useDiscoverFeed,
@@ -18,6 +16,7 @@ import {
   useFlameQuota,
   useMatchActions,
   useLiveUserLocation,
+  useProfilesWhoLikedYou,
   useUserProfile,
 } from '@/hooks';
 import { userProfileService } from '@/services/users/userProfileService';
@@ -56,8 +55,7 @@ export function DiscoverPage() {
   const { location, requestLocation } = useLiveUserLocation();
   const lastSyncedLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const lastSyncAtRef = useRef<number>(0);
-
-  const likeCount = MOCK_RECEIVED_LIKE_PROFILE_IDS.length;
+  const { profiles: receivedLikers, count: likeCount } = useProfilesWhoLikedYou();
   const isPremium = userProfile?.isPremium ?? false;
 
   const modalLiked = profileModal ? likedIds.has(profileModal.id) : false;
@@ -74,8 +72,10 @@ export function DiscoverPage() {
   };
 
   const sendMatchGreeting = (profileId: string, text: string) => {
-    const conversation = MOCK_CONVERSATIONS.find((c) => c.participantProfileId === profileId);
-    if (conversation) void messageService.sendMessage(conversation.id, text);
+    void (async () => {
+      const conversationId = await messageService.findConversationByProfileId(profileId);
+      if (conversationId) await messageService.sendMessage(conversationId, text);
+    })();
   };
 
   const handleMatchGreeting = (text: string) => {
@@ -201,6 +201,7 @@ export function DiscoverPage() {
       <ReceivedLikesSheet
         open={likesOpen}
         isPremium={isPremium}
+        likers={receivedLikers}
         likedProfileIds={likedIds}
         onClose={() => setLikesOpen(false)}
         onUpgrade={() => {
