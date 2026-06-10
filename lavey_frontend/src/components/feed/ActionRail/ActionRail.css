@@ -25,9 +25,16 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
+.action-rail__verified {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  z-index: 2;
+}
+
 .action-rail__liked-you {
   position: absolute;
-  bottom: -2px;
+  top: -2px;
   right: -2px;
   width: 16px;
   height: 16px;

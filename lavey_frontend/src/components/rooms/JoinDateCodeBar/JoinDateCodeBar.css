@@ -10,14 +10,16 @@
 }
 
 .join-code-bar__icon {
+  flex-shrink: 0;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: rgba(124, 58, 237, 0.25);
-  color: #c4b5fd;
+  background: var(--gradient-vibe);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
 }
 
 .join-code-bar__icon svg {
@@ -72,6 +74,10 @@
 [data-theme='light'] .join-code-bar__input {
   background: rgba(255, 255, 255, 0.95);
   border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .join-code-bar__icon {
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
 }
 
 @media (max-width: 360px) {

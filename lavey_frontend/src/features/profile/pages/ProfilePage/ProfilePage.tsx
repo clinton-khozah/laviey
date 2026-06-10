@@ -9,6 +9,7 @@ import { PageScroller } from '@/components/layout/PageScroller';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { LogoLoader } from '@/components/ui/LogoLoader';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { ProfileLikesPanel } from '@/components/profile/ProfileLikesPanel';
 import { ProfileMenuSheet, type ProfileMenuAction } from '@/components/profile/ProfileMenuSheet';
 import { ProfilePostViewer } from '@/components/profile/ProfilePostViewer';
@@ -364,11 +365,12 @@ export function ProfilePage() {
                   ) : null}
                   <span className="profile-page__edit-badge">Edit</span>
                   {verified && (
-                    <span className="profile-page__avatar-verified" title="Verified identity">
-                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                      </svg>
-                    </span>
+                    <VerifiedBadge
+                      size="lg"
+                      ring
+                      className="profile-page__avatar-verified"
+                      title="Verified identity"
+                    />
                   )}
                 </button>
                 {!verified && (

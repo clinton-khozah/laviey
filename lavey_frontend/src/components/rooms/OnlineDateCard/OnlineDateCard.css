@@ -188,19 +188,31 @@
   color: #c4b5fd;
 }
 
-.online-date-card__code-row {
+.online-date-card__code-row,
+.online-date-card__link-row {
   display: flex;
   align-items: stretch;
   gap: 8px;
   margin-bottom: 12px;
 }
 
-.online-date-card__code {
+.online-date-card__code,
+.online-date-card__link {
   flex: 1;
+  min-width: 0;
   padding: 8px 10px;
   border-radius: 12px;
   background: var(--chip-bg);
   border: 1px dashed var(--border-subtle);
+}
+
+.online-date-card__link-value {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-all;
+  color: var(--text-primary);
 }
 
 .online-date-card__code-label {

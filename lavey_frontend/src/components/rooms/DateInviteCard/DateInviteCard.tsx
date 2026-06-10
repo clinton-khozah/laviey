@@ -26,9 +26,15 @@ export function DateInviteCard({ invite, isBusy, onAccept, onDecline }: DateInvi
         <h3 className="date-invite-card__title">{invite.title}</h3>
         <p className="date-invite-card__topic">{invite.topic}</p>
         <p className="date-invite-card__when">{invite.scheduledLabel}</p>
-        <p className="date-invite-card__code">
-          Code after accept: <span>{invite.accessCode}</span>
-        </p>
+        {invite.accessCode ? (
+          <p className="date-invite-card__code">
+            Your room code: <span>{invite.accessCode}</span>
+          </p>
+        ) : (
+          <p className="date-invite-card__code date-invite-card__code--locked">
+            Room code unlocks after you accept
+          </p>
+        )}
         <div className="date-invite-card__actions">
           <button
             type="button"

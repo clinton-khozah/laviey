@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import type { ProfileOverlayProps } from './ProfileOverlay.types';
 import './ProfileOverlay.css';
 
@@ -16,15 +17,11 @@ export function ProfileOverlay({ profile }: ProfileOverlayProps) {
         <div className="profile-overlay__header">
           <h2 className="profile-overlay__name">
             {profile.name}
+            {profile.verified && (
+              <VerifiedBadge size="sm" className="profile-overlay__verified" />
+            )}
             <span className="profile-overlay__age">, {profile.age}</span>
           </h2>
-          {profile.verified && (
-            <span className="profile-overlay__verified" title="Verified">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
-            </span>
-          )}
         </div>
 
         {bio ? <p className="profile-overlay__bio">{bio}</p> : null}

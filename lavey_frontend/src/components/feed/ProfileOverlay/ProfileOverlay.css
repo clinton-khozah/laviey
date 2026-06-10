@@ -14,10 +14,12 @@
 .profile-overlay__header {
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 
 .profile-overlay__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -36,20 +38,8 @@
 }
 
 .profile-overlay__verified {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--gradient-vibe);
+  display: inline-flex;
   flex-shrink: 0;
-}
-
-.profile-overlay__verified svg {
-  width: 11px;
-  height: 11px;
-  color: white;
 }
 
 .profile-overlay__meta {

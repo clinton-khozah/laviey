@@ -78,6 +78,11 @@
   color: var(--text-secondary);
 }
 
+.date-invite-card__code--locked {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .date-invite-card__actions {
   display: flex;
   gap: 8px;

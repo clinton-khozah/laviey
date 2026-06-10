@@ -1,0 +1,216 @@
+.meeting-chat {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(76px + var(--safe-bottom));
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  max-height: min(58vh, 420px);
+  border-radius: 20px 20px 0 0;
+  background: rgba(12, 12, 18, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.meeting-chat__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.meeting-chat__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #f8f8fc;
+}
+
+.meeting-chat__subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: rgba(248, 248, 252, 0.62);
+}
+
+.meeting-chat__close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  color: rgba(248, 248, 252, 0.72);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.meeting-chat__messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: none;
+}
+
+.meeting-chat__messages::-webkit-scrollbar {
+  display: none;
+}
+
+.meeting-chat__empty {
+  text-align: center;
+  padding: 24px 12px;
+  font-size: 13px;
+  color: rgba(248, 248, 252, 0.55);
+}
+
+.meeting-chat__message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 85%;
+}
+
+.meeting-chat__message--mine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.meeting-chat__sender {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(248, 248, 252, 0.55);
+  padding-left: 4px;
+}
+
+.meeting-chat__bubble {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.meeting-chat__message--mine .meeting-chat__bubble {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.85) 0%, rgba(236, 72, 153, 0.75) 100%);
+  border-color: transparent;
+}
+
+.meeting-chat__bubble p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #f8f8fc;
+  word-break: break-word;
+}
+
+.meeting-chat__time {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: rgba(248, 248, 252, 0.5);
+}
+
+.meeting-chat__message--mine .meeting-chat__time {
+  text-align: right;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.meeting-chat__reactions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.meeting-chat__reaction {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 20px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.meeting-chat__reaction:active {
+  transform: scale(1.08);
+}
+
+.meeting-chat__composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.meeting-chat__input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  color: #f8f8fc;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  outline: none;
+}
+
+.meeting-chat__input::placeholder {
+  color: rgba(248, 248, 252, 0.45);
+}
+
+.meeting-chat__input:focus {
+  border-color: rgba(124, 58, 237, 0.55);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.meeting-chat__send {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  color: white;
+  background: var(--gradient-vibe);
+}
+
+.meeting-chat__send:disabled {
+  opacity: 0.45;
+}
+
+.video-meeting__control--chat-open {
+  background: rgba(124, 58, 237, 0.35);
+  border-color: rgba(124, 58, 237, 0.55);
+  color: #e9d5ff;
+}
+
+.video-meeting__control-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  color: white;
+  background: #ef4444;
+  border: 2px solid #050508;
+}
+
+.video-meeting__control-wrap {
+  position: relative;
+}

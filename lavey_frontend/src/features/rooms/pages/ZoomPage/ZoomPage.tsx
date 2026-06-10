@@ -5,18 +5,21 @@ import { CreateDateSheet } from '@/components/rooms/CreateDateSheet';
 import { DateInviteCard } from '@/components/rooms/DateInviteCard';
 import { JoinDateCodeBar } from '@/components/rooms/JoinDateCodeBar';
 import { JoinDateModal } from '@/components/rooms/JoinDateModal';
+import { MeetupShareSheet } from '@/components/rooms/MeetupShareSheet';
 import { OnlineDateCard } from '@/components/rooms/OnlineDateCard';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { ActiveMeetingContainer } from '@/features/rooms/containers/ActiveMeetingContainer';
 import { useOnlineDates, useUserProfile } from '@/hooks';
 import type { ActiveMeetingSession, OnlineDate } from '@/types';
+import { consumePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
 import './ZoomPage.css';
 
 export function ZoomPage() {
   const {
     dates,
     invites,
+    acceptedDateIds,
     isLoading,
     error,
     actionError,
@@ -39,6 +42,7 @@ export function ZoomPage() {
   const [isJoiningCode, setIsJoiningCode] = useState(false);
   const [inviteBusyId, setInviteBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [shareTarget, setShareTarget] = useState<OnlineDate | null>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -47,7 +51,9 @@ export function ZoomPage() {
 
   const liveDates = dates.filter((d) => d.status === 'live');
   const upcomingDates = dates.filter((d) => d.status !== 'live');
-  const myDates = dates.filter((d) => d.isHostedByYou);
+  const myDates = dates.filter(
+    (d) => d.isHostedByYou || acceptedDateIds.has(d.id),
+  );
 
   const openJoinModal = (date: OnlineDate, code = '') => {
     clearActionError();
@@ -102,32 +108,37 @@ export function ZoomPage() {
   };
 
   useEffect(() => {
-    const pendingCode = window.sessionStorage.getItem('lavey:adminJoinCode');
+    const pendingCode = consumePendingMeetupCode();
     if (!pendingCode) return;
-    window.sessionStorage.removeItem('lavey:adminJoinCode');
     void handleCodeBarJoin(pendingCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreate = async (input: Parameters<typeof createDate>[0]) => {
     setIsCreating(true);
+    clearActionError();
     try {
       const created = await createDate(input);
-      showToast(
-        input.mode === 'invite' || input.visibility === 'private'
-          ? `Invite sent · code ${created.accessCode}`
-          : `Posted · code ${created.accessCode}`,
-      );
+      setCreateOpen(false);
+      setShareTarget(created);
+    } catch {
+      /* actionError set in hook */
     } finally {
       setIsCreating(false);
     }
   };
 
-  const handleAcceptInvite = async (inviteId: string, code: string, title: string) => {
+  const handleAcceptInvite = async (inviteId: string, title: string) => {
     setInviteBusyId(inviteId);
     try {
-      await respondToInvite(inviteId, 'accept');
-      showToast(`Accepted — use code ${code} for ${title}`);
+      const result = await respondToInvite(inviteId, 'accept');
+      const code = result.invite.accessCode;
+      if (result.date && code) {
+        showToast(`Accepted ${title} — joining with code ${code}`);
+        openJoinModal(result.date, code);
+      } else {
+        showToast(`Accepted ${title}`);
+      }
     } finally {
       setInviteBusyId(null);
     }
@@ -148,11 +159,16 @@ export function ZoomPage() {
     showToast('Code copied');
   };
 
+  const copyLink = (link: string) => {
+    void navigator.clipboard?.writeText(link);
+    showToast('Link copied');
+  };
+
   return (
     <div className="online-dates-page">
       <ScreenHeader
         title="Online Dates"
-        subtitle="Video meetups · code to join · invite your match"
+        subtitle="Video meetups · share a link or code to join"
         action={
           <button
             type="button"
@@ -193,9 +209,7 @@ export function ZoomPage() {
                       key={invite.id}
                       invite={invite}
                       isBusy={inviteBusyId === invite.id}
-                      onAccept={() =>
-                        void handleAcceptInvite(invite.id, invite.accessCode, invite.title)
-                      }
+                      onAccept={() => void handleAcceptInvite(invite.id, invite.title)}
                       onDecline={() => void handleDeclineInvite(invite.id)}
                     />
                   ))}
@@ -213,6 +227,7 @@ export function ZoomPage() {
                       date={date}
                       isJoining={joiningId === date.id}
                       onCopyCode={copyCode}
+                      onCopyLink={copyLink}
                       onJoin={() => openJoinModal(date, date.accessCode)}
                     />
                   ))}
@@ -233,6 +248,7 @@ export function ZoomPage() {
                       date={date}
                       isJoining={joiningId === date.id}
                       onCopyCode={copyCode}
+                      onCopyLink={copyLink}
                       onJoin={() => openJoinModal(date)}
                     />
                   ))}
@@ -250,6 +266,7 @@ export function ZoomPage() {
                       date={date}
                       isJoining={joiningId === date.id}
                       onCopyCode={copyCode}
+                      onCopyLink={copyLink}
                       onJoin={() => openJoinModal(date)}
                     />
                   ))}
@@ -266,10 +283,22 @@ export function ZoomPage() {
         </div>
       )}
 
+      <MeetupShareSheet
+        open={Boolean(shareTarget)}
+        date={shareTarget}
+        onClose={() => setShareTarget(null)}
+        onCopyCode={copyCode}
+        onCopyLink={copyLink}
+      />
+
       <CreateDateSheet
         open={createOpen}
         isCreating={isCreating}
-        onClose={() => setCreateOpen(false)}
+        error={createOpen ? actionError : null}
+        onClose={() => {
+          setCreateOpen(false);
+          clearActionError();
+        }}
         onCreate={handleCreate}
       />
 

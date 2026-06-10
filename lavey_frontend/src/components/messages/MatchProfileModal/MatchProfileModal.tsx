@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppOverlay } from '@/components/ui/AppOverlay';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { getProfilePhotoUrls } from '@/utils/profilePhotos';
 import type { MatchProfileModalProps } from './MatchProfileModal.types';
 import './MatchProfileModal.css';
@@ -174,11 +175,7 @@ export function MatchProfileModal({
                       <h2 id="match-profile-title" className="match-profile-modal__name">
                         {profile.name}, {profile.age}
                         {profile.verified && (
-                          <span className="match-profile-modal__verified" title="Verified">
-                            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                            </svg>
-                          </span>
+                          <VerifiedBadge size="md" className="match-profile-modal__verified" />
                         )}
                       </h2>
                       <p className="match-profile-modal__distance">{profile.distance}</p>

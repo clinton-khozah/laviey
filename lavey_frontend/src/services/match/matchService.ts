@@ -1,8 +1,8 @@
-import { env } from '@/config/env';
+import { env, usesBackendAuth } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
-import type { ApiResponse, SendFlameResponse } from '@/types';
+import type { ApiResponse, MatchListItem, SendFlameResponse } from '@/types';
 import { sleep } from '@/utils/sleep';
 
 /**
@@ -25,6 +25,20 @@ export const matchService = {
     const response = await httpClient.post<ApiResponse<SendFlameResponse>>(
       API_ENDPOINTS.matches.flame,
       { body: { profileId } },
+    );
+
+    return response.data;
+  },
+
+  async listMatches(limit = 50): Promise<MatchListItem[]> {
+    if (!usesBackendAuth()) {
+      await sleep(200);
+      return [];
+    }
+
+    const response = await httpClient.get<ApiResponse<MatchListItem[]>>(
+      API_ENDPOINTS.matches.list,
+      { params: { limit } },
     );
 
     return response.data;

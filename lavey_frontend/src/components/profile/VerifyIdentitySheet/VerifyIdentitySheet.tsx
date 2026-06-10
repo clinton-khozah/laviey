@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import { SheetSaveSuccess } from '@/components/profile/SheetSaveSuccess';
 import { verificationService } from '@/services/verification/verificationService';
@@ -111,9 +112,7 @@ export function VerifyIdentitySheet({ open, verified, onClose, onVerify }: Verif
         ) : verified ? (
           <>
             <div className="verify-identity-sheet__icon verify-identity-sheet__icon--done">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
+              <VerifiedBadge size="xl" />
             </div>
             <h3 className="verify-identity-sheet__heading">You&apos;re verified</h3>
             <p className="verify-identity-sheet__text">
@@ -239,9 +238,7 @@ export function VerifyIdentitySheet({ open, verified, onClose, onVerify }: Verif
         ) : step === 'review' ? (
           <>
             <div className="verify-identity-sheet__icon verify-identity-sheet__icon--done">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-              </svg>
+              <VerifiedBadge size="xl" />
             </div>
             <h3 className="verify-identity-sheet__heading">Faces matched</h3>
             <p className="verify-identity-sheet__text">

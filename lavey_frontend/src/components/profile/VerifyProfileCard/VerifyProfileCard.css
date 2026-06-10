@@ -25,14 +25,9 @@
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--bg-deep);
-  background: var(--accent-mint);
+  color: #ffffff;
+  background: #1877f2;
   flex-shrink: 0;
-}
-
-.verify-profile-card__badge svg {
-  width: 12px;
-  height: 12px;
 }
 
 .verify-profile-card__text {

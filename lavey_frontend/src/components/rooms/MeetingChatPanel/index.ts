@@ -1,0 +1,1 @@
+export { MeetingChatPanel } from './MeetingChatPanel';

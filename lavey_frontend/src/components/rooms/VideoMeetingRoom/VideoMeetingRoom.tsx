@@ -1,14 +1,28 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppOverlay } from '@/components/ui/AppOverlay';
+import { MeetingChatPanel } from '@/components/rooms/MeetingChatPanel';
+import { MeetingGiftRecipientSheet } from '@/components/rooms/MeetingGiftRecipientSheet';
+import { MeetingReactionOverlay } from '@/components/rooms/MeetingReactionOverlay';
+import { RemoteParticipantVideo } from '@/components/rooms/RemoteParticipantVideo';
 import { MeetingCaptions } from '@/components/rooms/MeetingCaptions';
+import { MeetingGiftBursts } from '@/components/rooms/MeetingGiftPanel/MeetingGiftBursts';
 import { GiftIcon, MeetingGiftPanel } from '@/components/rooms/MeetingGiftPanel';
+import { MEETING_REACTION_LABEL } from '@/constants/meeting/meetingReactions';
 import { meetingString } from '@/constants/meeting/meetingStrings';
-import { useLocalMedia, useMeetingCaptions, useMeetingGift, useMeetingLanguage } from '@/hooks';
+import { useMeetingCaptions, useMeetingChat, useMeetingGift, useMeetingLanguage, useMeetingReactions } from '@/hooks';
 import { isDoubleDateMeetup } from '@/utils/meeting/isDoubleDateMeetup';
+import type { MeetingParticipant } from '@/types';
 import type { VideoMeetingRoomProps } from './VideoMeetingRoom.types';
 import './VideoMeetingRoom.css';
 
-export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetingRoomProps) {
+export function VideoMeetingRoom({
+  session,
+  participants,
+  localMedia,
+  connectionStatus = 'connecting',
+  localUserId,
+  onLeave,
+}: VideoMeetingRoomProps) {
   const { date, localDisplayName } = session;
   const isDouble = isDoubleDateMeetup(date);
   const { language, setLanguage } = useMeetingLanguage();
@@ -21,18 +35,31 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
     toggleVideo,
     toggleAudio,
     stopMedia,
-  } = useLocalMedia(true);
+  } = localMedia;
 
   const { line, displayText, captionsEnabled, toggleCaptions } = useMeetingCaptions(true, language);
-  const [giftOpen, setGiftOpen] = useState(false);
+  const { bursts: reactionBursts, sendReaction } = useMeetingReactions({
+    meetupId: date.id,
+    localUserId,
+    localDisplayName,
+  });
 
-  const giftRecipient = useMemo(() => {
-    if (date.isHostedByYou) {
-      if (isDouble && participants.length > 1) return participants[1];
-      return null;
-    }
-    return participants[0] ?? null;
-  }, [date.isHostedByYou, isDouble, participants]);
+  const { messages: chatMessages, sendMessage, setOnIncomingMessage } = useMeetingChat({
+    meetupId: date.id,
+    localUserId,
+    localDisplayName,
+  });
+
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftRecipientPickerOpen, setGiftRecipientPickerOpen] = useState(false);
+  const [giftRecipient, setGiftRecipient] = useState<MeetingParticipant | null>(null);
+
+  const giftableParticipants = useMemo(
+    () => participants.filter((participant) => participant.profileId !== localUserId),
+    [localUserId, participants],
+  );
 
   const {
     amount: giftAmount,
@@ -41,11 +68,7 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
     bursts: giftBursts,
     sessionTotal: giftSessionTotal,
     isSending: giftSending,
-  } = useMeetingGift({
-    recipientId: giftRecipient?.profileId ?? '',
-    recipientName: giftRecipient?.name ?? '',
-    meetupId: date.id,
-  });
+  } = useMeetingGift({ meetupId: date.id });
 
   const t = useCallback(
     (key: Parameters<typeof meetingString>[0], vars?: Record<string, string>) =>
@@ -69,6 +92,39 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
   const handleLeave = () => {
     stopMedia();
     onLeave();
+  };
+
+  const openGiftForRecipient = (participant: MeetingParticipant) => {
+    setGiftRecipient(participant);
+    setGiftRecipientPickerOpen(false);
+    setGiftOpen(true);
+  };
+
+  const handleGiftButtonClick = () => {
+    if (giftableParticipants.length === 0) return;
+    if (giftableParticipants.length === 1) {
+      openGiftForRecipient(giftableParticipants[0]);
+      return;
+    }
+    setGiftRecipientPickerOpen(true);
+  };
+
+  const closeGiftPanel = () => {
+    setGiftOpen(false);
+    setGiftRecipient(null);
+  };
+
+  useEffect(() => {
+    setOnIncomingMessage((message) => {
+      if (message.isLocal || chatOpen) return;
+      setChatUnread((count) => count + 1);
+    });
+    return () => setOnIncomingMessage(null);
+  }, [chatOpen, setOnIncomingMessage]);
+
+  const openChat = () => {
+    setChatOpen(true);
+    setChatUnread(0);
   };
 
   return (
@@ -100,12 +156,17 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
               <h1 className="video-meeting__title">{date.title}</h1>
               <span className="video-meeting__live">{t('live')}</span>
             </div>
-            <p className="video-meeting__subtitle">{subtitle}</p>
+            <p className="video-meeting__subtitle">
+              {subtitle}
+              {connectionStatus === 'connecting' && participants.length === 0 && ' · Waiting for others…'}
+            </p>
           </div>
           <span className="video-meeting__header-spacer" aria-hidden />
         </header>
 
         <div className="video-meeting__stage">
+          <MeetingReactionOverlay bursts={reactionBursts} />
+
           {participants.length === 1 && !isDouble && (
             <div className="video-meeting__love-badge" aria-hidden>
               <span className="video-meeting__love-icon">
@@ -116,33 +177,32 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
               <span className="video-meeting__love-label">Lovely date</span>
             </div>
           )}
+
           <div className={`video-meeting__grid ${gridClass}`}>
+            {participants.length === 0 && connectionStatus !== 'unsupported' && (
+              <article className="video-meeting__tile video-meeting__tile--waiting">
+                <div className="video-meeting__tile-placeholder">
+                  <span className="video-meeting__spinner" aria-hidden />
+                  <p>Waiting for someone to join…</p>
+                </div>
+              </article>
+            )}
             {participants.map((p) => (
               <article key={p.id} className="video-meeting__tile">
-                {p.isVideoOff ? (
+                {p.stream && !p.isVideoOff ? (
+                  <RemoteParticipantVideo stream={p.stream} className="video-meeting__tile-video" />
+                ) : (
                   <div className="video-meeting__tile-placeholder">
                     <img src={p.avatarUrl} alt="" className="video-meeting__tile-avatar" />
-                  </div>
-                ) : (
-                  <div
-                    className="video-meeting__tile-cover"
-                    style={{ backgroundImage: `url(${p.avatarUrl})` }}
-                  >
-                    {participants.length === 1 && !isDouble && (
-                      <span className="video-meeting__tile-heart" aria-hidden>
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                      </span>
+                    {p.isConnecting && (
+                      <span className="video-meeting__tile-connecting">Connecting…</span>
                     )}
                   </div>
                 )}
                 <div className="video-meeting__tile-footer">
                   <span className="video-meeting__tile-name">
                     {p.name}
-                    {p.isHost && (
-                      <span className="video-meeting__host-tag">{t('host')}</span>
-                    )}
+                    {p.isHost && <span className="video-meeting__host-tag">{t('host')}</span>}
                   </span>
                   <span className="video-meeting__tile-status" aria-hidden>
                     {p.isMuted ? '🔇' : ''}
@@ -183,19 +243,14 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
           <span className="video-meeting__self-label">{t('you')}</span>
         </div>
 
-        {giftRecipient && (
-          <MeetingGiftPanel
-            open={giftOpen}
-            recipientName={giftRecipient.name}
-            amount={giftAmount}
-            sessionTotal={giftSessionTotal}
-            isSending={giftSending}
-            bursts={giftBursts}
-            onClose={() => setGiftOpen(false)}
-            onAmountChange={setGiftAmount}
-            onSendGift={() => void sendGift()}
-          />
-        )}
+        <MeetingChatPanel
+          open={chatOpen}
+          messages={chatMessages}
+          localUserId={localUserId}
+          onClose={() => setChatOpen(false)}
+          onSendMessage={sendMessage}
+          onSendReaction={sendReaction}
+        />
 
         <footer className="video-meeting__controls">
           <button
@@ -224,19 +279,66 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
               <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </button>
-          {giftRecipient && (
+
+          <div className="video-meeting__control-wrap">
+            <button
+              type="button"
+              className={`video-meeting__control ${chatOpen ? 'video-meeting__control--chat-open' : ''}`}
+              onClick={() => (chatOpen ? setChatOpen(false) : openChat())}
+              aria-label={chatOpen ? 'Close chat' : 'Open chat'}
+              aria-pressed={chatOpen}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+              </svg>
+            </button>
+            {!chatOpen && chatUnread > 0 && (
+              <span className="video-meeting__control-badge" aria-label={`${chatUnread} unread messages`}>
+                {chatUnread > 9 ? '9+' : chatUnread}
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="video-meeting__control video-meeting__control--reaction"
+            onClick={() => sendReaction('like')}
+            aria-label={MEETING_REACTION_LABEL.like}
+          >
+            ❤️
+          </button>
+          <button
+            type="button"
+            className="video-meeting__control video-meeting__control--reaction"
+            onClick={() => sendReaction('live')}
+            aria-label={MEETING_REACTION_LABEL.live}
+          >
+            🔥
+          </button>
+          <button
+            type="button"
+            className="video-meeting__control video-meeting__control--reaction"
+            onClick={() => sendReaction('love')}
+            aria-label={MEETING_REACTION_LABEL.love}
+          >
+            💕
+          </button>
+
+          {giftableParticipants.length > 0 && (
             <button
               type="button"
               className={`video-meeting__control video-meeting__control--gift ${giftOpen ? 'video-meeting__control--gift-open' : ''}`}
-              onClick={() => {
-                if (giftOpen) void sendGift();
-                else setGiftOpen(true);
-              }}
-              aria-label={giftOpen ? `Send $${giftAmount} gift` : 'Open gift panel'}
+              onClick={handleGiftButtonClick}
+              aria-label={
+                giftOpen && giftRecipient
+                  ? `Send $${giftAmount} gift to ${giftRecipient.name}`
+                  : 'Send a gift'
+              }
             >
               <GiftIcon />
             </button>
           )}
+
           <button
             type="button"
             className="video-meeting__control video-meeting__control--leave"
@@ -245,6 +347,32 @@ export function VideoMeetingRoom({ session, participants, onLeave }: VideoMeetin
             {t('leave')}
           </button>
         </footer>
+      </div>
+
+      <MeetingGiftBursts bursts={giftBursts} />
+
+      <div className="meeting-gift-layer">
+        <MeetingGiftRecipientSheet
+          open={giftRecipientPickerOpen}
+          participants={giftableParticipants}
+          onClose={() => setGiftRecipientPickerOpen(false)}
+          onSelect={openGiftForRecipient}
+        />
+
+        {giftRecipient && (
+          <MeetingGiftPanel
+            open={giftOpen}
+            recipientName={giftRecipient.name}
+            amount={giftAmount}
+            sessionTotal={giftSessionTotal}
+            isSending={giftSending}
+            onClose={closeGiftPanel}
+            onAmountChange={setGiftAmount}
+            onSendGift={() =>
+              void sendGift({ id: giftRecipient.profileId, name: giftRecipient.name })
+            }
+          />
+        )}
       </div>
     </AppOverlay>
   );

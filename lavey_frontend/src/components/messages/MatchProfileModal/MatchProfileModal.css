@@ -140,18 +140,7 @@
 
 .match-profile-modal__verified {
   display: inline-flex;
-  width: 22px;
-  height: 22px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--accent-mint);
-  color: var(--bg-deep);
-}
-
-.match-profile-modal__verified svg {
-  width: 14px;
-  height: 14px;
+  flex-shrink: 0;
 }
 
 .match-profile-modal__distance {

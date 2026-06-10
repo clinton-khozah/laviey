@@ -20,6 +20,7 @@ export type {
   LikePostResponse,
   PostLiker,
   ReceivedPostLike,
+  MatchListItem,
   MatchToastProfile,
 } from './domain/match.types';
 export type { FlameQuota } from './domain/subscription.types';
@@ -51,6 +52,7 @@ export type {
 } from './domain/room.types';
 export type {
   MeetingParticipant,
+  MeetingChatMessage,
   MeetingJoinResult,
   ActiveMeetingSession,
 } from './domain/meeting.types';

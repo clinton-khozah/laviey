@@ -25,9 +25,9 @@
 }
 
 .verify-identity-sheet__icon--done {
-  background: var(--accent-mint);
-  border-color: transparent;
-  color: var(--bg-deep);
+  background: rgba(24, 119, 242, 0.1);
+  border-color: rgba(24, 119, 242, 0.28);
+  color: #1877f2;
 }
 
 .verify-identity-sheet__status {

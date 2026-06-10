@@ -1,5 +1,6 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { z } from 'zod';
+import type { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 import {
   createOnlineDate,
   joinOnlineDate,
@@ -23,6 +24,7 @@ const createDateBodySchema = z.object({
   topic: z.string().min(1).max(240),
   visibility: z.enum(['public', 'private']),
   mode: z.enum(['post', 'invite']),
+  inviteToProfileId: z.string().uuid().optional(),
   inviteToName: z.string().max(80).optional(),
   startsInMinutes: z.number().int().min(0).max(10080),
 });
@@ -32,39 +34,46 @@ const respondInviteBodySchema = z.object({
 });
 
 export const roomsController = {
-  listVibeCheck(_req: Request, res: Response): void {
-    res.json(successResponse(listOnlineDates()));
+  async listVibeCheck(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const dates = await listOnlineDates(req.authUser!, req.accessToken!);
+    res.json(successResponse(dates));
   },
 
-  joinVibeCheck(req: Request, res: Response): void {
+  async joinVibeCheck(req: AuthenticatedRequest, res: Response): Promise<void> {
     const body = joinBodySchema.parse(req.body);
     const dateId = String(req.params.id);
-    const result = joinOnlineDate(dateId, body.accessCode);
+    const result = await joinOnlineDate(req.authUser!, req.accessToken!, dateId, body.accessCode);
     res.json(successResponse(result));
   },
 };
 
 export const datesController = {
-  listInvites(_req: Request, res: Response): void {
-    res.json(successResponse(listDateInvites()));
+  async listInvites(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const invites = await listDateInvites(req.authUser!, req.accessToken!);
+    res.json(successResponse(invites));
   },
 
-  joinByCode(req: Request, res: Response): void {
+  async joinByCode(req: AuthenticatedRequest, res: Response): Promise<void> {
     const body = joinByCodeBodySchema.parse(req.body);
-    const result = joinOnlineDateByCode(body.accessCode);
+    const result = await joinOnlineDateByCode(req.authUser!, req.accessToken!, body.accessCode);
     res.json(successResponse(result));
   },
 
-  createDate(req: Request, res: Response): void {
+  async createDate(req: AuthenticatedRequest, res: Response): Promise<void> {
     const body = createDateBodySchema.parse(req.body);
-    const created = createOnlineDate(body);
+    const created = await createOnlineDate(req.authUser!, req.accessToken!, body);
     res.status(201).json(successResponse(created, 'Meetup created'));
   },
 
-  respondToInvite(req: Request, res: Response): void {
+  async respondToInvite(req: AuthenticatedRequest, res: Response): Promise<void> {
     const body = respondInviteBodySchema.parse(req.body);
     const inviteId = String(req.params.id);
-    const invite = respondToDateInvite(inviteId, body.action);
-    res.json(successResponse(invite));
+    const result = await respondToDateInvite(
+      req.authUser!,
+      req.accessToken!,
+      inviteId,
+      body.action,
+    );
+    res.json(successResponse(result));
   },
 };

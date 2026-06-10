@@ -1,3 +1,4 @@
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import './VerifyProfileCard.css';
 
 interface VerifyProfileCardProps {
@@ -14,9 +15,7 @@ export function VerifyProfileCard({ verified, onVerify }: VerifyProfileCardProps
         </h3>
         {verified && (
           <span className="verify-profile-card__badge" aria-label="Verified">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-            </svg>
+            <VerifiedBadge size="sm" />
             Verified
           </span>
         )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 
 interface UseLocalMediaResult {
   videoRef: RefObject<HTMLVideoElement | null>;
+  localStream: MediaStream | null;
   error: string | null;
   isLoading: boolean;
   isVideoEnabled: boolean;
@@ -14,6 +15,7 @@ interface UseLocalMediaResult {
 export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(enabled);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -22,6 +24,7 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
   const stopMedia = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    setLocalStream(null);
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -58,6 +61,7 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
         }
 
         streamRef.current = stream;
+        setLocalStream(stream);
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
@@ -114,6 +118,7 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
 
   return {
     videoRef,
+    localStream,
     error,
     isLoading,
     isVideoEnabled,

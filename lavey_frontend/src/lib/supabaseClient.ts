@@ -6,9 +6,13 @@ let client: SupabaseClient | null = null;
 
 export function getSupabaseRealtimeClient(): SupabaseClient | null {
   if (!env.supabaseUrl || !env.supabasePublishableKey) return null;
-  if (client) return client;
 
   const token = localStorage.getItem(STORAGE_KEYS.authToken) ?? '';
+
+  if (client) {
+    client.realtime.setAuth(token);
+    return client;
+  }
 
   client = createClient(env.supabaseUrl, env.supabasePublishableKey, {
     global: {

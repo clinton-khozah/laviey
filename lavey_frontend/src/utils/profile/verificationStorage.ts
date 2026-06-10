@@ -31,4 +31,7 @@ export function setProfileVerified(userId: string, verified: boolean): void {
   if (verified) map[userId] = true;
   else delete map[userId];
   writeMap(map);
+  window.dispatchEvent(
+    new CustomEvent('lavey:verification-changed', { detail: { userId, verified } }),
+  );
 }

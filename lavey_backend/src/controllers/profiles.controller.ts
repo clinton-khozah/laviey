@@ -35,7 +35,11 @@ export const profilesController = {
   },
 
   async getProfileById(req: AuthenticatedRequest, res: Response): Promise<void> {
-    const profile = await getDiscoverProfileById(String(req.params.id), req.accessToken!);
+    const profile = await getDiscoverProfileById(
+      req.authUser!,
+      String(req.params.id),
+      req.accessToken!,
+    );
     res.json(successResponse(profile));
   },
 };

@@ -21,11 +21,12 @@ export interface DateInviteDto {
   id: string;
   dateId: string;
   fromName: string;
+  fromProfileId?: string;
   fromAvatar: string;
   title: string;
   topic: string;
   scheduledLabel: string;
-  accessCode: string;
+  accessCode?: string;
   coverImage: string;
   status: 'pending' | 'accepted' | 'declined';
 }
@@ -80,20 +81,6 @@ export const MOCK_ONLINE_DATES: OnlineDateDto[] = [
     tags: ['Coffee', 'Chill'],
   },
   {
-    id: 'r5',
-    title: 'Double Date Night',
-    topic: 'Two couples · low-pressure intro',
-    hostName: 'Maya',
-    hostAvatar: pickMockAvatarPath(0),
-    status: 'live',
-    visibility: 'private',
-    accessCode: 'DOUBLE-2026',
-    participantCount: 3,
-    maxParticipants: 4,
-    coverImage: pickMockFeedImagePath(2),
-    tags: ['Double', 'Chill'],
-  },
-  {
     id: 'r4',
     title: 'Climbing Gym Crew',
     topic: 'Share your send of the week',
@@ -115,6 +102,7 @@ export const MOCK_DATE_INVITES: DateInviteDto[] = [
     id: 'inv1',
     dateId: 'priv1',
     fromName: 'Jordan',
+    fromProfileId: '2',
     fromAvatar: pickMockAvatarPath(1),
     title: 'Quick vibe check',
     topic: '15 min · just us two',
@@ -127,6 +115,7 @@ export const MOCK_DATE_INVITES: DateInviteDto[] = [
     id: 'inv2',
     dateId: 'priv2',
     fromName: 'Sofia',
+    fromProfileId: '3',
     fromAvatar: pickMockAvatarPath(2),
     title: 'Bookshop date',
     topic: 'Virtual coffee + chapter swap',

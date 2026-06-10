@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { getLikeButtonLabel } from '@/utils/likeButtonLabel';
 import type { ActionRailProps } from './ActionRail.types';
 import './ActionRail.css';
@@ -22,6 +23,14 @@ export function ActionRail({
         aria-label={`View ${profile.name}'s profile`}
       >
         <img src={profile.avatar} alt="" className="action-rail__avatar" />
+        {profile.verified && (
+          <VerifiedBadge
+            size="sm"
+            ring
+            className="action-rail__verified"
+            title="Verified"
+          />
+        )}
         {profile.likedYou && !liked && (
           <span className="action-rail__liked-you" title="Liked you">
             🔥

@@ -10,6 +10,11 @@ import {
   parseErrorPagePath,
   parseErrorPageSearch,
 } from '@/utils/navigation/errorNavigation';
+import {
+  isMeetupJoinPath,
+  parseMeetupJoinCode,
+  storePendingMeetupCode,
+} from '@/utils/meeting/meetupJoinLink';
 import { applyThemeToDocument, loadTheme } from '@/utils/theme/themeStorage';
 import { useEffect, useState } from 'react';
 
@@ -40,6 +45,13 @@ function App() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!isMeetupJoinPath(path)) return;
+    const code = parseMeetupJoinCode(window.location.search);
+    if (code) storePendingMeetupCode(code);
+    navigateTo('/');
+  }, [path]);
 
   useEffect(() => {
     if (!isAdminRoute) {

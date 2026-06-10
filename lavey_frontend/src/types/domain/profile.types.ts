@@ -29,6 +29,12 @@ export interface Profile {
   verified: boolean;
   vibeScore: number;
   interests: string[];
+  /** Onboarding interest keys — used for vibe match scoring */
+  interestKeys?: string[];
+  /** Onboarding religion key — used for vibe match scoring */
+  religion?: string;
+  /** Profile country — used for vibe match scoring */
+  country?: string;
   avatar: string;
   posts: ProfilePost[];
   /** Distance in km — used for discovery filters */

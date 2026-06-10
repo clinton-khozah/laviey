@@ -18,6 +18,11 @@ export function usesBackendAuth(): boolean {
   return env.useRealAuth || !env.useMockApi;
 }
 
+/** Online meetups require auth and use Supabase-backed routes in lavey_backend. */
+export function usesBackendMeetups(): boolean {
+  return usesBackendAuth();
+}
+
 export function hasSupabaseRealtime(): boolean {
   return Boolean(env.supabaseUrl && env.supabasePublishableKey);
 }

@@ -1,0 +1,78 @@
+.meeting-gift-recipient-sheet__lead {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.meeting-gift-recipient-sheet__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meeting-gift-recipient-sheet__option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.meeting-gift-recipient-sheet__option:active {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.meeting-gift-recipient-sheet__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.meeting-gift-recipient-sheet__avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  background: var(--gradient-vibe);
+}
+
+.meeting-gift-recipient-sheet__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meeting-gift-recipient-sheet__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.meeting-gift-recipient-sheet__tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.meeting-gift-recipient-sheet__chevron {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-muted);
+}

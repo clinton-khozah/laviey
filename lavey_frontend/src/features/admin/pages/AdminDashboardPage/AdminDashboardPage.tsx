@@ -8,6 +8,7 @@ import { adminAuthService } from '@/services/admin/adminAuthService';
 import type { AdminAccount } from '@/types/domain/adminAuth.types';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
 import type { OnlineDate } from '@/types';
+import { storePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { AdminAlgorithmOverseer } from '@/features/admin/components/AdminAlgorithmOverseer';
 import { AdminExperimentAnalytics } from '@/features/admin/components/AdminExperimentAnalytics';
@@ -1666,10 +1667,11 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                                 onJoin={() => {
                                   setJoiningMeetingId(date.id);
                                   window.sessionStorage.setItem('lavey:adminTargetNav', 'rooms');
-                                  window.sessionStorage.setItem('lavey:adminJoinCode', date.accessCode);
+                                  storePendingMeetupCode(date.accessCode);
                                   onNavigate('/');
                                 }}
                                 onCopyCode={(code) => setCopiedMeetingCode(code)}
+                                onCopyLink={(link) => void navigator.clipboard?.writeText(link)}
                               />
                               <div className="admin-activity-modal__meeting-actions">
                                 <button

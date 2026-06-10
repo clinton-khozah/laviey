@@ -39,6 +39,15 @@ export interface ReceivedPostLike {
   likedBack: boolean;
 }
 
+/** Active match row for invite pickers and match lists */
+export interface MatchListItem {
+  id: string;
+  userId: string;
+  name: string;
+  avatar: string;
+  matchedAt: string;
+}
+
 /** Shown in the mutual-match celebration popup */
 export interface MatchToastProfile {
   profileId: string;

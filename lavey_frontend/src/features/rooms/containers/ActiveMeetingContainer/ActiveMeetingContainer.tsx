@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
 import { VideoMeetingRoom } from '@/components/rooms/VideoMeetingRoom';
-import { getMockMeetingParticipants } from '@/services/mocks/meeting.mock';
+import { useAuth, useLocalMedia, useMeetupWebRTC } from '@/hooks';
 import type { ActiveMeetingSession } from '@/types';
 
 interface ActiveMeetingContainerProps {
@@ -9,10 +8,27 @@ interface ActiveMeetingContainerProps {
 }
 
 export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContainerProps) {
-  const participants = useMemo(
-    () => getMockMeetingParticipants(session.date),
-    [session.date],
-  );
+  const { user } = useAuth();
+  const localMedia = useLocalMedia(true);
 
-  return <VideoMeetingRoom session={session} participants={participants} onLeave={onLeave} />;
+  const localUserId = user?.id ?? `guest-${session.date.id}`;
+  const { participants, status } = useMeetupWebRTC({
+    meetupId: session.date.id,
+    localUserId,
+    localDisplayName: session.localDisplayName,
+    localAvatarUrl: user?.avatarUrl ?? '',
+    isHost: Boolean(session.date.isHostedByYou),
+    localStream: localMedia.localStream,
+  });
+
+  return (
+    <VideoMeetingRoom
+      session={session}
+      participants={participants}
+      localMedia={localMedia}
+      connectionStatus={status}
+      localUserId={localUserId}
+      onLeave={onLeave}
+    />
+  );
 }

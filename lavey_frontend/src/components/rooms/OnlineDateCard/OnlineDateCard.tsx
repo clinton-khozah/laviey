@@ -1,4 +1,5 @@
 import type { OnlineDate } from '@/types';
+import { buildMeetupJoinLink } from '@/utils/meeting/meetupJoinLink';
 import './OnlineDateCard.css';
 
 interface OnlineDateCardProps {
@@ -6,6 +7,7 @@ interface OnlineDateCardProps {
   isJoining: boolean;
   onJoin: () => void;
   onCopyCode: (code: string) => void;
+  onCopyLink: (link: string) => void;
 }
 
 function statusLabel(date: OnlineDate): string {
@@ -14,9 +16,10 @@ function statusLabel(date: OnlineDate): string {
   return `In ${date.startsInMinutes}m`;
 }
 
-export function OnlineDateCard({ date, isJoining, onJoin, onCopyCode }: OnlineDateCardProps) {
+export function OnlineDateCard({ date, isJoining, onJoin, onCopyCode, onCopyLink }: OnlineDateCardProps) {
   const isLive = date.status === 'live';
   const fillPct = Math.min(100, (date.participantCount / date.maxParticipants) * 100);
+  const joinLink = date.joinLink ?? buildMeetupJoinLink(date.accessCode);
 
   return (
     <article className={`online-date-card ${isLive ? 'online-date-card--live' : ''}`}>
@@ -78,6 +81,21 @@ export function OnlineDateCard({ date, isJoining, onJoin, onCopyCode }: OnlineDa
             className="online-date-card__copy"
             onClick={() => onCopyCode(date.accessCode)}
             aria-label="Copy room code"
+          >
+            Copy
+          </button>
+        </div>
+
+        <div className="online-date-card__link-row">
+          <div className="online-date-card__link">
+            <span className="online-date-card__code-label">Join link</span>
+            <span className="online-date-card__link-value">{joinLink}</span>
+          </div>
+          <button
+            type="button"
+            className="online-date-card__copy"
+            onClick={() => onCopyLink(joinLink)}
+            aria-label="Copy join link"
           >
             Copy
           </button>

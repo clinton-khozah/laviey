@@ -15,6 +15,8 @@ export interface OnlineDate {
   visibility: DateVisibility;
   /** Required to enter the video room */
   accessCode: string;
+  /** Shareable URL — opens Online Dates and joins with this code */
+  joinLink?: string;
   participantCount: number;
   maxParticipants: number;
   startsInMinutes?: number;
@@ -31,10 +33,12 @@ export interface DateInvite {
   dateId: string;
   fromName: string;
   fromAvatar: string;
+  fromProfileId?: string;
   title: string;
   topic: string;
   scheduledLabel: string;
-  accessCode: string;
+  /** Only present after the invite is accepted */
+  accessCode?: string;
   coverImage: string;
   status: InviteStatus;
 }
@@ -44,6 +48,8 @@ export interface CreateDateInput {
   topic: string;
   visibility: DateVisibility;
   mode: 'post' | 'invite';
+  /** Required when inviting — must be a matched profile id */
+  inviteToProfileId?: string;
   inviteToName?: string;
   startsInMinutes: number;
 }

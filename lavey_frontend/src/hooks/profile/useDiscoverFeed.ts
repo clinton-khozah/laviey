@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { profileService } from '@/services';
 import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
 import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
+import { isProfileVerified } from '@/utils/profile/verificationStorage';
 import {
   defaultNearbyDistanceTier,
   nextNearbyDistanceTier,
@@ -16,6 +17,13 @@ interface UseDiscoverFeedResult {
   setFilter: (filter: FeedFilter) => void;
   refetch: () => Promise<void>;
   onNearEndOfFeed: () => void;
+}
+
+function enrichVerifiedStatus(profiles: Profile[]): Profile[] {
+  return profiles.map((profile) => ({
+    ...profile,
+    verified: profile.verified || isProfileVerified(profile.id),
+  }));
 }
 
 function mergeProfiles(existing: Profile[], incoming: Profile[]): Profile[] {
@@ -52,6 +60,15 @@ export function useDiscoverFeed(
   const filterRef = useRef(filter);
   const distanceTierRef = useRef(distanceTierKm);
   const expandedRef = useRef(expandedDistance);
+
+  useEffect(() => {
+    const onVerificationChanged = () => {
+      setProfiles((prev) => enrichVerifiedStatus(prev));
+    };
+
+    window.addEventListener('lavey:verification-changed', onVerificationChanged);
+    return () => window.removeEventListener('lavey:verification-changed', onVerificationChanged);
+  }, []);
 
   useEffect(() => {
     filtersRef.current = filters;
@@ -113,7 +130,9 @@ export function useDiscoverFeed(
           ageMax: activeFilters.ageMax,
         });
 
-        const demographic = applyDiscoverDemographicFilters(response.profiles, activeFilters);
+        const demographic = enrichVerifiedStatus(
+          applyDiscoverDemographicFilters(response.profiles, activeFilters),
+        );
 
         setProfiles((prev) =>
           options.replace ? demographic : mergeProfiles(prev, demographic),

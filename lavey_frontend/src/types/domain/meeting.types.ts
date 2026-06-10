@@ -9,6 +9,9 @@ export interface MeetingParticipant {
   isHost?: boolean;
   isMuted?: boolean;
   isVideoOff?: boolean;
+  /** Live WebRTC stream from a remote participant */
+  stream?: MediaStream | null;
+  isConnecting?: boolean;
 }
 
 export interface MeetingJoinResult {
@@ -20,4 +23,13 @@ export interface ActiveMeetingSession {
   date: OnlineDate;
   accessCode: string;
   localDisplayName: string;
+}
+
+export interface MeetingChatMessage {
+  id: string;
+  fromUserId: string;
+  fromName: string;
+  text: string;
+  sentAt: string;
+  isLocal?: boolean;
 }

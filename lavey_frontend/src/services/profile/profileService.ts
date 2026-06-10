@@ -13,6 +13,7 @@ import {
   sortProfilesByDistance,
 } from '@/utils/discover/discoverDistanceTiers';
 import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
+import { applyVibeMatchToProfiles } from '@/utils/discover/vibeMatchScore';
 import { sleep } from '@/utils/sleep';
 
 interface DiscoverFeedApiPayload {
@@ -96,6 +97,8 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
   const canExpandDistance =
     !expandedDistance && (filter === 'for-you' || nextDistanceTierKm === null);
 
+  profiles = applyVibeMatchToProfiles(profiles);
+
   return {
     profiles,
     nextCursor: null,
@@ -166,7 +169,7 @@ export const profileService = {
       await sleep(200);
       const profile = MOCK_PROFILES.find((p) => p.id === id);
       if (!profile) throw new Error(`Profile ${id} not found`);
-      return profile;
+      return applyVibeMatchToProfiles([profile])[0]!;
     }
 
     const response = await httpClient.get<ApiResponse<Profile>>(

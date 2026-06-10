@@ -1,36 +1,21 @@
 import { Router } from 'express';
 import { datesController } from '../controllers/rooms.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
 
 export const datesRoutes = Router();
 
-datesRoutes.get('/invites', (req, res, next) => {
-  try {
-    datesController.listInvites(req, res);
-  } catch (error) {
-    next(error);
-  }
+datesRoutes.get('/invites', requireAuth, (req, res, next) => {
+  datesController.listInvites(req, res).catch(next);
 });
 
-datesRoutes.post('/join-by-code', (req, res, next) => {
-  try {
-    datesController.joinByCode(req, res);
-  } catch (error) {
-    next(error);
-  }
+datesRoutes.post('/join-by-code', requireAuth, (req, res, next) => {
+  datesController.joinByCode(req, res).catch(next);
 });
 
-datesRoutes.post('/', (req, res, next) => {
-  try {
-    datesController.createDate(req, res);
-  } catch (error) {
-    next(error);
-  }
+datesRoutes.post('/', requireAuth, (req, res, next) => {
+  datesController.createDate(req, res).catch(next);
 });
 
-datesRoutes.post('/invites/:id', (req, res, next) => {
-  try {
-    datesController.respondToInvite(req, res);
-  } catch (error) {
-    next(error);
-  }
+datesRoutes.post('/invites/:id', requireAuth, (req, res, next) => {
+  datesController.respondToInvite(req, res).catch(next);
 });

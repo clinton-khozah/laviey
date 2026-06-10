@@ -6,6 +6,21 @@
   color: var(--text-primary);
 }
 
+.create-date-sheet__empty,
+.create-date-sheet__error {
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.create-date-sheet__empty {
+  color: var(--text-secondary);
+}
+
+.create-date-sheet__error {
+  color: #f87171;
+}
+
 .create-date-sheet__label {
   display: flex;
   flex-direction: column;

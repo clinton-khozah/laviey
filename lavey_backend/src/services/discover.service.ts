@@ -7,6 +7,7 @@ import {
   parseDistanceTierKm,
   profileWithinDistanceKm,
 } from '../utils/discoverDistanceTiers.js';
+import { computeVibeMatchPercent, type VibeMatchViewer } from '../utils/vibeMatchScore.js';
 
 export type DiscoverFilter = 'for-you' | 'nearby';
 
@@ -25,11 +26,18 @@ interface DiscoverProfileRow {
   bio: string | null;
   headline: string | null;
   city: string | null;
+  country: string | null;
   avatar_url: string | null;
   is_verified: boolean;
   date_of_birth: string | null;
   latitude: number | null;
   longitude: number | null;
+}
+
+interface OnboardingMatchRow {
+  user_id: string;
+  religion: string | null;
+  interests: Array<{ key?: string; label?: string }> | null;
 }
 
 interface DiscoverStatsRow {
@@ -79,6 +87,7 @@ interface RankedCandidate {
   score: number;
   distanceKm: number | null;
   likedYou: boolean;
+  vibeMatchPercent: number;
 }
 
 export interface DiscoverProfileDto {
@@ -297,25 +306,65 @@ async function resolveAlgorithmVariant(
   return (fallback.data as DiscoverAlgorithmVariantRow | null) ?? null;
 }
 
+function parseOnboardingInterestKeys(interests: OnboardingMatchRow['interests']): string[] {
+  if (!Array.isArray(interests)) return [];
+  return interests
+    .map((item) => (item?.key ?? '').trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function loadOnboardingByUserIds(
+  userIds: string[],
+  accessToken: string,
+): Promise<Map<string, { religion: string | null; interestKeys: string[] }>> {
+  const map = new Map<string, { religion: string | null; interestKeys: string[] }>();
+  if (userIds.length === 0) return map;
+
+  const supabase = createSupabaseUserClient(accessToken);
+  const { data, error } = await supabase
+    .from('user_onboarding_details')
+    .select('user_id, religion, interests')
+    .in('user_id', userIds);
+
+  if (error) {
+    if (/user_onboarding_details/i.test(error.message)) return map;
+    throw new AppError(500, 'DISCOVER_ONBOARDING_FAILED', error.message);
+  }
+
+  for (const row of (data as OnboardingMatchRow[] | null) ?? []) {
+    map.set(row.user_id, {
+      religion: row.religion?.trim().toLowerCase() ?? null,
+      interestKeys: parseOnboardingInterestKeys(row.interests),
+    });
+  }
+
+  return map;
+}
+
 async function loadCurrentUserContext(
   userId: string,
   accessToken: string,
 ): Promise<{
   location: UserLocationRow;
-  interests: Set<string>;
+  vibeViewer: VibeMatchViewer;
 }> {
   const supabase = createSupabaseUserClient(accessToken);
-  const [locationResult, interestsResult] = await Promise.all([
-    supabase.from('profiles').select('latitude, longitude').eq('user_id', userId).maybeSingle(),
+  const [profileResult, interestsResult, onboardingResult] = await Promise.all([
+    supabase.from('profiles').select('latitude, longitude, country').eq('user_id', userId).maybeSingle(),
     supabase
       .from('profile_interests')
       .select('onboarding_options(option_key)')
       .eq('user_id', userId)
       .order('sort_order', { ascending: true }),
+    supabase
+      .from('user_onboarding_details')
+      .select('religion, interests')
+      .eq('user_id', userId)
+      .maybeSingle(),
   ]);
 
-  if (locationResult.error) {
-    throw new AppError(500, 'DISCOVER_CONTEXT_FAILED', locationResult.error.message);
+  if (profileResult.error) {
+    throw new AppError(500, 'DISCOVER_CONTEXT_FAILED', profileResult.error.message);
   }
   if (interestsResult.error) {
     throw new AppError(500, 'DISCOVER_CONTEXT_FAILED', interestsResult.error.message);
@@ -325,12 +374,25 @@ async function loadCurrentUserContext(
   for (const row of interestsResult.data ?? []) {
     const option = row.onboarding_options as { option_key: string } | { option_key: string }[] | null;
     const resolved = Array.isArray(option) ? option[0] : option;
-    if (resolved?.option_key) interestKeys.add(resolved.option_key);
+    if (resolved?.option_key) interestKeys.add(resolved.option_key.trim().toLowerCase());
   }
 
+  const onboarding = onboardingResult.error ? null : (onboardingResult.data as OnboardingMatchRow | null);
+  if (interestKeys.size === 0 && onboarding?.interests) {
+    for (const key of parseOnboardingInterestKeys(onboarding.interests)) {
+      interestKeys.add(key);
+    }
+  }
+
+  const profile = profileResult.data as (UserLocationRow & { country?: string | null }) | null;
+
   return {
-    location: (locationResult.data as UserLocationRow | null) ?? { latitude: null, longitude: null },
-    interests: interestKeys,
+    location: profile ?? { latitude: null, longitude: null },
+    vibeViewer: {
+      interestKeys,
+      religion: onboarding?.religion?.trim().toLowerCase() ?? null,
+      country: profile?.country?.trim() ?? null,
+    },
   };
 }
 
@@ -341,7 +403,8 @@ async function loadCandidates(
   profiles: DiscoverProfileRow[];
   statsByUserId: Map<string, DiscoverStatsRow>;
   postsByUserId: Map<string, DiscoverPostRow[]>;
-  interestsByUserId: Map<string, string[]>;
+  interestLabelsByUserId: Map<string, string[]>;
+  interestKeysByUserId: Map<string, string[]>;
   swipes: SwipePairRow[];
   matches: MatchPairRow[];
 }> {
@@ -349,7 +412,7 @@ async function loadCandidates(
   const profileResult = await supabase
     .from('profiles')
     .select(
-      'user_id, display_name, bio, headline, city, avatar_url, is_verified, date_of_birth, latitude, longitude',
+      'user_id, display_name, bio, headline, city, country, avatar_url, is_verified, date_of_birth, latitude, longitude',
     )
     .neq('user_id', authUser.id)
     .eq('show_on_discover', true)
@@ -368,7 +431,8 @@ async function loadCandidates(
       profiles: [],
       statsByUserId: new Map(),
       postsByUserId: new Map(),
-      interestsByUserId: new Map(),
+      interestLabelsByUserId: new Map(),
+      interestKeysByUserId: new Map(),
       swipes: [],
       matches: [],
     };
@@ -435,15 +499,23 @@ async function loadCandidates(
     postsByUserId.set(row.user_id, list);
   }
 
-  const interestsByUserId = new Map<string, string[]>();
+  const interestLabelsByUserId = new Map<string, string[]>();
+  const interestKeysByUserId = new Map<string, string[]>();
   for (const row of (interestsResult.data as InterestJoinRow[] | null) ?? []) {
     const option = row.onboarding_options;
     const resolved = Array.isArray(option) ? option[0] : option;
     if (!resolved?.option_key) continue;
-    const list = interestsByUserId.get(row.user_id) ?? [];
-    const label = resolved.label?.trim() || resolved.option_key;
-    if (!list.includes(label)) list.push(label);
-    interestsByUserId.set(row.user_id, list);
+
+    const key = resolved.option_key.trim().toLowerCase();
+    const label = resolved.label?.trim() || key;
+
+    const labels = interestLabelsByUserId.get(row.user_id) ?? [];
+    if (!labels.includes(label)) labels.push(label);
+    interestLabelsByUserId.set(row.user_id, labels);
+
+    const keys = interestKeysByUserId.get(row.user_id) ?? [];
+    if (!keys.includes(key)) keys.push(key);
+    interestKeysByUserId.set(row.user_id, keys);
   }
 
   const swipes = [
@@ -455,7 +527,8 @@ async function loadCandidates(
     profiles,
     statsByUserId,
     postsByUserId,
-    interestsByUserId,
+    interestLabelsByUserId,
+    interestKeysByUserId,
     swipes,
     matches: (matchesResult.data as MatchPairRow[] | null) ?? [],
   };
@@ -465,9 +538,10 @@ function rankCandidates(params: {
   filter: DiscoverFilter;
   candidates: DiscoverProfileRow[];
   userLocation: UserLocationRow;
-  userInterestKeys: Set<string>;
+  vibeViewer: VibeMatchViewer;
   statsByUserId: Map<string, DiscoverStatsRow>;
-  interestsByUserId: Map<string, string[]>;
+  interestKeysByUserId: Map<string, string[]>;
+  onboardingByUserId: Map<string, { religion: string | null; interestKeys: string[] }>;
   reverseLikes: Set<string>;
   variant: DiscoverAlgorithmVariantRow | null;
 }): RankedCandidate[] {
@@ -475,9 +549,10 @@ function rankCandidates(params: {
     filter,
     candidates,
     userLocation,
-    userInterestKeys,
+    vibeViewer,
     statsByUserId,
-    interestsByUserId,
+    interestKeysByUserId,
+    onboardingByUserId,
     reverseLikes,
     variant,
   } = params;
@@ -486,13 +561,23 @@ function rankCandidates(params: {
   const ranked: RankedCandidate[] = [];
 
   for (const candidate of candidates) {
-    const candidateInterests = interestsByUserId.get(candidate.user_id) ?? [];
-    const overlapCount = candidateInterests.reduce(
-      (count, key) => count + (userInterestKeys.has(key) ? 1 : 0),
+    const onboarding = onboardingByUserId.get(candidate.user_id);
+    const profileInterestKeys = interestKeysByUserId.get(candidate.user_id) ?? [];
+    const candidateInterestKeys =
+      profileInterestKeys.length > 0 ? profileInterestKeys : (onboarding?.interestKeys ?? []);
+
+    const overlapCount = candidateInterestKeys.reduce(
+      (count, key) => count + (vibeViewer.interestKeys.has(key) ? 1 : 0),
       0,
     );
     const overlapScore =
-      candidateInterests.length > 0 ? overlapCount / candidateInterests.length : 0;
+      candidateInterestKeys.length > 0 ? overlapCount / candidateInterestKeys.length : 0;
+
+    const vibeMatchPercent = computeVibeMatchPercent(vibeViewer, {
+      interestKeys: candidateInterestKeys,
+      religion: onboarding?.religion ?? null,
+      country: candidate.country?.trim() ?? null,
+    });
 
     const distanceKm = haversineKm(
       userLocation.latitude,
@@ -508,7 +593,7 @@ function rankCandidates(params: {
           : Math.max(0, 1 - distanceKm / 100);
 
     const stats = statsByUserId.get(candidate.user_id);
-    const vibeScore = Math.min(1, Math.max(0, (stats?.vibe_score ?? 80) / 100));
+    const vibeScore = vibeMatchPercent / 100;
     const engagementScore = Math.min(1, ((stats?.profile_views ?? 0) + (stats?.matches_count ?? 0) * 20) / 1200);
     const recencyDecay = Math.max(0.15, 1 - (now - now) / 1_000_000); // placeholder stable signal
 
@@ -530,6 +615,7 @@ function rankCandidates(params: {
       score,
       distanceKm,
       likedYou,
+      vibeMatchPercent,
     });
   }
 
@@ -558,11 +644,10 @@ function resolveDiscoverBio(profile: DiscoverProfileRow): string {
 
 function mapDiscoverProfile(params: {
   candidate: RankedCandidate;
-  stats: DiscoverStatsRow | undefined;
   posts: DiscoverPostRow[];
-  interestKeys: string[];
+  interestLabels: string[];
 }): DiscoverProfileDto {
-  const { candidate, stats, posts, interestKeys } = params;
+  const { candidate, posts, interestLabels } = params;
   return {
     id: candidate.profile.user_id,
     name: candidate.profile.display_name,
@@ -571,8 +656,8 @@ function mapDiscoverProfile(params: {
     distance: distanceLabelFromKm(candidate.distanceKm),
     distanceKm: candidate.distanceKm ?? undefined,
     verified: candidate.profile.is_verified,
-    vibeScore: stats?.vibe_score ?? 80,
-    interests: interestKeys,
+    vibeScore: candidate.vibeMatchPercent,
+    interests: interestLabels,
     avatar: candidate.profile.avatar_url ?? '',
     likedYou: candidate.likedYou,
     posts: posts.map((post) => ({
@@ -679,16 +764,23 @@ export async function getDiscoverFeed(
       !blockedIds.has(profile.user_id),
   );
 
+  const ageFiltered = candidates.filter((profile) =>
+    matchesDiscoverAge(profile, ageMin, ageMax),
+  );
+  const onboardingByUserId = await loadOnboardingByUserIds(
+    ageFiltered.map((profile) => profile.user_id),
+    accessToken,
+  );
+
   const ranked = applyDistanceCap(
     rankCandidates({
       filter,
-      candidates: candidates.filter((profile) =>
-        matchesDiscoverAge(profile, ageMin, ageMax),
-      ),
+      candidates: ageFiltered,
       userLocation: context.location,
-      userInterestKeys: context.interests,
+      vibeViewer: context.vibeViewer,
       statsByUserId: loaded.statsByUserId,
-      interestsByUserId: loaded.interestsByUserId,
+      interestKeysByUserId: loaded.interestKeysByUserId,
+      onboardingByUserId,
       reverseLikes,
       variant,
     }),
@@ -700,9 +792,9 @@ export async function getDiscoverFeed(
   const profiles = paged.map((candidate) =>
     mapDiscoverProfile({
       candidate,
-      stats: loaded.statsByUserId.get(candidate.profile.user_id),
       posts: loaded.postsByUserId.get(candidate.profile.user_id) ?? [],
-      interestKeys: loaded.interestsByUserId.get(candidate.profile.user_id) ?? [],
+      interestLabels:
+        loaded.interestLabelsByUserId.get(candidate.profile.user_id) ?? [],
     }),
   );
 
@@ -740,21 +832,21 @@ export async function getDiscoverFeed(
 }
 
 export async function getDiscoverProfileById(
+  authUser: AuthUser,
   profileId: string,
   accessToken: string,
 ): Promise<DiscoverProfileDto> {
   const supabase = createSupabaseUserClient(accessToken);
-  const [profileResult, statsResult, postsResult, interestsResult] = await Promise.all([
+  const [context, profileResult, postsResult, interestsResult, onboardingByUserId] =
+    await Promise.all([
+    loadCurrentUserContext(authUser.id, accessToken),
     supabase
       .from('profiles')
-      .select('user_id, display_name, bio, headline, city, avatar_url, is_verified, date_of_birth')
+      .select(
+        'user_id, display_name, bio, headline, city, country, avatar_url, is_verified, date_of_birth',
+      )
       .eq('user_id', profileId)
       .eq('show_on_discover', true)
-      .maybeSingle(),
-    supabase
-      .from('profile_stats')
-      .select('user_id, vibe_score, profile_views, matches_count')
-      .eq('user_id', profileId)
       .maybeSingle(),
     supabase
       .from('profile_posts')
@@ -765,27 +857,43 @@ export async function getDiscoverProfileById(
       .limit(6),
     supabase
       .from('profile_interests')
-      .select('user_id, onboarding_options(option_key)')
+      .select('user_id, onboarding_options(option_key, label)')
       .eq('user_id', profileId)
       .order('sort_order', { ascending: true }),
+    loadOnboardingByUserIds([profileId], accessToken),
   ]);
 
   if (profileResult.error) throw new AppError(500, 'PROFILE_READ_FAILED', profileResult.error.message);
   if (!profileResult.data) throw new AppError(404, 'PROFILE_NOT_FOUND', `Profile ${profileId} not found`);
-  if (statsResult.error) throw new AppError(500, 'PROFILE_STATS_READ_FAILED', statsResult.error.message);
   if (postsResult.error) throw new AppError(500, 'PROFILE_POSTS_READ_FAILED', postsResult.error.message);
   if (interestsResult.error) throw new AppError(500, 'PROFILE_INTERESTS_READ_FAILED', interestsResult.error.message);
 
   const profile = profileResult.data as DiscoverProfileRow;
-  const stats = statsResult.data as DiscoverStatsRow | null;
   const posts = (postsResult.data as DiscoverPostRow[] | null) ?? [];
-  const interests = ((interestsResult.data as InterestJoinRow[] | null) ?? [])
-    .map((row) => {
-      const option = row.onboarding_options as { option_key: string } | { option_key: string }[] | null;
-      const resolved = Array.isArray(option) ? option[0] : option;
-      return resolved?.option_key ?? null;
-    })
-    .filter((item): item is string => Boolean(item));
+  const interestLabels: string[] = [];
+  const interestKeys: string[] = [];
+
+  for (const row of (interestsResult.data as InterestJoinRow[] | null) ?? []) {
+    const option = row.onboarding_options as
+      | { option_key: string; label?: string }
+      | { option_key: string; label?: string }[]
+      | null;
+    const resolved = Array.isArray(option) ? option[0] : option;
+    if (!resolved?.option_key) continue;
+    const key = resolved.option_key.trim().toLowerCase();
+    const label = resolved.label?.trim() || key;
+    if (!interestLabels.includes(label)) interestLabels.push(label);
+    if (!interestKeys.includes(key)) interestKeys.push(key);
+  }
+
+  const onboarding = onboardingByUserId.get(profileId);
+  const candidateInterestKeys =
+    interestKeys.length > 0 ? interestKeys : (onboarding?.interestKeys ?? []);
+  const vibeScore = computeVibeMatchPercent(context.vibeViewer, {
+    interestKeys: candidateInterestKeys,
+    religion: onboarding?.religion ?? null,
+    country: profile.country?.trim() ?? null,
+  });
 
   return {
     id: profile.user_id,
@@ -794,8 +902,8 @@ export async function getDiscoverProfileById(
     bio: resolveDiscoverBio(profile),
     distance: profile.city ? `${profile.city}` : 'Unknown distance',
     verified: profile.is_verified,
-    vibeScore: stats?.vibe_score ?? 80,
-    interests,
+    vibeScore,
+    interests: interestLabels,
     avatar: profile.avatar_url ?? '',
     likedYou: false,
     posts: posts.map((post) => ({
