@@ -92,6 +92,19 @@ async function request<T>(
     return undefined as T;
   }
 
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    const preview = (await response.text()).trimStart().slice(0, 40);
+    if (preview.startsWith('<')) {
+      throw new ApiError(
+        502,
+        'INVALID_API_RESPONSE',
+        'The app called your Netlify site instead of the API. Set VITE_API_BASE_URL to https://laveybackend-3.onrender.com/api on Netlify, then redeploy.',
+      );
+    }
+    throw new ApiError(502, 'INVALID_API_RESPONSE', 'API returned a non-JSON response.');
+  }
+
   return response.json() as Promise<T>;
 }
 
