@@ -113,7 +113,10 @@ export const authService = {
 
     markPendingOnboardingQuiz();
     resetOAuthCallbackState();
-    window.location.assign(`${apiConfig.baseUrl}${API_ENDPOINTS.auth.google}`);
+    const origin = encodeURIComponent(window.location.origin);
+    window.location.assign(
+      `${apiConfig.baseUrl}${API_ENDPOINTS.auth.google}?origin=${origin}`,
+    );
     return new Promise(() => {
       /* full-page redirect to Google via backend */
     });

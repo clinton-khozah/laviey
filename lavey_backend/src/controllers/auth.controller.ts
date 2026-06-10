@@ -14,6 +14,12 @@ import {
 import { createSupabaseServerClient } from '../lib/supabase.server.js';
 import { successResponse } from '../utils/apiResponse.js';
 import { AppError } from '../utils/appError.js';
+import {
+  clearOAuthFrontendOrigin,
+  pickFrontendOrigin,
+  readOAuthFrontendOrigin,
+  stashOAuthFrontendOrigin,
+} from '../utils/oauthFrontendOrigin.js';
 import type { AuthenticatedRequest } from '../middleware/auth.middleware.js';
 
 const googleTokenBodySchema = z.object({
@@ -58,6 +64,11 @@ export const authController = {
    *         description: Redirect to Google OAuth
    */
   async startGoogleOAuth(req: Request, res: Response): Promise<void> {
+    const frontendOrigin = pickFrontendOrigin(
+      typeof req.query.origin === 'string' ? req.query.origin : undefined,
+    );
+    stashOAuthFrontendOrigin(res, frontendOrigin);
+
     const supabase = createSupabaseServerClient(req, res);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -98,19 +109,28 @@ export const authController = {
   async googleOAuthCallback(req: Request, res: Response): Promise<void> {
     const { code, error: oauthError, error_description: oauthErrorDescription } = req.query;
 
-    const callbackUrl = new URL('/auth/callback', env.FRONTEND_URL);
+    const frontendOrigin = readOAuthFrontendOrigin(req);
+    const callbackUrl = new URL('/auth/callback', frontendOrigin);
+
+    const redirectToFrontend = (params?: Record<string, string>) => {
+      if (params) {
+        for (const [key, value] of Object.entries(params)) {
+          callbackUrl.searchParams.set(key, value);
+        }
+      }
+      clearOAuthFrontendOrigin(res);
+      res.redirect(callbackUrl.toString());
+    };
 
     if (typeof oauthError === 'string') {
       const message =
         typeof oauthErrorDescription === 'string' ? oauthErrorDescription : oauthError;
-      callbackUrl.searchParams.set('error', message);
-      res.redirect(callbackUrl.toString());
+      redirectToFrontend({ error: message });
       return;
     }
 
     if (!code || typeof code !== 'string') {
-      callbackUrl.searchParams.set('error', 'missing_code');
-      res.redirect(callbackUrl.toString());
+      redirectToFrontend({ error: 'missing_code' });
       return;
     }
 
@@ -127,13 +147,11 @@ export const authController = {
       }
 
       const session = mapSession(data.session);
-      callbackUrl.searchParams.set('token', session.token);
-      res.redirect(callbackUrl.toString());
+      redirectToFrontend({ token: session.token });
     } catch (err) {
       console.error('Google OAuth callback failed:', err);
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
-      callbackUrl.searchParams.set('error', message);
-      res.redirect(callbackUrl.toString());
+      redirectToFrontend({ error: message });
     }
   },
 
