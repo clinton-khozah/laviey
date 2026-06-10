@@ -131,6 +131,12 @@
   font-weight: 600;
 }
 
+.auth-page__hint--error {
+  color: #b42318;
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
 .auth-page__hint--subtle {
   font-size: 11px;
   background: transparent;

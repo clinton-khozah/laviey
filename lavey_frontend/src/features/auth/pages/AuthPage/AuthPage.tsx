@@ -5,6 +5,8 @@ import { EmailVerificationForm } from '@/components/auth/EmailVerificationForm';
 import type { EmailAuthMode } from '@/components/auth/EmailAuthForm';
 import { APP_IMAGES } from '@/constants/images';
 import { useAuth } from '@/hooks';
+import { getApiConfigurationError } from '@/utils/api/apiConfiguration';
+import { usesBackendAuth } from '@/config/env';
 import { getGoogleSignInBlockedMessage } from '@/utils/google/googleEnvironment';
 import './AuthPage.css';
 
@@ -26,6 +28,7 @@ export function AuthPage() {
   } = useAuth();
   const [emailMode, setEmailMode] = useState<EmailAuthMode>('sign-in');
   const webViewWarning = getGoogleSignInBlockedMessage();
+  const apiConfigWarning = usesBackendAuth() ? getApiConfigurationError() : null;
   const showVerification = Boolean(pendingVerificationEmail);
 
   const handleModeChange = (mode: EmailAuthMode) => {
@@ -52,6 +55,12 @@ export function AuthPage() {
         </header>
 
         <div className="auth-page__card">
+          {apiConfigWarning && (
+            <p className="auth-page__hint auth-page__hint--error" role="alert">
+              {apiConfigWarning}
+            </p>
+          )}
+
           {webViewWarning && (
             <p className="auth-page__hint" role="status">
               {webViewWarning}{' '}
