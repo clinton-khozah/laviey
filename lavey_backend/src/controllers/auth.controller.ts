@@ -15,7 +15,9 @@ import { createSupabaseServerClient } from '../lib/supabase.server.js';
 import { successResponse } from '../utils/apiResponse.js';
 import { AppError } from '../utils/appError.js';
 import {
+  buildGoogleOAuthCallbackUrl,
   clearOAuthFrontendOrigin,
+  inferFrontendOriginFromRequest,
   pickFrontendOrigin,
   readOAuthFrontendOrigin,
   stashOAuthFrontendOrigin,
@@ -64,17 +66,21 @@ export const authController = {
    *         description: Redirect to Google OAuth
    */
   async startGoogleOAuth(req: Request, res: Response): Promise<void> {
-    const frontendOrigin = pickFrontendOrigin(
-      typeof req.query.origin === 'string' ? req.query.origin : undefined,
-    );
+    const originCandidate =
+      (typeof req.query.origin === 'string' ? req.query.origin : undefined) ??
+      inferFrontendOriginFromRequest(req);
+
+    const frontendOrigin = pickFrontendOrigin(originCandidate);
     stashOAuthFrontendOrigin(res, frontendOrigin);
 
     const supabase = createSupabaseServerClient(req, res);
+    const oauthCallbackUrl = buildGoogleOAuthCallbackUrl(frontendOrigin);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: env.GOOGLE_REDIRECT_URI,
+        // Carry frontend origin through Google/Supabase; cookie alone is often dropped.
+        redirectTo: oauthCallbackUrl,
         skipBrowserRedirect: true,
       },
     });
@@ -111,6 +117,10 @@ export const authController = {
 
     const frontendOrigin = readOAuthFrontendOrigin(req);
     const callbackUrl = new URL('/auth/callback', frontendOrigin);
+
+    if (env.NODE_ENV !== 'test') {
+      console.log(`[oauth] Google callback → frontend ${frontendOrigin}/auth/callback`);
+    }
 
     const redirectToFrontend = (params?: Record<string, string>) => {
       if (params) {
