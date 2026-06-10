@@ -1,0 +1,10 @@
+# Used when this folder is the Render service root (Root Directory = lavey_backend)
+
+services:
+  - type: web
+    name: lavey-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/meta/routes
