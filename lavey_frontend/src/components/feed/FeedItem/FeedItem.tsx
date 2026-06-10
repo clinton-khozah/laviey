@@ -11,9 +11,9 @@ const DEFAULT_CLIP_SECONDS = 10;
 export function FeedItem({
   profile,
   liked,
-  likedPost,
+  likedPost: _likedPost,
   onLike,
-  onPostLike,
+  onPostLike: _onPostLike,
   onCollab,
   onProfileClick,
   showSwipeHint = false,

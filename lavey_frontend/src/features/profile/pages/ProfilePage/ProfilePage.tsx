@@ -175,7 +175,11 @@ export function ProfilePage() {
     const input = photoInputRef.current;
     if (!input) return;
     if (typeof input.showPicker === 'function') {
-      void input.showPicker().catch(() => input.click());
+      try {
+        input.showPicker();
+      } catch {
+        input.click();
+      }
       return;
     }
     input.click();

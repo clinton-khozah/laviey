@@ -4,7 +4,8 @@ import type { MeetingLanguageCode } from '@/constants/meeting/meetingLanguages';
 import { authService } from '@/services/auth/authService';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse, AppTheme, ChatTypingStyle } from '@/types';
-import { getLocalUserSettings, type UserSettings } from '@/utils/settings/applyUserSettings';
+import { getLocalUserSettings } from '@/utils/settings/applyUserSettings';
+import type { UserSettings } from '@/utils/settings/userSettingsStorage';
 import { sleep } from '@/utils/sleep';
 
 export interface UserSettingsResponse extends UserSettings {

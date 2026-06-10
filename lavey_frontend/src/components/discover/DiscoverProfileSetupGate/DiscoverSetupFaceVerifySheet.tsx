@@ -35,8 +35,8 @@ export function DiscoverSetupFaceVerifySheet({
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
   const [matchResult, setMatchResult] = useState<FaceCompareResult | null>(null);
   const [failMessage, setFailMessage] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [statusText, setStatusText] = useState('Matching your live selfie…');
+  const [_isSaving, setIsSaving] = useState(false);
+  const [_statusText, setStatusText] = useState('Matching your live selfie…');
 
   const referenceUrl =
     (hasCustomProfileAvatar(avatarPreview) ? avatarPreview : undefined) ??

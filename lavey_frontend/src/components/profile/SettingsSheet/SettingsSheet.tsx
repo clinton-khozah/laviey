@@ -10,6 +10,7 @@ import { settingsService } from '@/services/settings/settingsService';
 import type { MeetingLanguageCode } from '@/constants/meeting/meetingLanguages';
 import type { AppTheme, ChatTypingStyle } from '@/types';
 import { applyUserSettings, getLocalUserSettings } from '@/utils/settings/applyUserSettings';
+import { getUserFacingErrorMessage } from '@/utils/errors/userFacingErrorMessage';
 import { markThemeExplicitlyChosen } from '@/utils/theme/themeStorage';
 import './SettingsSheet.css';
 
@@ -63,9 +64,9 @@ function ToggleRow({
 
 export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetProps) {
   const { user } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const { chatTypingStyle, setChatTypingStyle } = useChatTypingStyle();
-  const { language, setLanguage } = useMeetingLanguage();
+  const { setTheme } = useTheme();
+  const { setChatTypingStyle } = useChatTypingStyle();
+  const { setLanguage } = useMeetingLanguage();
 
   const [draft, setDraft] = useState<SettingsDraft>(() => {
     const local = getLocalUserSettings();

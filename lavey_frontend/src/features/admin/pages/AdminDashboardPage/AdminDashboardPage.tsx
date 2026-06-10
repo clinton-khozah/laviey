@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { APP_IMAGES } from '@/constants/images';
 import { pickMockFeedImage } from '@/constants/mockMedia';
 import { PLATINUM_FEATURES, PLATINUM_PLANS } from '@/constants/platinum';
@@ -667,12 +667,8 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
   const [selectedLiker, setSelectedLiker] = useState<LikerProfile | null>(null);
   const [likesSearch, setLikesSearch] = useState('');
   const [likesFilter, setLikesFilter] = useState<'all' | 'verified' | 'female' | 'male'>('all');
-  const [selectedCommsProfile, setSelectedCommsProfile] = useState<LikerProfile | null>(null);
+  const [, setSelectedCommsProfile] = useState<LikerProfile | null>(null);
   const [selectedFullProfile, setSelectedFullProfile] = useState<LikerProfile | null>(null);
-  const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
-  const [messageReactions, setMessageReactions] = useState<Record<string, string>>({});
-  const [uploadedFileName, setUploadedFileName] = useState('');
-  const [uploadError, setUploadError] = useState('');
   const [selectedPlanUser, setSelectedPlanUser] = useState<{ name: string; plan: 'Platinum' | 'Free' } | null>(null);
   const [selectedViewedUser, setSelectedViewedUser] = useState<AdminUserRecord | null>(null);
   const [avatarFullView, setAvatarFullView] = useState<{ src: string; name: string } | null>(null);
@@ -708,7 +704,6 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       lastGiftAt: index % 3 === 0 ? '2 days ago' : undefined,
     })),
   );
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activeModule = MODULES.find((m) => m.id === activeSection) ?? MODULES[0];
   const {
     users: adminUsers,

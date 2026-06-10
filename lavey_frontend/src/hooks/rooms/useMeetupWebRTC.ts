@@ -253,7 +253,7 @@ export function useMeetupWebRTC({
         }
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
-        for (const meta of newPresences as MeetupPresenceMeta[]) {
+        for (const meta of newPresences as unknown as MeetupPresenceMeta[]) {
           connectToPeer(meta);
         }
       })

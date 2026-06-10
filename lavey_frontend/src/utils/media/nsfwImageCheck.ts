@@ -48,7 +48,7 @@ function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   });
 }
 
-function scoreFor(predictions: nsfwjs.predictionType[], className: string): number {
+function scoreFor(predictions: nsfwjs.PredictionType[], className: string): number {
   return predictions.find((p) => p.className === className)?.probability ?? 0;
 }
 

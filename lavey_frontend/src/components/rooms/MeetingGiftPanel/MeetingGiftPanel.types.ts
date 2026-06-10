@@ -1,3 +1,4 @@
+export interface MeetingGiftPanelProps {
   open: boolean;
   recipientName: string;
   amount: number;
