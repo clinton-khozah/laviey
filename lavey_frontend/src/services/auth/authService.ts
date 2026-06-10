@@ -16,6 +16,7 @@ import type {
   EmailSignUpResult,
 } from '@/types';
 import { ApiError } from '@/services/api/apiError';
+import { getApiConfigurationError } from '@/utils/api/apiConfiguration';
 import { sleep } from '@/utils/sleep';
 
 function persistSession(session: AuthSession): void {
@@ -104,6 +105,11 @@ export const authService = {
       persistSession(session);
       markPendingOnboardingQuiz();
       return session;
+    }
+
+    const apiConfigError = getApiConfigurationError();
+    if (apiConfigError) {
+      throw new Error(apiConfigError);
     }
 
     const webViewMessage = getGoogleSignInBlockedMessage();

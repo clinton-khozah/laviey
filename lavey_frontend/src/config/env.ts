@@ -3,9 +3,10 @@
  * All `import.meta.env` access should go through this module.
  */
 export const env = {
+  /** Must be a full URL in production (Netlify cannot run lavey_backend). */
   apiBaseUrl:
-    import.meta.env.VITE_API_BASE_URL ??
-    (import.meta.env.DEV ? 'http://localhost:5000/api' : '/api'),
+    import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ??
+    (import.meta.env.DEV ? 'http://localhost:5000/api' : ''),
   /** Mock data for features without backend routes yet (profiles, messages, etc.). */
   useMockApi: import.meta.env.VITE_USE_MOCK_API !== 'false',
   /** Real Supabase auth via lavey_backend even when useMockApi is true. */
