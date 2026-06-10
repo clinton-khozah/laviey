@@ -1,5 +1,4 @@
-# Netlify deploys the Vite frontend only.
-# Host lavey_backend separately (Railway, Render, Fly.io, etc.) and set VITE_API_BASE_URL in Netlify env.
+# Netlify — frontend only. API is in the separate lavey-backend repo.
 
 [build]
   base = "lavey_frontend"

@@ -1,19 +1,11 @@
 {
-  "name": "lavey",
+  "name": "lavey-frontend",
   "private": true,
-  "description": "Lavey monorepo — run scripts from the repo root (lavey_frontend + lavey_backend).",
+  "description": "Lavey frontend — deployed on Netlify. API lives in a separate backend repo.",
   "scripts": {
-    "dev": "concurrently -k -n backend,frontend -c blue,magenta \"npm run dev --prefix lavey_backend\" \"npm run dev --prefix lavey_frontend\"",
-    "dev:frontend": "npm run dev --prefix lavey_frontend",
-    "dev:backend": "npm run dev --prefix lavey_backend",
-    "build": "npm install --prefix lavey_backend && npm run build --prefix lavey_backend",
-    "start": "npm start --prefix lavey_backend",
-    "build:frontend": "npm run build --prefix lavey_frontend",
-    "build:backend": "npm run build --prefix lavey_backend",
-    "install:all": "npm install --prefix lavey_backend && npm install --prefix lavey_frontend",
-    "lint": "npm run lint --prefix lavey_frontend"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.1"
+    "dev": "npm run dev --prefix lavey_frontend",
+    "build": "npm run build --prefix lavey_frontend",
+    "lint": "npm run lint --prefix lavey_frontend",
+    "preview": "npm run preview --prefix lavey_frontend"
   }
 }
