@@ -7,6 +7,9 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  VITE_API_BASE_URL = "https://laveybackend-3.onrender.com/api"
+  VITE_USE_MOCK_API = "false"
+  VITE_USE_REAL_AUTH = "true"
   # Backend env vars (PORT, API_PREFIX, etc.) are not used for this static build but
   # trigger false positives: "/api" in import paths, port numbers in mock data, localhost in docs.
   SECRETS_SCAN_OMIT_KEYS = "PORT,API_PREFIX,FRONTEND_URL,CORS_ORIGIN,VITE_API_BASE_URL"

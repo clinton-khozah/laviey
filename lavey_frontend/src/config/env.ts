@@ -2,11 +2,18 @@
  * Centralized environment configuration.
  * All `import.meta.env` access should go through this module.
  */
+const DEFAULT_PRODUCTION_API_BASE_URL = 'https://laveybackend-3.onrender.com/api';
+
+function resolveApiBaseUrl(): string {
+  const fromEnv = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '').trim();
+  if (fromEnv) return fromEnv;
+  if (import.meta.env.DEV) return 'http://localhost:5000/api';
+  return DEFAULT_PRODUCTION_API_BASE_URL;
+}
+
 export const env = {
   /** Must be a full URL in production (Netlify cannot run lavey_backend). */
-  apiBaseUrl:
-    import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ??
-    (import.meta.env.DEV ? 'http://localhost:5000/api' : ''),
+  apiBaseUrl: resolveApiBaseUrl(),
   /** Set VITE_USE_MOCK_API=true only for offline UI demos. Production uses the real API. */
   useMockApi: import.meta.env.VITE_USE_MOCK_API === 'true',
   /** Real Supabase auth via lavey_backend (default on). */
