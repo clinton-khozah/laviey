@@ -5,6 +5,13 @@ import { matchService } from '@/services';
 import { contentService } from '@/services/content/contentService';
 import type { CreateDateInput, DateVisibility } from '@/types';
 import { getMatchedConversations } from '@/utils/meeting/meetupAccess';
+import {
+  defaultMeetupStartLocal,
+  maxMeetupStartLocal,
+  minMeetupStartLocal,
+  parseDatetimeLocal,
+  toDatetimeLocalValue,
+} from '@/utils/meeting/meetupSchedule';
 import { prepareImageForUpload } from '@/utils/media/prepareUploadMedia';
 import { nsfwImageUserMessage } from '@/utils/media/nsfwImageCheck';
 import './CreateDateSheet.css';
@@ -28,14 +35,21 @@ const TIME_OPTIONS = [
   { label: 'In 15 min', minutes: 15 },
   { label: 'In 1 hour', minutes: 60 },
   { label: 'Later today', minutes: 180 },
-];
+] as const;
+
+function isChipActive(minutes: number, startAtLocal: string): boolean {
+  const current = parseDatetimeLocal(startAtLocal);
+  if (!current) return false;
+  const target = Date.now() + minutes * 60_000;
+  return Math.abs(current.getTime() - target) < 2 * 60_000;
+}
 
 export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: CreateDateSheetProps) {
   const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
   const [visibility, setVisibility] = useState<DateVisibility>('public');
   const [inviteProfileId, setInviteProfileId] = useState('');
-  const [startsInMinutes, setStartsInMinutes] = useState(15);
+  const [startAtLocal, setStartAtLocal] = useState(() => defaultMeetupStartLocal(15));
   const [formError, setFormError] = useState<string | null>(null);
   const [matchOptions, setMatchOptions] = useState<InviteMatchOption[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -51,6 +65,7 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
     setCoverPreview(null);
     setCoverFile(null);
     setFormError(null);
+    setStartAtLocal(defaultMeetupStartLocal(15));
   };
 
   useEffect(() => {
@@ -112,6 +127,21 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
       }
     }
 
+    const startsAtDate = parseDatetimeLocal(startAtLocal);
+    if (!startsAtDate) {
+      setFormError('Pick a valid start date and time');
+      return;
+    }
+    if (startsAtDate.getTime() < Date.now() + 60_000) {
+      setFormError('Start time must be at least 1 minute from now');
+      return;
+    }
+    const maxStart = parseDatetimeLocal(maxMeetupStartLocal());
+    if (maxStart && startsAtDate.getTime() > maxStart.getTime()) {
+      setFormError('Meetups can be scheduled up to 7 days ahead');
+      return;
+    }
+
     let coverImageUrl: string | undefined;
     if (coverFile) {
       setIsUploadingCover(true);
@@ -127,7 +157,7 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
 
     const base = {
       title: title.trim(),
-      startsInMinutes,
+      startsAt: startsAtDate.toISOString(),
       coverImageUrl,
     };
 
@@ -159,26 +189,15 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
     <ProfileSheet open={open} title="Schedule meetup" onClose={onClose} fromTop hideHandle>
       <form className="create-date-sheet" onSubmit={(e) => void handleSubmit(e)}>
         <div className="create-date-sheet__cover-block">
-          <span className="create-date-sheet__cover-label">Meetup cover</span>
           <button
             type="button"
             className={`create-date-sheet__cover-preview ${coverPreview ? 'create-date-sheet__cover-preview--filled' : ''}`}
             onClick={() => coverInputRef.current?.click()}
             aria-label={coverPreview ? 'Change cover photo' : 'Upload cover photo'}
           >
-            {coverPreview ? (
-              <img src={coverPreview} alt="" />
-            ) : (
-              <span className="create-date-sheet__cover-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                  <path d="M12 16V4M12 4l4 4M12 4L8 8" />
-                  <rect x="4" y="14" width="16" height="6" rx="2" />
-                </svg>
-                Add a cover photo
-              </span>
-            )}
+            {coverPreview ? <img src={coverPreview} alt="" /> : null}
           </button>
-          <p className="create-date-sheet__cover-hint">Shown on the meetup card and in the video room.</p>
+          <p className="create-date-sheet__caption">Shown on the meetup card and in the video room.</p>
           <input
             ref={coverInputRef}
             type="file"
@@ -188,40 +207,31 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
           />
         </div>
 
-        <label className="create-date-sheet__label">
-          Title
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Coffee chat, trivia night…"
-            maxLength={60}
-            required
-          />
-        </label>
+        <input
+          className="create-date-sheet__input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Coffee chat, trivia night…"
+          maxLength={60}
+          aria-label="Title"
+          required
+        />
 
-        <label className="create-date-sheet__label">
-          What to expect
-          <input
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="15 min · cameras optional"
-            maxLength={120}
-          />
-        </label>
+        <input
+          className="create-date-sheet__input"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="What to expect"
+          maxLength={120}
+          aria-label="What to expect"
+        />
 
         <fieldset className="create-date-sheet__fieldset">
           <legend>Visibility</legend>
           <div className="create-date-sheet__visibility">
-            <div className="create-date-sheet__visibility-text">
-              <span className="create-date-sheet__visibility-label">
-                {isPrivate ? 'Private' : 'Public'}
-              </span>
-              <span className="create-date-sheet__help">
-                {isPrivate
-                  ? 'Invite one match · they join with a room code after accepting'
-                  : 'Anyone can tap Join on the live list — no code needed'}
-              </span>
-            </div>
+            <span className="create-date-sheet__visibility-label">
+              {isPrivate ? 'Private' : 'Public'}
+            </span>
             <button
               type="button"
               role="switch"
@@ -291,13 +301,24 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
               <button
                 key={opt.minutes}
                 type="button"
-                className={`create-date-sheet__chip ${startsInMinutes === opt.minutes ? 'create-date-sheet__chip--active' : ''}`}
-                onClick={() => setStartsInMinutes(opt.minutes)}
+                className={`create-date-sheet__chip ${isChipActive(opt.minutes, startAtLocal) ? 'create-date-sheet__chip--active' : ''}`}
+                onClick={() =>
+                  setStartAtLocal(toDatetimeLocalValue(new Date(Date.now() + opt.minutes * 60_000)))
+                }
               >
                 {opt.label}
               </button>
             ))}
           </div>
+          <input
+            type="datetime-local"
+            className="create-date-sheet__datetime"
+            value={startAtLocal}
+            min={minMeetupStartLocal()}
+            max={maxMeetupStartLocal()}
+            onChange={(e) => setStartAtLocal(e.target.value)}
+            aria-label="Start date and time"
+          />
         </fieldset>
 
         {(formError || error) && (

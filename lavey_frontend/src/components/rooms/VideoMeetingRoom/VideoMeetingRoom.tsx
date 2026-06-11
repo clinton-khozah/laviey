@@ -11,6 +11,7 @@ import { MEETING_REACTION_LABEL } from '@/constants/meeting/meetingReactions';
 import { meetingString } from '@/constants/meeting/meetingStrings';
 import { useMeetingCaptions, useMeetingChat, useMeetingGift, useMeetingLanguage, useMeetingReactions } from '@/hooks';
 import { isDoubleDateMeetup } from '@/utils/meeting/isDoubleDateMeetup';
+import { hasMeetupCover, resolveMeetupCover } from '@/utils/meeting/meetupCover';
 import type { MeetingParticipant } from '@/types';
 import type { VideoMeetingRoomProps } from './VideoMeetingRoom.types';
 import './VideoMeetingRoom.css';
@@ -44,10 +45,14 @@ export function VideoMeetingRoom({
     localDisplayName,
   });
 
+  const localAvatarUrl =
+    participants.find((participant) => participant.profileId === localUserId)?.avatarUrl ?? '';
+
   const { messages: chatMessages, sendMessage, setOnIncomingMessage } = useMeetingChat({
     meetupId: date.id,
     localUserId,
     localDisplayName,
+    localAvatarUrl,
   });
 
   const [chatOpen, setChatOpen] = useState(false);
@@ -127,6 +132,9 @@ export function VideoMeetingRoom({
     setChatUnread(0);
   };
 
+  const meetingCover = resolveMeetupCover(date.coverImage);
+  const showMeetingCover = hasMeetupCover(date.coverImage);
+
   return (
     <AppOverlay>
       <div className="video-meeting">
@@ -166,10 +174,10 @@ export function VideoMeetingRoom({
         </header>
 
         <div
-          className={`video-meeting__stage ${date.coverImage ? 'video-meeting__stage--has-cover' : ''}`}
+          className={`video-meeting__stage ${showMeetingCover ? 'video-meeting__stage--has-cover' : ''}`}
           style={
-            date.coverImage
-              ? ({ '--meeting-cover-image': `url("${date.coverImage}")` } as React.CSSProperties)
+            showMeetingCover && meetingCover
+              ? ({ '--meeting-cover-image': `url("${meetingCover}")` } as React.CSSProperties)
               : undefined
           }
         >

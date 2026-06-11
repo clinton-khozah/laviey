@@ -1,230 +1,243 @@
+/* For You–style meetup feed card */
 .online-date-card {
-  border-radius: 20px;
+  width: 100%;
+  border-radius: 16px;
   overflow: hidden;
-  background: linear-gradient(160deg, rgba(124, 58, 237, 0.08) 0%, var(--bg-elevated) 45%);
+  background: var(--bg-elevated);
+  box-shadow: var(--shell-shadow);
   border: 1px solid var(--border-subtle);
 }
 
 .online-date-card--live {
-  border-color: rgba(52, 211, 153, 0.35);
-  box-shadow: 0 8px 32px rgba(52, 211, 153, 0.12);
+  box-shadow: var(--shell-shadow), 0 0 0 1px rgba(52, 211, 153, 0.28);
 }
 
-.online-date-card__cover {
+.online-date-card--feed {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+.online-date-card--feed .online-date-card__stage {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.online-date-card__stage {
   position: relative;
-  height: 128px;
-  background-size: cover;
-  background-position: center;
+  width: 100%;
+  aspect-ratio: 9 / 14;
+  overflow: hidden;
+  background: var(--bg-deep);
 }
 
-.online-date-card__cover::after {
-  content: '';
+.online-date-card__media {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(8, 8, 12, 0.28) 0%, transparent 62%);
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.online-date-card__media--profile {
+  background-size: cover;
+  background-position: center top;
+}
+
+.online-date-card__media--empty {
+  background: linear-gradient(160deg, #e8e4ff 0%, #f4f4f8 45%, #fce7f3 100%);
+}
+
+[data-theme='night'] .online-date-card__media--empty {
+  background: linear-gradient(160deg, #1e1b4b 0%, #0f172a 50%, #1a1028 100%);
+}
+
+.online-date-card__gradient--vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.28) 0%, transparent 30%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.38) 0%, transparent 34%);
+}
+
+.online-date-card--feed .online-date-card__gradient--vignette {
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0%, transparent 26%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.32) 0%, transparent 30%);
+}
+
+/* Chrome layer — badges top, content centered */
+.online-date-card__chrome {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
   pointer-events: none;
 }
 
-.online-date-card__badges {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  z-index: 1;
+.online-date-card__top {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
-.online-date-card__status {
+.online-date-card__top-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.online-date-card__active {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+.online-date-card__active-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-mint, #34d399);
+}
+
+.online-date-card__active-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.online-date-card__live-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   padding: 5px 10px;
   border-radius: 99px;
   font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.online-date-card__status--live {
-  background: rgba(52, 211, 153, 0.95);
-  color: #042f1a;
-}
-
-.online-date-card__status--starting-soon {
-  background: rgba(168, 85, 247, 0.92);
   color: white;
+  background: rgba(239, 68, 68, 0.9);
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.4);
 }
 
-.online-date-card__status--scheduled {
-  background: rgba(255, 255, 255, 0.18);
-  color: white;
-  backdrop-filter: blur(8px);
-}
-
-.online-date-card__visibility {
+.online-date-card__status-pill {
+  display: inline-flex;
   padding: 5px 10px;
   border-radius: 99px;
   font-size: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.online-date-card__visibility--public {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
+  color: var(--text-primary);
+  background: var(--glass-bg-strong);
   backdrop-filter: blur(8px);
-}
-
-.online-date-card__visibility--private {
-  background: rgba(255, 77, 109, 0.85);
-  color: white;
+  border: 1px solid var(--border-subtle);
 }
 
 .online-date-card__pulse {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: currentColor;
-  animation: datePulse 1.2s ease-in-out infinite;
+  background: white;
+  animation: meetupLivePulse 1.2s ease-in-out infinite;
 }
 
-@keyframes datePulse {
+@keyframes meetupLivePulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.45; transform: scale(0.85); }
+  50% { opacity: 0.5; transform: scale(0.8); }
 }
 
-.online-date-card__count {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 1;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 99px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-}
-
-.online-date-card__fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.online-date-card__fill span {
-  display: block;
-  height: 100%;
-  background: var(--gradient-vibe);
-  border-radius: 0 2px 2px 0;
-  transition: width 0.3s ease;
-}
-
-.online-date-card__body {
-  padding: 12px 14px 14px;
-}
-
-.online-date-card__title {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 3px;
-}
-
-.online-date-card__topic {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
-
-.online-date-card__host {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-
-.online-date-card__host-avatar {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid var(--border-subtle);
-}
-
-.online-date-card__host-avatar--you,
-.online-date-card__host-avatar--initial {
+.online-date-card__host-chip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  border: none;
-}
-
-.online-date-card__host-avatar--you {
-  background: var(--gradient-flame);
-  color: white;
-}
-
-.online-date-card__host-avatar--initial {
-  background: rgba(124, 58, 237, 0.35);
-  color: var(--text-primary);
+  gap: 8px;
+  max-width: min(58%, 220px);
+  padding: 4px 12px 4px 4px;
+  border-radius: 99px;
+  text-align: left;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(14px);
   border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  pointer-events: auto;
 }
 
-.online-date-card__delete {
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #f87171;
-  background: transparent;
-  border: 1px solid rgba(248, 113, 113, 0.45);
+.online-date-card__host-chip:disabled {
+  pointer-events: none;
 }
 
-.online-date-card__delete:disabled {
-  opacity: 0.65;
+.online-date-card__host-chip-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
 }
 
-[data-theme='light'] .online-date-card__delete {
-  color: #dc2626;
-  border-color: rgba(220, 38, 38, 0.35);
-}
-
-.online-date-card__tags {
+.online-date-card__host-chip-avatar--initial {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: white;
+  background: var(--gradient-vibe);
 }
 
-.online-date-card__tag {
+.online-date-card__host-chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.online-date-card__host-chip-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.online-date-card__host-chip-meta {
   font-size: 10px;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 99px;
-  background: rgba(124, 58, 237, 0.2);
-  color: #c4b5fd;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
-.online-date-card__public-hint {
-  margin: 0 0 12px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-secondary);
+/* Access + delete below card */
+.online-date-card__access {
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .online-date-card__code-row,
@@ -232,7 +245,7 @@
   display: flex;
   align-items: stretch;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .online-date-card__code,
@@ -240,7 +253,7 @@
   flex: 1;
   min-width: 0;
   padding: 8px 10px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--chip-bg);
   border: 1px dashed var(--border-subtle);
 }
@@ -270,32 +283,25 @@
   font-variant-numeric: tabular-nums;
 }
 
-[data-theme='light'] .online-date-card__tag {
-  background: rgba(124, 58, 237, 0.12);
-  color: #4c1d95;
-  border: 1px solid rgba(124, 58, 237, 0.22);
-}
-
 .online-date-card__copy {
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 12px;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--chip-bg);
   border: 1px solid var(--border-subtle);
 }
 
-.online-date-card__join {
+.online-date-card__delete {
   width: 100%;
-  padding: 11px;
-  border-radius: 14px;
+  padding: 12px;
+  font-size: 12px;
   font-weight: 700;
-  font-size: 13px;
-  color: white;
-  background: var(--gradient-vibe);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+  color: #f87171;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-subtle);
 }
 
-.online-date-card__join:disabled {
+.online-date-card__delete:disabled {
   opacity: 0.65;
 }

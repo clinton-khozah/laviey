@@ -22,6 +22,7 @@ import {
 import { userProfileService } from '@/services/users/userProfileService';
 import { subscribeAlgorithmChange } from '@/features/admin/algorithm/algorithmConfig';
 import type { Profile } from '@/types';
+import { hasPremiumAccess } from '@/config/features';
 import { navigateAppTo, openChatWithProfile } from '@/utils/navigation/appNav';
 import './DiscoverPage.css';
 
@@ -56,7 +57,7 @@ export function DiscoverPage() {
   const lastSyncedLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const lastSyncAtRef = useRef<number>(0);
   const { profiles: receivedLikers, count: likeCount } = useProfilesWhoLikedYou();
-  const isPremium = userProfile?.isPremium ?? false;
+  const isPremium = hasPremiumAccess(userProfile?.isPremium);
 
   const modalLiked = profileModal ? likedIds.has(profileModal.id) : false;
 
@@ -200,14 +201,9 @@ export function DiscoverPage() {
       />
       <ReceivedLikesSheet
         open={likesOpen}
-        isPremium={isPremium}
         likers={receivedLikers}
         likedProfileIds={likedIds}
         onClose={() => setLikesOpen(false)}
-        onUpgrade={() => {
-          setLikesOpen(false);
-          setPlatinumOpen(true);
-        }}
         onLikeBack={(profileId) => void sendFlame(profileId)}
         onChat={(profileId) => {
           setLikesOpen(false);

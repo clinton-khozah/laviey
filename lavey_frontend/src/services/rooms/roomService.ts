@@ -1,6 +1,5 @@
 import { usesBackendMeetups } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { pickMockFeedImage } from '@/constants/mockMedia';
 import { httpClient } from '@/services/api/httpClient';
 import { MOCK_DATE_INVITES, MOCK_ONLINE_DATES } from '@/services/mocks/room.mock';
 import type {
@@ -17,7 +16,9 @@ import {
   normalizeMeetupCode,
   readAcceptedMeetupCodes,
 } from '@/utils/meeting/meetupAccess';
+import { resolveMeetupCover } from '@/utils/meeting/meetupCover';
 import { buildMeetupJoinLink } from '@/utils/meeting/meetupJoinLink';
+import { formatMeetupScheduledLabel, isMeetupExpired } from '@/utils/meeting/meetupSchedule';
 import { sleep } from '@/utils/sleep';
 
 function generateAccessCode(): string {
@@ -29,25 +30,52 @@ function cloneDate(date: OnlineDate): OnlineDate {
   return enrichDate({ ...date });
 }
 
-function enrichDate(date: OnlineDate): OnlineDate {
+type MeetupDatePayload = OnlineDate & {
+  host_user_id?: string;
+  starts_at?: string;
+  scheduled_label?: string;
+};
+
+function enrichDate(date: MeetupDatePayload): OnlineDate {
+  const startsAt = date.startsAt ?? date.starts_at;
+  const scheduledLabel =
+    date.scheduledLabel ??
+    date.scheduled_label ??
+    (startsAt ? formatMeetupScheduledLabel(startsAt) : undefined);
+
   return {
     ...date,
+    hostUserId: date.hostUserId ?? date.host_user_id,
+    startsAt,
+    scheduledLabel,
+    coverImage: resolveMeetupCover(date.coverImage) ?? '',
     joinLink: buildMeetupJoinLink(date.accessCode),
   };
 }
 
-function inviteForClient(invite: DateInvite): DateInvite {
-  if (invite.status === 'pending') {
-    const { accessCode: _hidden, ...rest } = invite;
+function filterActiveMeetups(dates: OnlineDate[]): OnlineDate[] {
+  return dates.filter((date) => !date.startsAt || !isMeetupExpired(date.startsAt));
+}
+
+type DateInvitePayload = DateInvite & { from_profile_id?: string };
+
+function inviteForClient(invite: DateInvitePayload): DateInvite {
+  const normalized: DateInvite = {
+    ...invite,
+    fromProfileId: invite.fromProfileId ?? invite.from_profile_id,
+  };
+  if (normalized.status === 'pending') {
+    const { accessCode: _hidden, ...rest } = normalized;
     return { ...rest, status: 'pending' };
   }
-  return { ...invite };
+  return normalized;
 }
 
 function buildDateFromInvite(invite: DateInvite): OnlineDate {
   const code = invite.accessCode ?? generateAccessCode();
   return {
     id: invite.dateId,
+    hostUserId: invite.fromProfileId,
     title: invite.title,
     topic: invite.topic,
     hostName: invite.fromName,
@@ -73,10 +101,10 @@ export const roomService = {
   async getOnlineDates(): Promise<OnlineDate[]> {
     if (!usesBackendMeetups()) {
       await sleep(350);
-      return MOCK_ONLINE_DATES.map(cloneDate);
+      return filterActiveMeetups(MOCK_ONLINE_DATES.map(cloneDate));
     }
     const res = await httpClient.get<ApiResponse<OnlineDate[]>>(API_ENDPOINTS.dates.list);
-    return res.data.map(enrichDate);
+    return filterActiveMeetups(res.data.map(enrichDate));
   },
 
   async getDateInvites(): Promise<DateInvite[]> {
@@ -155,6 +183,12 @@ export const roomService = {
       }
 
       const code = generateAccessCode();
+      const startsAt =
+        input.startsAt ?? new Date(Date.now() + (input.startsInMinutes ?? 15) * 60_000).toISOString();
+      const startsInMinutes = Math.max(
+        1,
+        Math.ceil((new Date(startsAt).getTime() - Date.now()) / 60_000),
+      );
 
       const newDate: OnlineDate = {
         id: `new-${Date.now()}`,
@@ -162,13 +196,15 @@ export const roomService = {
         topic: input.topic,
         hostName: 'You',
         hostAvatar: '',
-        status: input.startsInMinutes <= 15 ? 'starting-soon' : 'scheduled',
+        status: startsInMinutes <= 15 ? 'starting-soon' : 'scheduled',
         visibility: input.visibility,
         accessCode: code,
         participantCount: isInvite ? 0 : 1,
         maxParticipants: isPrivate ? 2 : 24,
-        startsInMinutes: input.startsInMinutes,
-        coverImage: input.coverImageUrl ?? pickMockFeedImage(2),
+        startsInMinutes,
+        startsAt,
+        scheduledLabel: formatMeetupScheduledLabel(startsAt),
+        coverImage: input.coverImageUrl ?? '',
         tags: isPrivate ? ['Private'] : ['Public'],
         isHostedByYou: true,
       };
@@ -185,6 +221,7 @@ export const roomService = {
         mode: input.mode,
         inviteToProfileId: input.inviteToProfileId,
         inviteToName: input.inviteToName,
+        startsAt: input.startsAt,
         startsInMinutes: input.startsInMinutes,
         coverImageUrl: input.coverImageUrl,
       },

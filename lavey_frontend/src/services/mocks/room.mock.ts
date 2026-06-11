@@ -1,9 +1,10 @@
 import type { DateInvite, OnlineDate } from '@/types';
-import { MOCK_MEDIA, pickMockAvatar, pickMockFeedImage } from '@/constants/mockMedia';
+import { pickMockAvatar } from '@/constants/mockMedia';
 
 export const MOCK_ONLINE_DATES: OnlineDate[] = [
   {
     id: 'r1',
+    hostUserId: 'mock-host-1',
     title: 'Dog Lovers Happy Hour',
     topic: 'Bring your pup stories · camera on welcome',
     hostName: 'Lavey Host',
@@ -13,11 +14,12 @@ export const MOCK_ONLINE_DATES: OnlineDate[] = [
     accessCode: 'PAWS-4821',
     participantCount: 18,
     maxParticipants: 24,
-    coverImage: pickMockFeedImage(0),
+    coverImage: '',
     tags: ['Dogs', 'Casual'],
   },
   {
     id: 'r2',
+    hostUserId: 'mock-host-2',
     title: '80s Music Trivia',
     topic: 'Quick rounds · camera optional',
     hostName: 'DJ Riley',
@@ -27,11 +29,12 @@ export const MOCK_ONLINE_DATES: OnlineDate[] = [
     accessCode: 'VIBE-8033',
     participantCount: 31,
     maxParticipants: 40,
-    coverImage: pickMockFeedImage(1),
+    coverImage: '',
     tags: ['Music', 'Games'],
   },
   {
     id: 'r3',
+    hostUserId: 'mock-host-3',
     title: 'Sunset Coffee Chats',
     topic: 'Low-pressure first vibes',
     hostName: 'Maya',
@@ -42,11 +45,12 @@ export const MOCK_ONLINE_DATES: OnlineDate[] = [
     participantCount: 6,
     maxParticipants: 16,
     startsInMinutes: 12,
-    coverImage: MOCK_MEDIA.flower,
+    coverImage: '',
     tags: ['Coffee', 'Chill'],
   },
   {
     id: 'r4',
+    hostUserId: 'mock-host-4',
     title: 'Climbing Gym Crew',
     topic: 'Share your send of the week',
     hostName: 'Alex',
@@ -57,7 +61,7 @@ export const MOCK_ONLINE_DATES: OnlineDate[] = [
     participantCount: 0,
     maxParticipants: 20,
     startsInMinutes: 90,
-    coverImage: pickMockFeedImage(3),
+    coverImage: '',
     tags: ['Climbing', 'Fitness'],
   },
 ];
@@ -73,7 +77,7 @@ export const MOCK_DATE_INVITES: DateInvite[] = [
     topic: '15 min · just us two',
     scheduledLabel: 'Tonight · 8:00 PM',
     accessCode: 'JORD-5529',
-    coverImage: pickMockFeedImage(4),
+    coverImage: '',
     status: 'pending',
   },
   {
@@ -86,7 +90,7 @@ export const MOCK_DATE_INVITES: DateInvite[] = [
     topic: 'Virtual coffee + chapter swap',
     scheduledLabel: 'Tomorrow · 6:30 PM',
     accessCode: 'READ-3318',
-    coverImage: pickMockFeedImage(5),
+    coverImage: '',
     status: 'pending',
   },
 ];

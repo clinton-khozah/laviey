@@ -1,0 +1,37 @@
+.profile-initial-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  background: linear-gradient(145deg, rgba(255, 77, 109, 0.18) 0%, rgba(168, 85, 247, 0.14) 100%);
+  border: 2px solid var(--border-subtle);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.profile-initial-avatar--sm {
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
+.profile-initial-avatar--md {
+  width: 44px;
+  height: 44px;
+  font-size: 17px;
+}
+
+.profile-initial-avatar--lg {
+  width: 52px;
+  height: 52px;
+  font-size: 20px;
+}
+
+.profile-initial-avatar--feed {
+  width: 120px;
+  height: 120px;
+  font-size: 48px;
+  border-width: 3px;
+}

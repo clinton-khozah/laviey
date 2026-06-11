@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { usesBackendApi } from '@/config/env';
+import { UNLOCK_PREMIUM_FEATURES } from '@/config/features';
 import { contentService } from '@/services/content/contentService';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
 import { MOCK_RECEIVED_LIKE_PROFILE_IDS } from '@/services/mocks/likes.mock';
@@ -50,8 +51,12 @@ export function ProfileLikesPanel({ reciprocatedIds }: ProfileLikesPanelProps) {
     };
   }, [reciprocatedIds]);
 
-  const unlocked = received.filter((item) => item.likedBack || reciprocatedIds.has(item.userId));
-  const locked = received.filter((item) => !item.likedBack && !reciprocatedIds.has(item.userId));
+  const unlocked = UNLOCK_PREMIUM_FEATURES
+    ? received
+    : received.filter((item) => item.likedBack || reciprocatedIds.has(item.userId));
+  const locked = UNLOCK_PREMIUM_FEATURES
+    ? []
+    : received.filter((item) => !item.likedBack && !reciprocatedIds.has(item.userId));
 
   return (
     <div className="profile-likes-panel">
@@ -62,8 +67,9 @@ export function ProfileLikesPanel({ reciprocatedIds }: ProfileLikesPanelProps) {
             : `${received.length} ${received.length === 1 ? 'person liked' : 'people liked'} your posts`}
         </h3>
         <p className="profile-likes-panel__hint">
-          Tap a post&apos;s like count to see names and user IDs. Like them back on For You to match
-          and unlock their profile.
+          {UNLOCK_PREMIUM_FEATURES
+            ? 'Tap a post\'s like count to see who liked it and like them back.'
+            : 'Tap a post\'s like count to see names and user IDs. Like them back on For You to match and unlock their profile.'}
         </p>
       </div>
 

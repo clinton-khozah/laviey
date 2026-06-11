@@ -23,18 +23,13 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary);
 }
 
 .profile-overlay__age {
   font-weight: 500;
   opacity: 0.9;
-}
-
-/* Discover feed stays "night-like" even in light theme (video background). */
-[data-theme='light'] .profile-overlay__name,
-[data-theme='light'] .profile-overlay__age {
-  color: #38bdf8;
+  color: var(--text-primary);
 }
 
 .profile-overlay__verified {
@@ -83,16 +78,11 @@
   font-size: 13px;
   line-height: 1.45;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.94);
+  color: var(--text-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
-}
-
-[data-theme='light'] .profile-overlay__bio {
-  color: rgba(255, 255, 255, 0.96);
 }
 
 .profile-overlay__tags {

@@ -498,7 +498,6 @@ export function ProfilePage() {
           posts={displayPosts}
           activePostId={viewingPostId}
           isOwner
-          isPremium={profile.isPremium ?? false}
           likedProfileIds={likedIds}
           onClose={() => setViewingPostId(null)}
           onChangePost={setViewingPostId}
@@ -506,7 +505,6 @@ export function ProfilePage() {
           onHidePost={handleHidePost}
           onLikeBack={(profileId) => void sendFlame(profileId)}
           onChat={(profileId) => openChatWithProfile(profileId)}
-          onUpgrade={() => setSheet('platinum')}
         />
       )}
 

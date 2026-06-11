@@ -3,14 +3,17 @@ import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { PageScroller } from '@/components/layout/PageScroller';
 import { CreateDateSheet } from '@/components/rooms/CreateDateSheet';
 import { DateInviteCard } from '@/components/rooms/DateInviteCard';
-import { JoinDateCodeBar } from '@/components/rooms/JoinDateCodeBar';
 import { JoinDateModal } from '@/components/rooms/JoinDateModal';
 import { MeetupShareSheet } from '@/components/rooms/MeetupShareSheet';
+import { LiveMeetupsStrip } from '@/components/rooms/LiveMeetupsStrip';
+import { MeetupVerticalFeed } from '@/components/rooms/MeetupVerticalFeed';
 import { OnlineDateCard } from '@/components/rooms/OnlineDateCard';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
+import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { ActiveMeetingContainer } from '@/features/rooms/containers/ActiveMeetingContainer';
-import { useOnlineDates, useUserProfile } from '@/hooks';
+import { useMatchActions, useMatchProfile, useOnlineDates, useUserProfile } from '@/hooks';
+import { messageService } from '@/services';
 import type { ActiveMeetingSession, OnlineDate } from '@/types';
 import { meetupRequiresAccessCode } from '@/utils/meeting/meetupJoinAccess';
 import { consumePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
@@ -35,8 +38,15 @@ export function ZoomPage() {
     clearActionError,
   } = useOnlineDates();
   const { profile: userProfile } = useUserProfile();
+  const { likedIds, sendFlame, isSubmitting: isFlameSubmitting } = useMatchActions();
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
+  const {
+    profile: profileModal,
+    isLoading: profileModalLoading,
+    error: profileModalError,
+  } = useMatchProfile(profileModalUserId);
   const [activeMeeting, setActiveMeeting] = useState<ActiveMeetingSession | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
@@ -51,6 +61,42 @@ export function ZoomPage() {
     setToast(message);
     window.setTimeout(() => setToast(null), 2400);
   }, []);
+
+  const openProfileByUserId = useCallback((userId: string) => {
+    if (!userId || userId === 'guest') return;
+    setProfileModalUserId(userId);
+  }, []);
+
+  const openHostProfile = useCallback(
+    (date: OnlineDate) => {
+      if (!date.hostUserId) {
+        showToast('Could not load profile');
+        return;
+      }
+      openProfileByUserId(date.hostUserId);
+    },
+    [openProfileByUserId, showToast],
+  );
+
+  const modalLiked = profileModal ? likedIds.has(profileModal.id) : false;
+
+  const handleFlameFromModal = useCallback(() => {
+    if (!profileModal || modalLiked) return;
+    void sendFlame(profileModal.id);
+  }, [modalLiked, profileModal, sendFlame]);
+
+  const sendMatchGreeting = useCallback((profileId: string, text: string) => {
+    void (async () => {
+      const conversationId = await messageService.findConversationByProfileId(profileId);
+      if (conversationId) await messageService.sendMessage(conversationId, text);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!profileModalError) return;
+    showToast('Could not load profile');
+    setProfileModalUserId(null);
+  }, [profileModalError, showToast]);
 
   const handleDeleteMeetup = useCallback(
     async (date: OnlineDate) => {
@@ -70,6 +116,10 @@ export function ZoomPage() {
 
   const liveDates = dates.filter((d) => d.status === 'live');
   const upcomingDates = dates.filter((d) => d.status !== 'live');
+  const discoverMeetups = [
+    ...liveDates.filter((d) => !d.isHostedByYou),
+    ...upcomingDates.filter((d) => !d.isHostedByYou),
+  ];
   const myDates = dates.filter(
     (d) => d.isHostedByYou || acceptedDateIds.has(d.id),
   );
@@ -206,11 +256,12 @@ export function ZoomPage() {
     showToast('Link copied');
   };
 
+  const hasLiveRail = !isLoading && !error && liveDates.length > 0;
+
   return (
-    <div className="online-dates-page">
+    <div className={`online-dates-page ${hasLiveRail ? 'online-dates-page--has-live-rail' : ''}`}>
       <ScreenHeader
         title="Online Dates"
-        subtitle="Video meetups · share a link or code to join"
         action={
           <button
             type="button"
@@ -225,15 +276,19 @@ export function ZoomPage() {
         }
       />
 
-      <PageScroller className="page-scroller--with-header">
-        <div className="online-dates-page__top">
-          <JoinDateCodeBar
-            isJoining={isJoiningCode}
-            error={!joinModalOpen ? actionError : null}
-            onJoin={(code) => void handleCodeBarJoin(code)}
+      {hasLiveRail && (
+        <div className="online-dates-page__live-rail">
+          <LiveMeetupsStrip
+            dates={liveDates}
+            joiningId={joiningId}
+            onJoin={(date) => void joinMeetup(date)}
           />
         </div>
+      )}
 
+      <PageScroller
+        className={`page-scroller--with-header ${hasLiveRail ? 'page-scroller--below-live-rail' : ''}`}
+      >
         {isLoading && <PageTransitionSplash />}
         {error && <FeedState message={error} onRetry={() => void refetch()} />}
 
@@ -272,6 +327,8 @@ export function ZoomPage() {
                       onCopyCode={copyCode}
                       onCopyLink={copyLink}
                       onJoin={() => void joinMeetup(date)}
+                      onHostClick={(d) => void openHostProfile(d)}
+                      onProfileClick={(userId) => openProfileByUserId(userId)}
                       onDelete={
                         date.isHostedByYou
                           ? () => void handleDeleteMeetup(date)
@@ -283,42 +340,19 @@ export function ZoomPage() {
               </section>
             )}
 
-            {liveDates.length > 0 && (
-              <section className="online-dates-page__section">
-                <h2 className="online-dates-page__section-title">
-                  <span className="online-dates-page__live-dot" />
-                  Live now
-                </h2>
-                <div className="online-dates-page__stack">
-                  {liveDates.filter((d) => !d.isHostedByYou).map((date) => (
-                    <OnlineDateCard
-                      key={date.id}
-                      date={date}
-                      isJoining={joiningId === date.id}
-                      onCopyCode={copyCode}
-                      onCopyLink={copyLink}
-                      onJoin={() => void joinMeetup(date)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {upcomingDates.length > 0 && (
-              <section className="online-dates-page__section">
-                <h2 className="online-dates-page__section-title">Coming up</h2>
-                <div className="online-dates-page__stack">
-                  {upcomingDates.filter((d) => !d.isHostedByYou).map((date) => (
-                    <OnlineDateCard
-                      key={date.id}
-                      date={date}
-                      isJoining={joiningId === date.id}
-                      onCopyCode={copyCode}
-                      onCopyLink={copyLink}
-                      onJoin={() => void joinMeetup(date)}
-                    />
-                  ))}
-                </div>
+            {discoverMeetups.length > 0 && (
+              <section className="online-dates-page__section online-dates-page__section--feed">
+                <h2 className="online-dates-page__section-title">For you</h2>
+                <MeetupVerticalFeed
+                  className="online-dates-page__feed"
+                  dates={discoverMeetups}
+                  joiningId={joiningId}
+                  onCopyCode={copyCode}
+                  onCopyLink={copyLink}
+                  onJoin={(date) => void joinMeetup(date)}
+                  onHostClick={(d) => void openHostProfile(d)}
+                  onProfileClick={(userId) => openProfileByUserId(userId)}
+                />
               </section>
             )}
           </div>
@@ -373,6 +407,23 @@ export function ZoomPage() {
           }}
         />
       )}
+
+      <MatchProfileModal
+        open={profileModalUserId !== null}
+        mode="discover"
+        profile={profileModal}
+        liked={modalLiked}
+        likedYou={profileModal?.likedYou ?? false}
+        isLoading={profileModalLoading}
+        isSubmittingFlame={isFlameSubmitting}
+        onClose={() => setProfileModalUserId(null)}
+        onFlame={handleFlameFromModal}
+        onSendMessage={
+          profileModal && modalLiked && profileModal.likedYou
+            ? (text) => sendMatchGreeting(profileModal.id, text)
+            : undefined
+        }
+      />
     </div>
   );
 }

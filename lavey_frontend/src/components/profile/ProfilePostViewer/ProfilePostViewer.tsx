@@ -13,7 +13,6 @@ interface ProfilePostViewerProps {
   posts: ProfilePost[];
   activePostId: string | null;
   isOwner?: boolean;
-  isPremium?: boolean;
   likedProfileIds?: Set<string>;
   onClose: () => void;
   onChangePost?: (postId: string) => void;
@@ -21,7 +20,6 @@ interface ProfilePostViewerProps {
   onHidePost?: (postId: string) => void | Promise<void>;
   onLikeBack?: (profileId: string) => void;
   onChat?: (profileId: string) => void;
-  onUpgrade?: () => void;
 }
 
 const DEFAULT_CLIP_SECONDS = 10;
@@ -109,7 +107,6 @@ export function ProfilePostViewer({
   posts,
   activePostId,
   isOwner = false,
-  isPremium = false,
   likedProfileIds = new Set(),
   onClose,
   onChangePost,
@@ -117,7 +114,6 @@ export function ProfilePostViewer({
   onHidePost,
   onLikeBack,
   onChat,
-  onUpgrade,
 }: ProfilePostViewerProps) {
   const feedRef = useRef<HTMLDivElement>(null);
   const slideNodesRef = useRef<Map<string, HTMLElement>>(new Map());
@@ -409,10 +405,8 @@ export function ProfilePostViewer({
         open={likersPostId !== null}
         postId={likersPostId}
         likeCount={posts.find((p) => p.id === likersPostId)?.likeCount ?? 0}
-        isPremium={isPremium}
-        likedProfileIds={likedProfileIds}
+        likedProfileIds={likedProfileIds ?? new Set()}
         onClose={() => setLikersPostId(null)}
-        onUpgrade={onUpgrade}
         onLikeBack={onLikeBack}
         onChat={onChat}
       />
