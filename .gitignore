@@ -1,3 +1,6 @@
+# Backend lives in https://github.com/clintonkhozah/laveybackend
+lavey_backend/
+
 node_modules/
 .DS_Store
 *.log

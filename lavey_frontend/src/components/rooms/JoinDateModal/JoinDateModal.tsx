@@ -46,7 +46,7 @@ export function JoinDateModal({
           </>
         )}
         <p className="join-date-modal__hint">
-          Like a video meeting — only people with the code can join.
+          Private meetups need the room code from your host (shared after they invite you).
         </p>
         <form onSubmit={handleSubmit}>
           <label className="join-date-modal__label" htmlFor="join-date-code">

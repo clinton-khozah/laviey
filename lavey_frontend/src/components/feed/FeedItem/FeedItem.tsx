@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ActionRail } from '@/components/feed/ActionRail';
 import { ProfileOverlay } from '@/components/feed/ProfileOverlay';
+import { ProfileInitialAvatar } from '@/components/ui/ProfileInitialAvatar';
 import { useDoubleTap, useInView } from '@/hooks';
+import { hasFeedDisplayMedia } from '@/utils/profile/feedMedia';
 import type { FeedItemProps } from './FeedItem.types';
 import './FeedItem.css';
 
@@ -18,19 +20,22 @@ export function FeedItem({
   onProfileClick,
   showSwipeHint = false,
 }: FeedItemProps) {
-  const post =
-    profile.posts?.[0] ??
-    ({
-      id: `fallback-${profile.id}`,
-      type: 'image',
-      src: profile.avatar,
-      poster: profile.avatar,
-    } as const);
+  const firstPost = profile.posts?.[0];
+  const videoSrc =
+    firstPost?.type === 'video' && hasFeedDisplayMedia(firstPost.src) ? firstPost.src : null;
+  const imageSrc =
+    (firstPost?.type === 'image' && hasFeedDisplayMedia(firstPost.src) ? firstPost.src : null) ??
+    (hasFeedDisplayMedia(profile.avatar) ? profile.avatar : null);
+  const videoPoster =
+    firstPost?.type === 'video' && hasFeedDisplayMedia(firstPost.poster) ? firstPost.poster : imageSrc ?? undefined;
+  const showInitial = !videoSrc && !imageSrc;
+  const maxDuration =
+    firstPost?.type === 'video' ? (firstPost.durationSec ?? DEFAULT_CLIP_SECONDS) : DEFAULT_CLIP_SECONDS;
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const { ref, inView } = useInView(0.72);
   const [progress, setProgress] = useState(0);
   const [heartBurst, setHeartBurst] = useState(false);
-  const maxDuration = post.type === 'video' ? (post.durationSec ?? DEFAULT_CLIP_SECONDS) : DEFAULT_CLIP_SECONDS;
 
   const triggerHeart = () => {
     setHeartBurst(true);
@@ -42,7 +47,7 @@ export function FeedItem({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || post.type !== 'video') return;
+    if (!video || !videoSrc) return;
 
     if (inView) {
       video.currentTime = 0;
@@ -51,7 +56,7 @@ export function FeedItem({
       video.pause();
       setProgress(0);
     }
-  }, [inView, post.type]);
+  }, [inView, videoSrc]);
 
   const handleTimeUpdate = () => {
     const video = videoRef.current;
@@ -65,7 +70,11 @@ export function FeedItem({
 
   return (
     <article className="feed-item" ref={ref} onPointerUp={onPointerUp}>
-      {post.type === 'video' ? (
+      {showInitial ? (
+        <div className="feed-item__media feed-item__media--initial">
+          <ProfileInitialAvatar name={profile.name} size="feed" />
+        </div>
+      ) : videoSrc ? (
         <>
           <div className="feed-item__progress-track">
             <motion.div
@@ -76,8 +85,8 @@ export function FeedItem({
           <video
             ref={videoRef}
             className="feed-item__media"
-            src={post.src}
-            poster={post.poster}
+            src={videoSrc}
+            poster={videoPoster}
             muted
             playsInline
             loop={false}
@@ -95,7 +104,7 @@ export function FeedItem({
       ) : (
         <div
           className="feed-item__media feed-item__media--image"
-          style={{ backgroundImage: `url(${post.src})` }}
+          style={{ backgroundImage: `url(${imageSrc})` }}
         />
       )}
 

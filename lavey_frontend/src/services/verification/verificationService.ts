@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { authService } from '@/services/auth/authService';
 import { httpClient } from '@/services/api/httpClient';
@@ -7,7 +7,7 @@ import { setProfileVerified } from '@/utils/profile/verificationStorage';
 import { sleep } from '@/utils/sleep';
 
 function usesBackendVerification(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 export const verificationService = {

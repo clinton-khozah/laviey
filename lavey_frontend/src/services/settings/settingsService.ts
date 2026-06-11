@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi, usesBackendAuth } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import type { MeetingLanguageCode } from '@/constants/meeting/meetingLanguages';
 import { authService } from '@/services/auth/authService';
@@ -21,7 +21,7 @@ export interface UpdateUserSettingsInput {
 }
 
 function usesBackendSettings(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 export const settingsService = {

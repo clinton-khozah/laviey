@@ -29,7 +29,11 @@ export interface MeetingChatMessage {
   id: string;
   fromUserId: string;
   fromName: string;
+  fromAvatarUrl?: string;
   text: string;
   sentAt: string;
+  replyToId?: string;
+  replyToName?: string;
+  likeUserIds?: string[];
   isLocal?: boolean;
 }

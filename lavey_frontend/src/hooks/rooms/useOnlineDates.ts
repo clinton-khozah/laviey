@@ -10,6 +10,7 @@ export function useOnlineDates() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
@@ -72,6 +73,20 @@ export function useOnlineDates() {
     }
   }, []);
 
+  const deleteDate = useCallback(async (dateId: string) => {
+    setDeletingId(dateId);
+    setActionError(null);
+    try {
+      await roomService.deleteDate(dateId);
+      setDates((prev) => prev.filter((date) => date.id !== dateId));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not delete meetup');
+      throw err;
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
+
   const respondToInvite = useCallback(
     async (inviteId: string, action: 'accept' | 'decline') => {
       setActionError(null);
@@ -109,10 +124,12 @@ export function useOnlineDates() {
     error,
     actionError,
     joiningId,
+    deletingId,
     refetch: fetch,
     joinDate,
     joinByCode,
     createDate,
+    deleteDate,
     respondToInvite,
     clearActionError: () => setActionError(null),
   };

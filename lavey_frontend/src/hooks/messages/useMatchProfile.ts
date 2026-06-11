@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { profileService } from '@/services';
 import type { Profile } from '@/types';
+import { isProfileVerified } from '@/utils/profile/verificationStorage';
 
 export function useMatchProfile(profileId: string | null) {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -22,7 +23,12 @@ export function useMatchProfile(profileId: string | null) {
       setError(null);
       try {
         const data = await profileService.getProfileById(id);
-        if (!cancelled) setProfile(data);
+        if (!cancelled) {
+          setProfile({
+            ...data,
+            verified: data.verified || isProfileVerified(data.id),
+          });
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load profile');

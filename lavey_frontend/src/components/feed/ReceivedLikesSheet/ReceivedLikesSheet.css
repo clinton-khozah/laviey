@@ -2,6 +2,13 @@
   padding-bottom: 8px;
 }
 
+.received-likes-sheet__empty {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 .received-likes-sheet__free {
   display: flex;
   flex-direction: column;

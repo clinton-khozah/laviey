@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppOverlay } from '@/components/ui/AppOverlay';
+import { ProfileInitialAvatar } from '@/components/ui/ProfileInitialAvatar';
 import { contentService } from '@/services/content/contentService';
 import type { PostLiker } from '@/types';
+import { hasFeedDisplayMedia } from '@/utils/profile/feedMedia';
 import './PostLikersSheet.css';
 
 interface PostLikersSheetProps {
   open: boolean;
   postId: string | null;
   likeCount: number;
-  isPremium: boolean;
   likedProfileIds: Set<string>;
   onClose: () => void;
-  onUpgrade?: () => void;
   onLikeBack?: (profileId: string) => void;
   onChat?: (profileId: string) => void;
 }
@@ -29,10 +29,8 @@ export function PostLikersSheet({
   open,
   postId,
   likeCount,
-  isPremium,
   likedProfileIds,
   onClose,
-  onUpgrade,
   onLikeBack,
   onChat,
 }: PostLikersSheetProps) {
@@ -112,68 +110,55 @@ export function PostLikersSheet({
                 </button>
               </header>
 
-              {!isPremium ? (
-                <div className="post-likers-sheet__free">
-                  <p className="post-likers-sheet__free-text">
-                    {likeCount} {likeCount === 1 ? 'person likes' : 'people like'} your post. Upgrade to
-                    Platinum to see who and like them back.
-                  </p>
-                  {onUpgrade ? (
-                    <button type="button" className="post-likers-sheet__upgrade-btn" onClick={onUpgrade}>
-                      Upgrade to Platinum
-                    </button>
-                  ) : null}
-                </div>
-              ) : (
-                <>
-                  {loading && <p className="post-likers-sheet__status">Loading…</p>}
-                  {error && <p className="post-likers-sheet__status post-likers-sheet__status--error">{error}</p>}
+              {loading && <p className="post-likers-sheet__status">Loading…</p>}
+              {error && <p className="post-likers-sheet__status post-likers-sheet__status--error">{error}</p>}
 
-                  {!loading && !error && likers.length === 0 && (
-                    <p className="post-likers-sheet__status">No likes yet — share your post on For You.</p>
-                  )}
-
-                  {!loading && !error && likers.length > 0 && (
-                    <p className="post-likers-sheet__intro">People who liked this post</p>
-                  )}
-
-                  <ul className="post-likers-sheet__list">
-                    {isPremium &&
-                      likers.map((liker) => {
-                        const alreadyLiked = likedProfileIds.has(liker.userId);
-                        return (
-                          <li key={liker.userId} className="post-likers-sheet__row">
-                            <img src={liker.avatar} alt="" className="post-likers-sheet__avatar" />
-                            <div className="post-likers-sheet__info">
-                              <span className="post-likers-sheet__name">{liker.name}</span>
-                              <span className="post-likers-sheet__hint">
-                                {alreadyLiked ? 'You matched — say hi' : 'Liked your post'}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              className={`post-likers-sheet__action ${
-                                alreadyLiked
-                                  ? 'post-likers-sheet__action--chat'
-                                  : 'post-likers-sheet__action--like'
-                              }`}
-                              onClick={() => handleAction(liker)}
-                            >
-                              {alreadyLiked ? (
-                                'Chat'
-                              ) : (
-                                <>
-                                  <HeartIcon />
-                                  Like back
-                                </>
-                              )}
-                            </button>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </>
+              {!loading && !error && likers.length === 0 && (
+                <p className="post-likers-sheet__status">No likes yet — share your post on For You.</p>
               )}
+
+              {!loading && !error && likers.length > 0 && (
+                <p className="post-likers-sheet__intro">People who liked this post</p>
+              )}
+
+              <ul className="post-likers-sheet__list">
+                {likers.map((liker) => {
+                  const alreadyLiked = likedProfileIds.has(liker.userId);
+                  const avatarSrc = hasFeedDisplayMedia(liker.avatar) ? liker.avatar : undefined;
+                  return (
+                    <li key={liker.userId} className="post-likers-sheet__row">
+                      <ProfileInitialAvatar
+                        name={liker.name}
+                        src={avatarSrc}
+                        className="post-likers-sheet__avatar"
+                        size="md"
+                      />
+                      <div className="post-likers-sheet__info">
+                        <span className="post-likers-sheet__name">{liker.name}</span>
+                        <span className="post-likers-sheet__hint">
+                          {alreadyLiked ? 'You matched — say hi' : 'Liked your post'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className={`post-likers-sheet__action ${
+                          alreadyLiked ? 'post-likers-sheet__action--chat' : ''
+                        }`}
+                        onClick={() => handleAction(liker)}
+                      >
+                        {alreadyLiked ? (
+                          'Chat'
+                        ) : (
+                          <>
+                            <HeartIcon />
+                            Like back
+                          </>
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </motion.div>
           </>
         )}

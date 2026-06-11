@@ -11,6 +11,7 @@ import { MEETING_REACTION_LABEL } from '@/constants/meeting/meetingReactions';
 import { meetingString } from '@/constants/meeting/meetingStrings';
 import { useMeetingCaptions, useMeetingChat, useMeetingGift, useMeetingLanguage, useMeetingReactions } from '@/hooks';
 import { isDoubleDateMeetup } from '@/utils/meeting/isDoubleDateMeetup';
+import { hasMeetupCover, resolveMeetupCover } from '@/utils/meeting/meetupCover';
 import type { MeetingParticipant } from '@/types';
 import type { VideoMeetingRoomProps } from './VideoMeetingRoom.types';
 import './VideoMeetingRoom.css';
@@ -44,10 +45,14 @@ export function VideoMeetingRoom({
     localDisplayName,
   });
 
+  const localAvatarUrl =
+    participants.find((participant) => participant.profileId === localUserId)?.avatarUrl ?? '';
+
   const { messages: chatMessages, sendMessage, setOnIncomingMessage } = useMeetingChat({
     meetupId: date.id,
     localUserId,
     localDisplayName,
+    localAvatarUrl,
   });
 
   const [chatOpen, setChatOpen] = useState(false);
@@ -127,6 +132,9 @@ export function VideoMeetingRoom({
     setChatUnread(0);
   };
 
+  const meetingCover = resolveMeetupCover(date.coverImage);
+  const showMeetingCover = hasMeetupCover(date.coverImage);
+
   return (
     <AppOverlay>
       <div className="video-meeting">
@@ -158,13 +166,21 @@ export function VideoMeetingRoom({
             </div>
             <p className="video-meeting__subtitle">
               {subtitle}
+              {connectionStatus === 'unsupported' && ' · Video link unavailable — refresh after signing in'}
               {connectionStatus === 'connecting' && participants.length === 0 && ' · Waiting for others…'}
             </p>
           </div>
           <span className="video-meeting__header-spacer" aria-hidden />
         </header>
 
-        <div className="video-meeting__stage">
+        <div
+          className={`video-meeting__stage ${showMeetingCover ? 'video-meeting__stage--has-cover' : ''}`}
+          style={
+            showMeetingCover && meetingCover
+              ? ({ '--meeting-cover-image': `url("${meetingCover}")` } as React.CSSProperties)
+              : undefined
+          }
+        >
           <MeetingReactionOverlay bursts={reactionBursts} />
 
           {participants.length === 1 && !isDouble && (

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppOverlay } from '@/components/ui/AppOverlay';
+import { LogoLoader } from '@/components/ui/LogoLoader';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { getProfilePhotoUrls } from '@/utils/profilePhotos';
 import type { MatchProfileModalProps } from './MatchProfileModal.types';
@@ -124,6 +125,12 @@ export function MatchProfileModal({
                 ×
               </button>
 
+              {isLoading && (
+                <div className="match-profile-modal__loading" aria-busy="true">
+                  <LogoLoader label="Loading profile" />
+                </div>
+              )}
+
               {canRender && (
                 <>
                   <div className="match-profile-modal__gallery">
@@ -173,7 +180,8 @@ export function MatchProfileModal({
 
                     <div className="match-profile-modal__gallery-meta">
                       <h2 id="match-profile-title" className="match-profile-modal__name">
-                        {profile.name}, {profile.age}
+                        {profile.name}
+                        {profile.age > 0 ? `, ${profile.age}` : ''}
                         {profile.verified && (
                           <VerifiedBadge size="md" className="match-profile-modal__verified" />
                         )}

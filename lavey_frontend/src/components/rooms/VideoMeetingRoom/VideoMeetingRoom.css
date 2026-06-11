@@ -98,6 +98,25 @@
   padding: 0 12px;
 }
 
+.video-meeting__stage--has-cover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: 0 12px;
+  border-radius: 20px;
+  background-image: var(--meeting-cover-image);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.video-meeting__stage--has-cover > * {
+  position: relative;
+  z-index: 1;
+}
+
 .video-meeting__love-badge {
   position: absolute;
   top: 8px;

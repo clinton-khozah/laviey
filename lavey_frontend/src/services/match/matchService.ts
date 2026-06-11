@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
@@ -10,7 +10,7 @@ import { sleep } from '@/utils/sleep';
  */
 export const matchService = {
   async sendFlame(profileId: string): Promise<SendFlameResponse> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(250);
       const profile = MOCK_PROFILES.find((p) => p.id === profileId);
       const matched = Boolean(profile?.likedYou);
@@ -31,7 +31,7 @@ export const matchService = {
   },
 
   async listMatches(limit = 50): Promise<MatchListItem[]> {
-    if (!usesBackendAuth()) {
+    if (!usesBackendApi()) {
       await sleep(200);
       return [];
     }

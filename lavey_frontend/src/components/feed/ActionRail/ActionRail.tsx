@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
+import { ProfileInitialAvatar } from '@/components/ui/ProfileInitialAvatar';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { getLikeButtonLabel } from '@/utils/likeButtonLabel';
+import { hasFeedDisplayMedia } from '@/utils/profile/feedMedia';
 import type { ActionRailProps } from './ActionRail.types';
 import './ActionRail.css';
 
@@ -13,6 +15,7 @@ export function ActionRail({
 }: ActionRailProps) {
   const isMutual = liked && profile.likedYou;
   const likeLabel = getLikeButtonLabel(liked, profile.likedYou);
+  const avatarSrc = hasFeedDisplayMedia(profile.avatar) ? profile.avatar : undefined;
 
   return (
     <aside className="action-rail" aria-label="Profile actions">
@@ -22,7 +25,12 @@ export function ActionRail({
         onClick={onProfileClick}
         aria-label={`View ${profile.name}'s profile`}
       >
-        <img src={profile.avatar} alt="" className="action-rail__avatar" />
+        <ProfileInitialAvatar
+          name={profile.name}
+          src={avatarSrc}
+          className="action-rail__avatar"
+          size="sm"
+        />
         {profile.verified && (
           <VerifiedBadge
             size="sm"
