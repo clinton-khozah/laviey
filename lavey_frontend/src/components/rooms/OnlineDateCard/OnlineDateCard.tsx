@@ -1,4 +1,5 @@
 import type { OnlineDate } from '@/types';
+import { meetupRequiresAccessCode } from '@/utils/meeting/meetupJoinAccess';
 import { buildMeetupJoinLink } from '@/utils/meeting/meetupJoinLink';
 import './OnlineDateCard.css';
 
@@ -36,6 +37,12 @@ export function OnlineDateCard({
   const fillPct = Math.min(100, (date.participantCount / date.maxParticipants) * 100);
   const joinLink = date.joinLink ?? buildMeetupJoinLink(date.accessCode);
   const hostLabel = date.isHostedByYou ? 'Hosted by you' : `Hosted by ${date.hostName}`;
+  const showAccessCode = meetupRequiresAccessCode(date);
+  const joinLabel = isLive
+    ? 'Join meetup'
+    : showAccessCode
+      ? 'Join with code'
+      : 'Join meetup';
 
   return (
     <article className={`online-date-card ${isLive ? 'online-date-card--live' : ''}`}>
@@ -93,35 +100,41 @@ export function OnlineDateCard({
           ))}
         </div>
 
-        <div className="online-date-card__code-row">
-          <div className="online-date-card__code">
-            <span className="online-date-card__code-label">Room code</span>
-            <span className="online-date-card__code-value">{date.accessCode}</span>
-          </div>
-          <button
-            type="button"
-            className="online-date-card__copy"
-            onClick={() => onCopyCode(date.accessCode)}
-            aria-label="Copy room code"
-          >
-            Copy
-          </button>
-        </div>
+        {showAccessCode ? (
+          <>
+            <div className="online-date-card__code-row">
+              <div className="online-date-card__code">
+                <span className="online-date-card__code-label">Room code</span>
+                <span className="online-date-card__code-value">{date.accessCode}</span>
+              </div>
+              <button
+                type="button"
+                className="online-date-card__copy"
+                onClick={() => onCopyCode(date.accessCode)}
+                aria-label="Copy room code"
+              >
+                Copy
+              </button>
+            </div>
 
-        <div className="online-date-card__link-row">
-          <div className="online-date-card__link">
-            <span className="online-date-card__code-label">Join link</span>
-            <span className="online-date-card__link-value">{joinLink}</span>
-          </div>
-          <button
-            type="button"
-            className="online-date-card__copy"
-            onClick={() => onCopyLink(joinLink)}
-            aria-label="Copy join link"
-          >
-            Copy
-          </button>
-        </div>
+            <div className="online-date-card__link-row">
+              <div className="online-date-card__link">
+                <span className="online-date-card__code-label">Join link</span>
+                <span className="online-date-card__link-value">{joinLink}</span>
+              </div>
+              <button
+                type="button"
+                className="online-date-card__copy"
+                onClick={() => onCopyLink(joinLink)}
+                aria-label="Copy join link"
+              >
+                Copy
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="online-date-card__public-hint">Public meetup — tap Join below, no code needed.</p>
+        )}
 
         {date.isHostedByYou && onDelete ? (
           <button
@@ -141,7 +154,7 @@ export function OnlineDateCard({
           onClick={onJoin}
           disabled={isJoining || isDeleting}
         >
-          {isJoining ? 'Connecting…' : isLive ? 'Join meetup' : 'Reserve & get code'}
+          {isJoining ? 'Connecting…' : joinLabel}
         </button>
       </div>
     </article>

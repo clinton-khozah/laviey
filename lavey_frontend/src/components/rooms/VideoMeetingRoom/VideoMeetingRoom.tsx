@@ -165,7 +165,14 @@ export function VideoMeetingRoom({
           <span className="video-meeting__header-spacer" aria-hidden />
         </header>
 
-        <div className="video-meeting__stage">
+        <div
+          className={`video-meeting__stage ${date.coverImage ? 'video-meeting__stage--has-cover' : ''}`}
+          style={
+            date.coverImage
+              ? ({ '--meeting-cover-image': `url("${date.coverImage}")` } as React.CSSProperties)
+              : undefined
+          }
+        >
           <MeetingReactionOverlay bursts={reactionBursts} />
 
           {participants.length === 1 && !isDouble && (

@@ -12,6 +12,7 @@ import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageT
 import { ActiveMeetingContainer } from '@/features/rooms/containers/ActiveMeetingContainer';
 import { useOnlineDates, useUserProfile } from '@/hooks';
 import type { ActiveMeetingSession, OnlineDate } from '@/types';
+import { meetupRequiresAccessCode } from '@/utils/meeting/meetupJoinAccess';
 import { consumePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
 import './ZoomPage.css';
 
@@ -73,6 +74,20 @@ export function ZoomPage() {
     (d) => d.isHostedByYou || acceptedDateIds.has(d.id),
   );
 
+  const enterMeeting = useCallback(
+    (date: OnlineDate, accessCode: string) => {
+      setJoinModalOpen(false);
+      setJoinTarget(null);
+      clearActionError();
+      setActiveMeeting({
+        date,
+        accessCode: accessCode.trim().toUpperCase(),
+        localDisplayName: userProfile?.displayName ?? 'You',
+      });
+    },
+    [clearActionError, userProfile?.displayName],
+  );
+
   const openJoinModal = (date: OnlineDate, code = '') => {
     clearActionError();
     setJoinTarget(date);
@@ -80,16 +95,25 @@ export function ZoomPage() {
     setJoinModalOpen(true);
   };
 
-  const enterMeeting = (date: OnlineDate, accessCode: string) => {
-    setJoinModalOpen(false);
-    setJoinTarget(null);
-    clearActionError();
-    setActiveMeeting({
-      date,
-      accessCode: accessCode.trim().toUpperCase(),
-      localDisplayName: userProfile?.displayName ?? 'You',
-    });
-  };
+  const joinMeetup = useCallback(
+    async (date: OnlineDate) => {
+      if (!meetupRequiresAccessCode(date)) {
+        clearActionError();
+        try {
+          const result = await joinDate(date.id, date.accessCode);
+          enterMeeting(result.date, date.accessCode);
+        } catch {
+          /* actionError set in hook */
+        }
+        return;
+      }
+
+      const prefilledCode =
+        date.isHostedByYou || acceptedDateIds.has(date.id) ? date.accessCode : '';
+      openJoinModal(date, prefilledCode);
+    },
+    [acceptedDateIds, clearActionError, enterMeeting, joinDate],
+  );
 
   const handleJoinSubmit = async (accessCode: string) => {
     if (!joinTarget) {
@@ -247,7 +271,7 @@ export function ZoomPage() {
                       isDeleting={deletingId === date.id}
                       onCopyCode={copyCode}
                       onCopyLink={copyLink}
-                      onJoin={() => openJoinModal(date, date.accessCode)}
+                      onJoin={() => void joinMeetup(date)}
                       onDelete={
                         date.isHostedByYou
                           ? () => void handleDeleteMeetup(date)
@@ -273,7 +297,7 @@ export function ZoomPage() {
                       isJoining={joiningId === date.id}
                       onCopyCode={copyCode}
                       onCopyLink={copyLink}
-                      onJoin={() => openJoinModal(date)}
+                      onJoin={() => void joinMeetup(date)}
                     />
                   ))}
                 </div>
@@ -291,7 +315,7 @@ export function ZoomPage() {
                       isJoining={joiningId === date.id}
                       onCopyCode={copyCode}
                       onCopyLink={copyLink}
-                      onJoin={() => openJoinModal(date)}
+                      onJoin={() => void joinMeetup(date)}
                     />
                   ))}
                 </div>

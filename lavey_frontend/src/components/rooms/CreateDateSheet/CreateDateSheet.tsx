@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import { usesBackendMeetups } from '@/config/env';
 import { matchService } from '@/services';
+import { contentService } from '@/services/content/contentService';
 import type { CreateDateInput, DateVisibility } from '@/types';
 import { getMatchedConversations } from '@/utils/meeting/meetupAccess';
+import { prepareImageForUpload } from '@/utils/media/prepareUploadMedia';
+import { nsfwImageUserMessage } from '@/utils/media/nsfwImageCheck';
 import './CreateDateSheet.css';
 
 interface CreateDateSheetProps {
@@ -36,6 +39,19 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
   const [formError, setFormError] = useState<string | null>(null);
   const [matchOptions, setMatchOptions] = useState<InviteMatchOption[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const resetForm = () => {
+    setTitle('');
+    setTopic('');
+    setInviteProfileId('');
+    setCoverPreview(null);
+    setCoverFile(null);
+    setFormError(null);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -71,6 +87,19 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
   const isPrivate = visibility === 'private';
   const selectedMatch = matchOptions.find((match) => match.userId === inviteProfileId);
 
+  const handleCoverPick = async (file: File | null) => {
+    if (!file) return;
+    setFormError(null);
+    try {
+      const prepared = await prepareImageForUpload(file);
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      setCoverFile(prepared);
+      setCoverPreview(URL.createObjectURL(prepared));
+    } catch (err) {
+      setFormError(nsfwImageUserMessage(err));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -81,34 +110,84 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
         setFormError('Pick a match to invite — private meetups are 1-on-1');
         return;
       }
+    }
+
+    let coverImageUrl: string | undefined;
+    if (coverFile) {
+      setIsUploadingCover(true);
+      try {
+        coverImageUrl = await contentService.uploadAvatar(coverFile);
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : 'Could not upload cover photo');
+        setIsUploadingCover(false);
+        return;
+      }
+      setIsUploadingCover(false);
+    }
+
+    const base = {
+      title: title.trim(),
+      startsInMinutes,
+      coverImageUrl,
+    };
+
+    if (isPrivate) {
       await onCreate({
-        title: title.trim(),
+        ...base,
         topic: topic.trim() || 'Video meetup with your match',
         visibility: 'private',
         mode: 'invite',
         inviteToProfileId: inviteProfileId,
         inviteToName: selectedMatch?.name,
-        startsInMinutes,
       });
     } else {
       await onCreate({
-        title: title.trim(),
-        topic: topic.trim() || 'Open video meetup — anyone with the code can join',
+        ...base,
+        topic: topic.trim() || 'Open video meetup — join from the live list',
         visibility: 'public',
         mode: 'post',
-        startsInMinutes,
       });
     }
 
-    setTitle('');
-    setTopic('');
-    setInviteProfileId('');
+    resetForm();
     onClose();
   };
+
+  const isBusy = isCreating || isUploadingCover;
 
   return (
     <ProfileSheet open={open} title="Schedule meetup" onClose={onClose} fromTop hideHandle>
       <form className="create-date-sheet" onSubmit={(e) => void handleSubmit(e)}>
+        <div className="create-date-sheet__cover-block">
+          <span className="create-date-sheet__cover-label">Meetup cover</span>
+          <button
+            type="button"
+            className={`create-date-sheet__cover-preview ${coverPreview ? 'create-date-sheet__cover-preview--filled' : ''}`}
+            onClick={() => coverInputRef.current?.click()}
+            aria-label={coverPreview ? 'Change cover photo' : 'Upload cover photo'}
+          >
+            {coverPreview ? (
+              <img src={coverPreview} alt="" />
+            ) : (
+              <span className="create-date-sheet__cover-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="M12 16V4M12 4l4 4M12 4L8 8" />
+                  <rect x="4" y="14" width="16" height="6" rx="2" />
+                </svg>
+                Add a cover photo
+              </span>
+            )}
+          </button>
+          <p className="create-date-sheet__cover-hint">Shown on the meetup card and in the video room.</p>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="create-date-sheet__cover-input"
+            onChange={(e) => void handleCoverPick(e.target.files?.[0] ?? null)}
+          />
+        </div>
+
         <label className="create-date-sheet__label">
           Title
           <input
@@ -139,8 +218,8 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
               </span>
               <span className="create-date-sheet__help">
                 {isPrivate
-                  ? 'Invite one match · code unlocks after they accept'
-                  : 'Listed for anyone with the room code — no invite needed'}
+                  ? 'Invite one match · they join with a room code after accepting'
+                  : 'Anyone can tap Join on the live list — no code needed'}
               </span>
             </div>
             <button
@@ -230,12 +309,12 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
         <button
           type="submit"
           className="create-date-sheet__submit"
-          disabled={
-            isCreating || loadingMatches || (isPrivate && matchOptions.length === 0)
-          }
+          disabled={isBusy || loadingMatches || (isPrivate && matchOptions.length === 0)}
         >
-          {isCreating
-            ? 'Creating…'
+          {isBusy
+            ? isUploadingCover
+              ? 'Uploading cover…'
+              : 'Creating…'
             : isPrivate
               ? 'Send invite'
               : 'Post public meetup'}

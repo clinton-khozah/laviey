@@ -52,4 +52,6 @@ export interface CreateDateInput {
   inviteToProfileId?: string;
   inviteToName?: string;
   startsInMinutes: number;
+  /** Uploaded cover shown on the meetup card and in the video room */
+  coverImageUrl?: string;
 }

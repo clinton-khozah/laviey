@@ -49,40 +49,44 @@ export function MeetupShareSheet({
       <div className="meetup-share-sheet">
         <p className="meetup-share-sheet__lead">
           {isPrivate
-            ? `Your match will get the invite in-app. Share this link with them after they accept — or keep the code handy for yourself.`
-            : `Anyone with this link or room code can join your meetup.`}
+            ? `Your match will get the invite in-app. Share the room code with them after they accept.`
+            : `Your meetup is live on the list — anyone can tap Join, no code needed.`}
         </p>
 
-        <div className="meetup-share-sheet__block">
-          <span className="meetup-share-sheet__label">Room code</span>
-          <div className="meetup-share-sheet__row">
-            <span className="meetup-share-sheet__code">{date.accessCode}</span>
-            <button
-              type="button"
-              className="meetup-share-sheet__copy"
-              onClick={() => onCopyCode(date.accessCode)}
-            >
-              Copy
-            </button>
-          </div>
-        </div>
+        {isPrivate ? (
+          <>
+            <div className="meetup-share-sheet__block">
+              <span className="meetup-share-sheet__label">Room code</span>
+              <div className="meetup-share-sheet__row">
+                <span className="meetup-share-sheet__code">{date.accessCode}</span>
+                <button
+                  type="button"
+                  className="meetup-share-sheet__copy"
+                  onClick={() => onCopyCode(date.accessCode)}
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
 
-        <div className="meetup-share-sheet__block">
-          <span className="meetup-share-sheet__label">Join link</span>
-          <div className="meetup-share-sheet__row meetup-share-sheet__row--link">
-            <span className="meetup-share-sheet__link">{joinLink}</span>
-            <button
-              type="button"
-              className="meetup-share-sheet__copy"
-              onClick={() => onCopyLink(joinLink)}
-            >
-              Copy
-            </button>
-          </div>
-        </div>
+            <div className="meetup-share-sheet__block">
+              <span className="meetup-share-sheet__label">Join link</span>
+              <div className="meetup-share-sheet__row meetup-share-sheet__row--link">
+                <span className="meetup-share-sheet__link">{joinLink}</span>
+                <button
+                  type="button"
+                  className="meetup-share-sheet__copy"
+                  onClick={() => onCopyLink(joinLink)}
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+          </>
+        ) : null}
 
         <div className="meetup-share-sheet__actions">
-          {typeof navigator.share === 'function' && (
+          {isPrivate && typeof navigator.share === 'function' && (
             <button type="button" className="meetup-share-sheet__share" onClick={() => void handleShare()}>
               Share link
             </button>

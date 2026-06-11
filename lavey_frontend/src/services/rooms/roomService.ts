@@ -168,7 +168,7 @@ export const roomService = {
         participantCount: isInvite ? 0 : 1,
         maxParticipants: isPrivate ? 2 : 24,
         startsInMinutes: input.startsInMinutes,
-        coverImage: pickMockFeedImage(2),
+        coverImage: input.coverImageUrl ?? pickMockFeedImage(2),
         tags: isPrivate ? ['Private'] : ['Public'],
         isHostedByYou: true,
       };
@@ -178,7 +178,16 @@ export const roomService = {
       return cloneDate(newDate);
     }
     const res = await httpClient.post<ApiResponse<OnlineDate>>(API_ENDPOINTS.dates.create, {
-      body: input,
+      body: {
+        title: input.title,
+        topic: input.topic,
+        visibility: input.visibility,
+        mode: input.mode,
+        inviteToProfileId: input.inviteToProfileId,
+        inviteToName: input.inviteToName,
+        startsInMinutes: input.startsInMinutes,
+        coverImageUrl: input.coverImageUrl,
+      },
     });
     return enrichDate(res.data);
   },
