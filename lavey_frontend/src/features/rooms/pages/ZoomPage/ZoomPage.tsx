@@ -12,7 +12,13 @@ import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { ActiveMeetingContainer } from '@/features/rooms/containers/ActiveMeetingContainer';
-import { useMatchActions, useMatchProfile, useOnlineDates, useUserProfile } from '@/hooks';
+import {
+  useMatchActions,
+  useMatchProfile,
+  useOnlineDates,
+  useUserProfile,
+  type ProfileLookup,
+} from '@/hooks';
 import { messageService } from '@/services';
 import type { ActiveMeetingSession, OnlineDate } from '@/types';
 import { meetupRequiresAccessCode } from '@/utils/meeting/meetupJoinAccess';
@@ -41,12 +47,12 @@ export function ZoomPage() {
   const { likedIds, sendFlame, isSubmitting: isFlameSubmitting } = useMatchActions();
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
+  const [profileLookup, setProfileLookup] = useState<ProfileLookup | null>(null);
   const {
     profile: profileModal,
     isLoading: profileModalLoading,
     error: profileModalError,
-  } = useMatchProfile(profileModalUserId);
+  } = useMatchProfile(profileLookup);
   const [activeMeeting, setActiveMeeting] = useState<ActiveMeetingSession | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
@@ -64,19 +70,13 @@ export function ZoomPage() {
 
   const openProfileByUserId = useCallback((userId: string) => {
     if (!userId || userId === 'guest') return;
-    setProfileModalUserId(userId);
+    setProfileLookup({ type: 'user', id: userId });
   }, []);
 
-  const openHostProfile = useCallback(
-    (date: OnlineDate) => {
-      if (!date.hostUserId) {
-        showToast('Could not load profile');
-        return;
-      }
-      openProfileByUserId(date.hostUserId);
-    },
-    [openProfileByUserId, showToast],
-  );
+  const openHostProfile = useCallback((date: OnlineDate) => {
+    if (!date.id) return;
+    setProfileLookup({ type: 'meetup-host', meetupId: date.id });
+  }, []);
 
   const modalLiked = profileModal ? likedIds.has(profileModal.id) : false;
 
@@ -95,7 +95,7 @@ export function ZoomPage() {
   useEffect(() => {
     if (!profileModalError) return;
     showToast('Could not load profile');
-    setProfileModalUserId(null);
+    setProfileLookup(null);
   }, [profileModalError, showToast]);
 
   const handleDeleteMeetup = useCallback(
@@ -409,14 +409,14 @@ export function ZoomPage() {
       )}
 
       <MatchProfileModal
-        open={profileModalUserId !== null}
+        open={profileLookup !== null}
         mode="discover"
         profile={profileModal}
         liked={modalLiked}
         likedYou={profileModal?.likedYou ?? false}
         isLoading={profileModalLoading}
         isSubmittingFlame={isFlameSubmitting}
-        onClose={() => setProfileModalUserId(null)}
+        onClose={() => setProfileLookup(null)}
         onFlame={handleFlameFromModal}
         onSendMessage={
           profileModal && modalLiked && profileModal.likedYou

@@ -179,6 +179,21 @@ export const profileService = {
     return response.data;
   },
 
+  async getMeetupHostProfile(meetupId: string): Promise<Profile> {
+    if (!usesBackendApi()) {
+      await sleep(200);
+      const profile = MOCK_PROFILES[0];
+      if (!profile) throw new Error('Profile not found');
+      return applyVibeMatchToProfiles([profile])[0]!;
+    }
+
+    const response = await httpClient.get<ApiResponse<Profile>>(
+      API_ENDPOINTS.dates.hostProfile(meetupId),
+    );
+
+    return response.data;
+  },
+
   /** Profiles that sent you a flame and are waiting for you to like back. */
   async getProfilesWhoLikedYou(): Promise<Profile[]> {
     if (!usesBackendApi()) {

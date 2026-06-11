@@ -13,7 +13,7 @@ export { usePlatinumCatalog } from './subscription/usePlatinumCatalog';
 export { useAuth } from './auth/useAuth';
 export { useConversations } from './messages/useConversations';
 export { useChatThread } from './messages/useChatThread';
-export { useMatchProfile } from './messages/useMatchProfile';
+export { useMatchProfile, type ProfileLookup } from './messages/useMatchProfile';
 export { useOnlineDates } from './rooms/useOnlineDates';
 export { useMeetupWebRTC } from './rooms/useMeetupWebRTC';
 export { useMeetingReactions } from './rooms/useMeetingReactions';

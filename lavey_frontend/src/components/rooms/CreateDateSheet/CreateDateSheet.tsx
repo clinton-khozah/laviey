@@ -197,7 +197,6 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
           >
             {coverPreview ? <img src={coverPreview} alt="" /> : null}
           </button>
-          <p className="create-date-sheet__caption">Shown on the meetup card and in the video room.</p>
           <input
             ref={coverInputRef}
             type="file"
@@ -207,24 +206,24 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
           />
         </div>
 
-        <input
-          className="create-date-sheet__input"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Coffee chat, trivia night…"
-          maxLength={60}
-          aria-label="Title"
-          required
-        />
+        <label className="create-date-sheet__label">
+          Title
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={60}
+            required
+          />
+        </label>
 
-        <input
-          className="create-date-sheet__input"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="What to expect"
-          maxLength={120}
-          aria-label="What to expect"
-        />
+        <label className="create-date-sheet__label">
+          What to expect
+          <input
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            maxLength={120}
+          />
+        </label>
 
         <fieldset className="create-date-sheet__fieldset">
           <legend>Visibility</legend>

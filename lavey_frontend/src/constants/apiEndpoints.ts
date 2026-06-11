@@ -45,6 +45,7 @@ export const API_ENDPOINTS = {
     list: '/rooms/vibe-check',
     create: '/dates',
     byId: (id: string) => `/dates/${id}`,
+    hostProfile: (id: string) => `/dates/${id}/host-profile`,
     invites: '/dates/invites',
     respondToInvite: (id: string) => `/dates/invites/${id}`,
     joinByCode: '/dates/join-by-code',
