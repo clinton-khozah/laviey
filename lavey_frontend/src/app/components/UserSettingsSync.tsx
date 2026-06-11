@@ -3,7 +3,7 @@ import { useAuth, useChatTypingStyle, useMeetingLanguage, useTheme } from '@/hoo
 import { settingsService } from '@/services/settings/settingsService';
 import { applyUserSettings } from '@/utils/settings/applyUserSettings';
 import { resolveEffectiveTheme } from '@/utils/theme/themeStorage';
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 
 /** Pulls saved preferences from the API after sign-in and applies them app-wide. */
 export function UserSettingsSync() {
@@ -13,7 +13,7 @@ export function UserSettingsSync() {
   const { setLanguage } = useMeetingLanguage();
 
   useEffect(() => {
-    if (!isAuthenticated || !usesBackendAuth() || env.useMockApi) return;
+    if (!isAuthenticated || !usesBackendApi()) return;
 
     let cancelled = false;
     void (async () => {

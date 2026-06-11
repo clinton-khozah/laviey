@@ -1,4 +1,4 @@
-import { env } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse, FlameQuota } from '@/types';
@@ -9,7 +9,7 @@ import { sleep } from '@/utils/sleep';
  */
 export const flameQuotaService = {
   async getQuota(): Promise<FlameQuota> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(150);
       return { remaining: 3, max: 5 };
     }

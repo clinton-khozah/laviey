@@ -7,6 +7,7 @@ export type RoomStatus = DateStatus;
 
 export interface OnlineDate {
   id: string;
+  hostUserId?: string;
   title: string;
   topic: string;
   hostName: string;
@@ -20,6 +21,10 @@ export interface OnlineDate {
   participantCount: number;
   maxParticipants: number;
   startsInMinutes?: number;
+  /** ISO start time from API */
+  startsAt?: string;
+  /** Human-readable schedule, e.g. "Tomorrow · 6:30 PM" */
+  scheduledLabel?: string;
   coverImage: string;
   tags: string[];
   isHostedByYou?: boolean;
@@ -51,5 +56,9 @@ export interface CreateDateInput {
   /** Required when inviting — must be a matched profile id */
   inviteToProfileId?: string;
   inviteToName?: string;
-  startsInMinutes: number;
+  startsInMinutes?: number;
+  /** Preferred — exact start time (ISO). */
+  startsAt?: string;
+  /** Uploaded cover shown on the meetup card and in the video room */
+  coverImageUrl?: string;
 }

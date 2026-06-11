@@ -6,6 +6,65 @@
   color: var(--text-primary);
 }
 
+.create-date-sheet__cover-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.create-date-sheet__cover-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.create-date-sheet__cover-preview {
+  width: 100%;
+  height: 132px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px dashed var(--border-subtle);
+  background: var(--chip-bg);
+  padding: 0;
+}
+
+.create-date-sheet__cover-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.create-date-sheet__cover-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.create-date-sheet__cover-placeholder svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.7;
+}
+
+.create-date-sheet__caption {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.create-date-sheet__cover-input {
+  display: none;
+}
+
 .create-date-sheet__empty,
 .create-date-sheet__error {
   font-size: 12px;
@@ -30,8 +89,10 @@
   color: var(--text-secondary);
 }
 
+.create-date-sheet__input,
 .create-date-sheet__label input,
 .create-date-sheet__label select {
+  width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 13px;
@@ -41,12 +102,19 @@
   outline: none;
 }
 
+.create-date-sheet__input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.create-date-sheet__input:focus,
 .create-date-sheet__label input:focus,
 .create-date-sheet__label select:focus {
   border-color: rgba(124, 58, 237, 0.4);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
 }
 
+[data-theme='light'] .create-date-sheet__input,
 [data-theme='light'] .create-date-sheet__label input,
 [data-theme='light'] .create-date-sheet__label select {
   background: rgba(255, 255, 255, 0.95);
@@ -320,6 +388,40 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-bottom: 8px;
+}
+
+.create-date-sheet__datetime-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.create-date-sheet__datetime-caption {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.create-date-sheet__datetime {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--chip-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+[data-theme='light'] .create-date-sheet__datetime {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.create-date-sheet__datetime:focus {
+  outline: none;
+  border-color: rgba(124, 58, 237, 0.45);
 }
 
 .create-date-sheet__chip {

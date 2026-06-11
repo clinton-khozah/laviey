@@ -15,6 +15,7 @@ import {
   parseMeetupJoinCode,
   storePendingMeetupCode,
 } from '@/utils/meeting/meetupJoinLink';
+import { hasOAuthReturnParams } from '@/utils/auth/oauthCallbackState';
 import { applyThemeToDocument, loadTheme } from '@/utils/theme/themeStorage';
 import { useEffect, useState } from 'react';
 
@@ -100,7 +101,7 @@ function App() {
         onNavigate={navigateTo}
       />
     );
-  } else if (path === '/auth/callback') {
+  } else if (path === '/auth/callback' || hasOAuthReturnParams()) {
     content = <AuthCallbackPage />;
   } else if (isAdminRoute) {
     if (adminAuthLoading) {

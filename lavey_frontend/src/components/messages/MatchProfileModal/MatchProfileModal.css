@@ -34,7 +34,10 @@
 }
 
 .match-profile-modal__loading {
-  margin: auto;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-secondary);
 }
 

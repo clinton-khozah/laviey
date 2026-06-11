@@ -24,10 +24,14 @@ export function getSupabaseRealtimeClient(): SupabaseClient | null {
     },
     realtime: {
       params: {
-        eventsPerSecond: 8,
+        eventsPerSecond: 12,
       },
     },
   });
+
+  if (token) {
+    client.realtime.setAuth(token);
+  }
 
   return client;
 }

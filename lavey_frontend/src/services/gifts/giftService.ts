@@ -1,4 +1,4 @@
-import { env } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import { addGiftEarnings } from '@/utils/gift/giftEarningsStorage';
@@ -9,7 +9,7 @@ const sessionTotals = new Map<string, number>();
 
 export const giftService = {
   async sendGift(request: SendGiftRequest): Promise<SendGiftResponse> {
-    if (env.useMockApi) {
+    if (!usesBackendApi()) {
       await sleep(180);
       addGiftEarnings(request.recipientId, request.amount);
       const sessionKey = `${request.meetupId}:${request.recipientId}`;

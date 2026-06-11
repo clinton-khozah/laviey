@@ -1,4 +1,5 @@
 import type { DateInvite } from '@/types';
+import { hasMeetupCover, resolveMeetupCover } from '@/utils/meeting/meetupCover';
 import './DateInviteCard.css';
 
 interface DateInviteCardProps {
@@ -9,12 +10,21 @@ interface DateInviteCardProps {
 }
 
 export function DateInviteCard({ invite, isBusy, onAccept, onDecline }: DateInviteCardProps) {
+  const coverUrl = resolveMeetupCover(invite.coverImage);
+  const showCover = hasMeetupCover(invite.coverImage);
+
   return (
     <article className="date-invite-card">
-      <div
-        className="date-invite-card__thumb"
-        style={{ backgroundImage: `url(${invite.coverImage})` }}
-      />
+      {showCover ? (
+        <div
+          className="date-invite-card__thumb"
+          style={{ backgroundImage: `url(${coverUrl})` }}
+        />
+      ) : (
+        <div className="date-invite-card__thumb date-invite-card__thumb--template">
+          <span>#Private</span>
+        </div>
+      )}
       <div className="date-invite-card__main">
         <div className="date-invite-card__from">
           <img src={invite.fromAvatar} alt="" className="date-invite-card__avatar" />

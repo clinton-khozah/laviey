@@ -1,0 +1,35 @@
+.meetup-vertical-feed {
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+  padding: 2px 0 12px;
+}
+
+.meetup-vertical-feed::-webkit-scrollbar {
+  display: none;
+}
+
+.meetup-vertical-feed__item {
+  height: 100%;
+  min-height: 100%;
+  padding-bottom: 14px;
+  box-sizing: border-box;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.meetup-vertical-feed__item:last-child {
+  padding-bottom: 0;
+}
+
+.meetup-vertical-feed__item .online-date-card--feed {
+  height: calc(100% - 14px);
+}
+
+.meetup-vertical-feed__item:last-child .online-date-card--feed {
+  height: 100%;
+}

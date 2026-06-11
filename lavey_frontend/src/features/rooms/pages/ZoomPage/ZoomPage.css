@@ -20,6 +20,20 @@
   height: 20px;
 }
 
+.online-dates-page__live-rail {
+  position: absolute;
+  top: calc(var(--safe-top) + 72px);
+  left: 0;
+  right: 0;
+  z-index: 12;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.page-scroller--below-live-rail {
+  padding-top: calc(var(--safe-top) + 72px + 98px);
+}
+
 .online-dates-page__top {
   padding: 8px 14px 0;
 }
@@ -83,6 +97,24 @@
   gap: 14px;
 }
 
+.online-dates-page__section--feed {
+  margin-bottom: 0;
+}
+
+.online-dates-page__feed {
+  height: calc(
+    100dvh - var(--safe-top) - 72px - var(--nav-height) - var(--safe-bottom) - 52px
+  );
+  min-height: 380px;
+  overscroll-behavior-y: contain;
+}
+
+.online-dates-page--has-live-rail .online-dates-page__feed {
+  height: calc(
+    100dvh - var(--safe-top) - 72px - 98px - var(--nav-height) - var(--safe-bottom) - 52px
+  );
+}
+
 .online-dates-page__toast {
   position: fixed;
   left: 50%;
@@ -95,8 +127,9 @@
   font-size: 13px;
   font-weight: 600;
   text-align: center;
-  background: rgba(18, 18, 26, 0.95);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shell-shadow);
   pointer-events: none;
 }

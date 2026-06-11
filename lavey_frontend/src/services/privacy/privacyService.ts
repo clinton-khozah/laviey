@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse } from '@/types';
@@ -26,7 +26,7 @@ export interface ContactImportResponse {
 }
 
 function usesBackendPrivacy(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 function toLocalSettings(data: PrivacySettingsResponse): PrivacySettings {

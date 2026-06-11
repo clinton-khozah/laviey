@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/services/mocks/message.mock';
@@ -25,7 +25,7 @@ import {
 import { sleep } from '@/utils/sleep';
 
 function usesBackendMessages(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 function filterVisibleConversations(conversations: Conversation[]): Conversation[] {

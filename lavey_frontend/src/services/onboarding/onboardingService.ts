@@ -1,4 +1,4 @@
-import { usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse, ProfileInterestItem } from '@/types';
@@ -16,7 +16,7 @@ import { MOCK_ONBOARDING_CATALOG } from './onboarding.mock';
 
 export const onboardingService = {
   async listQuestions(): Promise<OnboardingQuestionDto[]> {
-    if (!usesBackendAuth()) {
+    if (!usesBackendApi()) {
       await sleep(150);
       return MOCK_ONBOARDING_CATALOG;
     }
@@ -38,7 +38,7 @@ export const onboardingService = {
   },
 
   async getOnboardingStatus(): Promise<UserOnboardingStatusDto> {
-    if (!usesBackendAuth()) {
+    if (!usesBackendApi()) {
       await sleep(80);
       const answers = loadOnboardingQuizAnswers();
       return {
@@ -54,7 +54,7 @@ export const onboardingService = {
   },
 
   async submitOnboarding(answers: OnboardingQuizAnswers): Promise<UserOnboardingStatusDto> {
-    if (!usesBackendAuth()) {
+    if (!usesBackendApi()) {
       await sleep(200);
       saveOnboardingQuizAnswers(answers);
       return { completed: true, completedAt: answers.completedAt };

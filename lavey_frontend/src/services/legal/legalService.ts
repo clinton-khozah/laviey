@@ -1,4 +1,4 @@
-import { env, usesBackendAuth } from '@/config/env';
+import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { httpClient } from '@/services/api/httpClient';
 import type { ApiResponse } from '@/types';
@@ -10,7 +10,7 @@ import {
 import { sleep } from '@/utils/sleep';
 
 function usesBackendLegal(): boolean {
-  return usesBackendAuth() && !env.useMockApi;
+  return usesBackendApi();
 }
 
 const ENDPOINTS: Record<TrustInfoVariant, string> = {
