@@ -24,10 +24,12 @@ export function ZoomPage() {
     error,
     actionError,
     joiningId,
+    deletingId,
     refetch,
     joinDate,
     joinByCode,
     createDate,
+    deleteDate,
     respondToInvite,
     clearActionError,
   } = useOnlineDates();
@@ -48,6 +50,22 @@ export function ZoomPage() {
     setToast(message);
     window.setTimeout(() => setToast(null), 2400);
   }, []);
+
+  const handleDeleteMeetup = useCallback(
+    async (date: OnlineDate) => {
+      if (!date.isHostedByYou) return;
+      const confirmed = window.confirm(`Delete "${date.title}"? This cannot be undone.`);
+      if (!confirmed) return;
+      clearActionError();
+      try {
+        await deleteDate(date.id);
+        showToast('Meetup deleted');
+      } catch {
+        /* actionError set in hook */
+      }
+    },
+    [clearActionError, deleteDate, showToast],
+  );
 
   const liveDates = dates.filter((d) => d.status === 'live');
   const upcomingDates = dates.filter((d) => d.status !== 'live');
@@ -226,9 +244,15 @@ export function ZoomPage() {
                       key={date.id}
                       date={date}
                       isJoining={joiningId === date.id}
+                      isDeleting={deletingId === date.id}
                       onCopyCode={copyCode}
                       onCopyLink={copyLink}
                       onJoin={() => openJoinModal(date, date.accessCode)}
+                      onDelete={
+                        date.isHostedByYou
+                          ? () => void handleDeleteMeetup(date)
+                          : undefined
+                      }
                     />
                   ))}
                 </div>

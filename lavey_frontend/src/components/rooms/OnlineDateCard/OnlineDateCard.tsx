@@ -5,9 +5,11 @@ import './OnlineDateCard.css';
 interface OnlineDateCardProps {
   date: OnlineDate;
   isJoining: boolean;
+  isDeleting?: boolean;
   onJoin: () => void;
   onCopyCode: (code: string) => void;
   onCopyLink: (link: string) => void;
+  onDelete?: () => void;
 }
 
 function statusLabel(date: OnlineDate): string {
@@ -16,10 +18,24 @@ function statusLabel(date: OnlineDate): string {
   return `In ${date.startsInMinutes}m`;
 }
 
-export function OnlineDateCard({ date, isJoining, onJoin, onCopyCode, onCopyLink }: OnlineDateCardProps) {
+function hostInitial(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+}
+
+export function OnlineDateCard({
+  date,
+  isJoining,
+  isDeleting = false,
+  onJoin,
+  onCopyCode,
+  onCopyLink,
+  onDelete,
+}: OnlineDateCardProps) {
   const isLive = date.status === 'live';
   const fillPct = Math.min(100, (date.participantCount / date.maxParticipants) * 100);
   const joinLink = date.joinLink ?? buildMeetupJoinLink(date.accessCode);
+  const hostLabel = date.isHostedByYou ? 'Hosted by you' : `Hosted by ${date.hostName}`;
 
   return (
     <article className={`online-date-card ${isLive ? 'online-date-card--live' : ''}`}>
@@ -51,16 +67,22 @@ export function OnlineDateCard({ date, isJoining, onJoin, onCopyCode, onCopyLink
         <p className="online-date-card__topic">{date.topic}</p>
 
         <div className="online-date-card__host">
-          {date.hostAvatar ? (
+          {date.isHostedByYou ? (
+            date.hostAvatar ? (
+              <img src={date.hostAvatar} alt="" className="online-date-card__host-avatar" />
+            ) : (
+              <span className="online-date-card__host-avatar online-date-card__host-avatar--you">
+                You
+              </span>
+            )
+          ) : date.hostAvatar ? (
             <img src={date.hostAvatar} alt="" className="online-date-card__host-avatar" />
           ) : (
-            <span className="online-date-card__host-avatar online-date-card__host-avatar--you">
-              You
+            <span className="online-date-card__host-avatar online-date-card__host-avatar--initial">
+              {hostInitial(date.hostName)}
             </span>
           )}
-          <span>
-            {date.isHostedByYou ? 'Hosted by you' : `Hosted by ${date.hostName}`}
-          </span>
+          <span>{hostLabel}</span>
         </div>
 
         <div className="online-date-card__tags">
@@ -101,11 +123,23 @@ export function OnlineDateCard({ date, isJoining, onJoin, onCopyCode, onCopyLink
           </button>
         </div>
 
+        {date.isHostedByYou && onDelete ? (
+          <button
+            type="button"
+            className="online-date-card__delete"
+            onClick={onDelete}
+            disabled={isDeleting || isJoining}
+            aria-label="Delete meetup"
+          >
+            {isDeleting ? 'Deleting…' : 'Delete meetup'}
+          </button>
+        ) : null}
+
         <button
           type="button"
           className="online-date-card__join"
           onClick={onJoin}
-          disabled={isJoining}
+          disabled={isJoining || isDeleting}
         >
           {isJoining ? 'Connecting…' : isLive ? 'Join meetup' : 'Reserve & get code'}
         </button>

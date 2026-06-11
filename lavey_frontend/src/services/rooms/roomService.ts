@@ -183,6 +183,21 @@ export const roomService = {
     return enrichDate(res.data);
   },
 
+  async deleteDate(dateId: string): Promise<void> {
+    if (!usesBackendMeetups()) {
+      await sleep(200);
+      const index = MOCK_ONLINE_DATES.findIndex((item) => item.id === dateId);
+      if (index === -1) throw new Error('Meetup not found');
+      if (!MOCK_ONLINE_DATES[index]?.isHostedByYou) {
+        throw new Error('Only the host can delete this meetup');
+      }
+      MOCK_ONLINE_DATES.splice(index, 1);
+      return;
+    }
+
+    await httpClient.delete<ApiResponse<{ ok: boolean }>>(API_ENDPOINTS.dates.byId(dateId));
+  },
+
   async respondToInvite(
     inviteId: string,
     action: 'accept' | 'decline',
