@@ -3,6 +3,9 @@
  * All `import.meta.env` access should go through this module.
  */
 const DEFAULT_PRODUCTION_API_BASE_URL = 'https://laveybackend-3.onrender.com/api';
+const DEFAULT_SUPABASE_URL = 'https://wgyqotbvjnkafmwmhvbj.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  'sb_publishable_F9_1U8m0og8iS3tQmBD6YQ_xV-AVFlL';
 
 function resolveApiBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '').trim();
@@ -19,8 +22,9 @@ export const env = {
   /** Real Supabase auth via lavey_backend (default on). */
   useRealAuth: import.meta.env.VITE_USE_REAL_AUTH !== 'false',
   googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '',
-  supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? '',
-  supabasePublishableKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '',
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL?.trim() || DEFAULT_SUPABASE_URL,
+  supabasePublishableKey:
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || DEFAULT_SUPABASE_PUBLISHABLE_KEY,
   isDev: import.meta.env.DEV,
 } as const;
 

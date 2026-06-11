@@ -158,6 +158,7 @@ export function VideoMeetingRoom({
             </div>
             <p className="video-meeting__subtitle">
               {subtitle}
+              {connectionStatus === 'unsupported' && ' · Video link unavailable — refresh after signing in'}
               {connectionStatus === 'connecting' && participants.length === 0 && ' · Waiting for others…'}
             </p>
           </div>
