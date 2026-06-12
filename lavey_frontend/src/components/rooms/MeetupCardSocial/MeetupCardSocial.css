@@ -107,13 +107,13 @@
 /* Vertical rail — centered on card (hidden while comment sheet is open) */
 .meetup-card-social--rail {
   position: absolute;
-  right: 6px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   z-index: 10;
 }
 
@@ -149,29 +149,101 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
+  padding: 0;
   color: #fff;
-  font-size: 9px;
-  font-weight: 600;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.18s ease;
 }
 
-.meetup-card-social__rail-btn svg {
-  width: 24px;
-  height: 24px;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+.meetup-card-social__rail-btn:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
-.meetup-card-social__rail-btn--active {
-  color: var(--accent-flame, #ff4d6d);
+.meetup-card-social__rail-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(8, 8, 14, 0.52);
+  border: 1.5px solid rgba(255, 255, 255, 0.32);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.meetup-card-social__rail-btn--join {
-  color: var(--accent-mint, #34d399);
+.meetup-card-social__rail-icon svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+}
+
+.meetup-card-social__rail-icon--join {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(145deg, rgba(16, 185, 129, 0.92), rgba(5, 150, 105, 0.96));
+  border-color: rgba(167, 243, 208, 0.65);
+  box-shadow:
+    0 6px 22px rgba(16, 185, 129, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.meetup-card-social__rail-icon--join svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.25;
+}
+
+.meetup-card-social__rail-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.65);
+}
+
+.meetup-card-social__rail-label--join {
+  font-size: 11px;
+  color: #a7f3d0;
+}
+
+.meetup-card-social__rail-btn--active .meetup-card-social__rail-icon {
+  background: rgba(255, 77, 109, 0.28);
+  border-color: rgba(255, 77, 109, 0.55);
+  box-shadow:
+    0 4px 18px rgba(255, 77, 109, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.meetup-card-social__rail-btn--active .meetup-card-social__rail-label {
+  color: #ffb3c1;
 }
 
 .meetup-card-social__rail-btn--join:disabled {
-  opacity: 0.6;
+  opacity: 0.65;
+}
+
+.meetup-card-social__rail-btn--join:disabled .meetup-card-social__rail-icon--join {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.meetup-card-social--rail .meetup-card-social__heart-icon {
+  width: 24px;
+  height: 24px;
+  overflow: visible;
+}
+
+.meetup-card-social--rail .meetup-card-social__heart-shape {
+  fill: #fff;
+}
+
+.meetup-card-social--rail .meetup-card-social__heart-shape--active {
+  fill: var(--accent-flame, #ff4d6d);
+  filter: drop-shadow(0 0 6px rgba(255, 77, 109, 0.55));
 }
 
 .meetup-card-social__heart-icon {

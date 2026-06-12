@@ -1,6 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { AppOverlay } from '@/components/ui/AppOverlay';
+import type { ReactNode } from 'react';
+import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import type { OnlineDate } from '@/types';
 import { meetupRequiresAccessCode } from '@/utils/meeting/meetupJoinAccess';
 import { buildMeetupJoinLink } from '@/utils/meeting/meetupJoinLink';
@@ -110,22 +109,13 @@ export function MeetupCardMenuSheet({
   onCopyCode,
   onCopyLink,
 }: MeetupCardMenuSheetProps) {
-  useEffect(() => {
-    if (!open) return;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [open, onClose]);
+  const isHost = Boolean(date?.isHostedByYou);
+  const options: MenuOption[] = [];
 
-  if (!date) return null;
+  if (!date) {
+    return null;
+  }
 
-  const isHost = Boolean(date.isHostedByYou);
   const joinLink = date.joinLink ?? buildMeetupJoinLink(date.accessCode);
   const showCode = meetupRequiresAccessCode(date);
 
@@ -133,8 +123,6 @@ export function MeetupCardMenuSheet({
     action();
     onClose();
   };
-
-  const options: MenuOption[] = [];
 
   if (isHost) {
     if (onEdit) {
@@ -207,72 +195,32 @@ export function MeetupCardMenuSheet({
   }
 
   return (
-    <AppOverlay>
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.button
-              type="button"
-              className="meetup-card-menu__backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={onClose}
-              aria-label="Close"
-            />
-            <div className="meetup-card-menu__center" role="presentation">
-              <motion.div
-                className="meetup-card-menu"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="meetup-card-menu-title"
-                initial={{ opacity: 0, scale: 0.94, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 6 }}
-                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+    <ProfileSheet open={open} title="Meetup options" fromTop compact hideHandle onClose={onClose}>
+      <div className="meetup-top-sheet meetup-card-menu-sheet">
+        <p className="meetup-card-menu-sheet__subtitle" title={date.title}>
+          {date.title}
+        </p>
+
+        <ul className="meetup-card-menu-sheet__list" role="menu">
+          {options.map((option) => (
+            <li
+              key={option.id}
+              role="none"
+              className={option.dividerBefore ? 'meetup-card-menu-sheet__divider' : undefined}
+            >
+              <button
+                type="button"
+                role="menuitem"
+                className={`meetup-card-menu-sheet__item${option.danger ? ' meetup-card-menu-sheet__item--danger' : ''}`}
+                onClick={option.onClick}
               >
-                <header className="meetup-card-menu__header">
-                  <h2 id="meetup-card-menu-title" className="meetup-card-menu__title">
-                    Meetup options
-                  </h2>
-                  <button
-                    type="button"
-                    className="meetup-card-menu__close"
-                    onClick={onClose}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </header>
-
-                <p className="meetup-card-menu__subtitle" title={date.title}>
-                  {date.title}
-                </p>
-
-                <ul className="meetup-card-menu__list" role="menu">
-                  {options.map((option) => (
-                    <li
-                      key={option.id}
-                      role="none"
-                      className={option.dividerBefore ? 'meetup-card-menu__divider' : undefined}
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className={`meetup-card-menu__item${option.danger ? ' meetup-card-menu__item--danger' : ''}`}
-                        onClick={option.onClick}
-                      >
-                        {option.icon}
-                        <span className="meetup-card-menu__label">{option.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
-    </AppOverlay>
+                {option.icon}
+                <span className="meetup-card-menu-sheet__label">{option.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </ProfileSheet>
   );
 }

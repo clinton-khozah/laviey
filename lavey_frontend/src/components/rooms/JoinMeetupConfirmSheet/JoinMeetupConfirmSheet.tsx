@@ -34,7 +34,7 @@ export function JoinMeetupConfirmSheet({
       onClose={onClose}
     >
       {date && (
-        <div className="join-meetup-confirm">
+        <div className="meetup-top-sheet join-meetup-confirm">
           <div className="join-meetup-confirm__main">
             {date.hostAvatar ? (
               <img src={date.hostAvatar} alt="" className="join-meetup-confirm__avatar" />

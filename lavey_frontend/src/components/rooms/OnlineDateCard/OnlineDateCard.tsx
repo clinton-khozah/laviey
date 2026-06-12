@@ -141,15 +141,6 @@ export function OnlineDateCard({
                   ) : (
                     <span className="online-date-card__status-pill">{statusLabel(date)}</span>
                   )}
-                  <div
-                    className="online-date-card__active"
-                    aria-label={`${date.participantCount} of ${date.maxParticipants} active`}
-                  >
-                    <span className="online-date-card__active-label">Active</span>
-                    <span className="online-date-card__active-count">
-                      {date.participantCount} of {date.maxParticipants}
-                    </span>
-                  </div>
                 </div>
 
                 <button

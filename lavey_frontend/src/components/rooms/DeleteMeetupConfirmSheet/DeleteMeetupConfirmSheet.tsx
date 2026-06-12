@@ -20,12 +20,18 @@ export function DeleteMeetupConfirmSheet({
   onClose,
 }: DeleteMeetupConfirmSheetProps) {
   return (
-    <ProfileSheet open={open} title="Delete meetup?" compact hideHandle onClose={onClose}>
+    <ProfileSheet
+      open={open}
+      title="Delete meetup?"
+      fromTop
+      compact
+      hideHandle
+      onClose={onClose}
+    >
       {date && (
-        <div className="delete-meetup-confirm">
+        <div className="meetup-top-sheet delete-meetup-confirm">
           <p className="delete-meetup-confirm__message">
-            Delete <span className="delete-meetup-confirm__title">&ldquo;{date.title}&rdquo;</span>?
-            This cannot be undone.
+            Delete &ldquo;{date.title}&rdquo;? This cannot be undone.
           </p>
 
           {error ? (

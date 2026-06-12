@@ -381,8 +381,12 @@ export function MeetupCardSocial({
         aria-pressed={userLiked}
         aria-label={`Like${likeCount ? `, ${likeCount}` : ''}`}
       >
-        <HeartIcon filled={userLiked} />
-        <span>{likeCount > 0 ? likeCount : 'Like'}</span>
+        <span className="meetup-card-social__rail-icon" aria-hidden>
+          <HeartIcon filled={userLiked} />
+        </span>
+        <span className="meetup-card-social__rail-label">
+          {likeCount > 0 ? likeCount : 'Like'}
+        </span>
       </button>
 
       <button
@@ -392,8 +396,12 @@ export function MeetupCardSocial({
         aria-expanded={commentsOpen}
         aria-label="Comment"
       >
-        <CommentIcon />
-        <span>{comments.length > 0 ? comments.length : 'Comment'}</span>
+        <span className="meetup-card-social__rail-icon" aria-hidden>
+          <CommentIcon />
+        </span>
+        <span className="meetup-card-social__rail-label">
+          {comments.length > 0 ? comments.length : 'Comment'}
+        </span>
       </button>
 
       <button
@@ -401,9 +409,14 @@ export function MeetupCardSocial({
         className="meetup-card-social__rail-btn meetup-card-social__rail-btn--join"
         onClick={onJoin}
         disabled={isJoining}
+        aria-label={isJoining ? 'Joining meetup' : joinLabel}
       >
-        <JoinIcon />
-        <span>{isJoining ? '…' : joinLabel}</span>
+        <span className="meetup-card-social__rail-icon meetup-card-social__rail-icon--join" aria-hidden>
+          <JoinIcon />
+        </span>
+        <span className="meetup-card-social__rail-label meetup-card-social__rail-label--join">
+          {isJoining ? '…' : joinLabel}
+        </span>
       </button>
     </aside>
   );

@@ -91,7 +91,9 @@
 
 .create-date-sheet__input,
 .create-date-sheet__label input,
-.create-date-sheet__label select {
+.create-date-sheet__label select,
+.create-date-sheet__textarea,
+.create-date-sheet__label textarea {
   width: 100%;
   padding: 10px 12px;
   border-radius: 10px;
@@ -102,6 +104,14 @@
   outline: none;
 }
 
+.create-date-sheet__textarea,
+.create-date-sheet__label textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.45;
+  font-family: inherit;
+}
+
 .create-date-sheet__input::placeholder {
   color: var(--text-muted);
   opacity: 1;
@@ -109,14 +119,18 @@
 
 .create-date-sheet__input:focus,
 .create-date-sheet__label input:focus,
-.create-date-sheet__label select:focus {
+.create-date-sheet__label select:focus,
+.create-date-sheet__textarea:focus,
+.create-date-sheet__label textarea:focus {
   border-color: rgba(124, 58, 237, 0.4);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
 }
 
 [data-theme='light'] .create-date-sheet__input,
 [data-theme='light'] .create-date-sheet__label input,
-[data-theme='light'] .create-date-sheet__label select {
+[data-theme='light'] .create-date-sheet__label select,
+[data-theme='light'] .create-date-sheet__textarea,
+[data-theme='light'] .create-date-sheet__label textarea {
   background: rgba(255, 255, 255, 0.95);
   border-color: rgba(0, 0, 0, 0.08);
 }

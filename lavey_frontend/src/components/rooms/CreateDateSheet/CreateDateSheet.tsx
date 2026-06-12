@@ -40,6 +40,16 @@ const TIME_OPTIONS = [
   { label: 'Later today', minutes: 180 },
 ] as const;
 
+const DEFAULT_MEETUP_TOPICS = new Set([
+  'Open video meetup — join from the live list',
+  'Video meetup with your match',
+]);
+
+function meetupCaptionFromDate(date: OnlineDate): string {
+  if (date.topic && !DEFAULT_MEETUP_TOPICS.has(date.topic)) return date.topic;
+  return date.title;
+}
+
 function isChipActive(minutes: number, startAtLocal: string): boolean {
   const current = parseDatetimeLocal(startAtLocal);
   if (!current) return false;
@@ -57,8 +67,7 @@ export function CreateDateSheet({
   onUpdate,
 }: CreateDateSheetProps) {
   const isEditing = Boolean(editingDate);
-  const [title, setTitle] = useState('');
-  const [topic, setTopic] = useState('');
+  const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState<DateVisibility>('public');
   const [inviteProfileId, setInviteProfileId] = useState('');
   const [startAtLocal, setStartAtLocal] = useState(() => defaultMeetupStartLocal(15));
@@ -71,8 +80,7 @@ export function CreateDateSheet({
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
-    setTitle('');
-    setTopic('');
+    setCaption('');
     setInviteProfileId('');
     setCoverPreview(null);
     setCoverFile(null);
@@ -84,8 +92,7 @@ export function CreateDateSheet({
     if (!open) return;
 
     if (editingDate) {
-      setTitle(editingDate.title);
-      setTopic(editingDate.topic);
+      setCaption(meetupCaptionFromDate(editingDate));
       setVisibility(editingDate.visibility);
       setStartAtLocal(
         editingDate.startsAt
@@ -146,7 +153,8 @@ export function CreateDateSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    if (!title.trim()) return;
+    const captionText = caption.trim();
+    if (!captionText) return;
 
     if (!isEditing && isPrivate) {
       if (!inviteProfileId) {
@@ -184,7 +192,8 @@ export function CreateDateSheet({
     }
 
     const base = {
-      title: title.trim(),
+      title: captionText.slice(0, 120),
+      topic: captionText.slice(0, 240),
       startsAt: startsAtDate.toISOString(),
       coverImageUrl: coverImageUrl ?? (editingDate ? resolveMeetupCover(editingDate.coverImage) || undefined : undefined),
     };
@@ -192,7 +201,7 @@ export function CreateDateSheet({
     if (isEditing && editingDate && onUpdate) {
       await onUpdate(editingDate.id, {
         title: base.title,
-        topic: topic.trim() || editingDate.topic,
+        topic: base.topic,
         startsAt: base.startsAt,
         coverImageUrl: coverImageUrl ?? (editingDate.coverImage ? resolveMeetupCover(editingDate.coverImage) : undefined),
       });
@@ -204,7 +213,6 @@ export function CreateDateSheet({
     if (isPrivate) {
       await onCreate({
         ...base,
-        topic: topic.trim() || 'Video meetup with your match',
         visibility: 'private',
         mode: 'invite',
         inviteToProfileId: inviteProfileId,
@@ -213,7 +221,6 @@ export function CreateDateSheet({
     } else {
       await onCreate({
         ...base,
-        topic: topic.trim() || 'Open video meetup — join from the live list',
         visibility: 'public',
         mode: 'post',
       });
@@ -253,21 +260,15 @@ export function CreateDateSheet({
         </div>
 
         <label className="create-date-sheet__label">
-          Title
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={60}
+          Caption
+          <textarea
+            className="create-date-sheet__textarea"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            maxLength={240}
+            rows={3}
+            placeholder="What's this meetup about?"
             required
-          />
-        </label>
-
-        <label className="create-date-sheet__label">
-          What to expect
-          <input
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            maxLength={120}
           />
         </label>
 

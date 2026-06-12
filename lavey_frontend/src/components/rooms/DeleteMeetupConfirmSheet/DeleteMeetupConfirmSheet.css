@@ -1,20 +1,16 @@
+@import '../meetupTopSheet.css';
+
 .delete-meetup-confirm {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding-bottom: 4px;
+  gap: 12px;
 }
 
 .delete-meetup-confirm__message {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.45;
   color: var(--text-secondary);
-}
-
-.delete-meetup-confirm__title {
-  font-weight: 700;
-  color: var(--text-primary);
 }
 
 .delete-meetup-confirm__error {
@@ -27,17 +23,17 @@
 .delete-meetup-confirm__actions {
   display: grid;
   grid-template-columns: 1fr 1.15fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .delete-meetup-confirm__btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 40px;
+  padding: 0 10px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
   transition: transform 0.12s ease, opacity 0.12s ease;
@@ -48,7 +44,7 @@
 }
 
 .delete-meetup-confirm__btn:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
 }
 
 .delete-meetup-confirm__btn--cancel {
