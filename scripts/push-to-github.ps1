@@ -7,7 +7,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
-git remote set-url origin https://github.com/clinton-khozah/laviey_frontend.git
+git remote set-url origin https://clinton-khozah@github.com/clinton-khozah/laviey_frontend.git
 git push -u origin development
 git push -u origin testing
 git push origin main

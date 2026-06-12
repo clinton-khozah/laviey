@@ -38,16 +38,20 @@ jobs:
         working-directory: lavey_frontend
         run: npm run build
         env:
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://laveybackend-3.onrender.com/api' }}
           VITE_USE_MOCK_API: 'false'
           VITE_USE_REAL_AUTH: 'true'
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://wgyqotbvjnkafmwmhvbj.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_F9_1U8m0og8iS3tQmBD6YQ_xV-AVFlL' }}
+
+      - name: Verify build output
+        run: test -f lavey_frontend/dist/index.html
 
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: ./lavey_frontend/dist
+          netlify-config-path: ./netlify.toml
           production-branch: main
           production-deploy: ${{ github.ref == 'refs/heads/main' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

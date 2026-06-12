@@ -37,6 +37,12 @@ VITE_USE_REAL_AUTH=true
 
 Pushes to `main` deploy production. `testing` and `development` get branch deploys.
 
+**Netlify site settings** (Site configuration → Build & deploy):
+
+- Either leave **Base directory** empty and let root `netlify.toml` drive the build, **or** set Base directory to `lavey_frontend` (uses `lavey_frontend/netlify.toml`).
+- **Publish directory** must end up as `lavey_frontend/dist` (root config) or `dist` (when base is `lavey_frontend`).
+- If you use GitHub Actions to deploy, turn off Netlify’s own **Build** hook (Build settings → Stop builds) so only Actions uploads `dist`.
+
 **Repository secrets** (Settings → Secrets and variables → Actions):
 
 - `NETLIFY_AUTH_TOKEN` — from [Netlify user settings](https://app.netlify.com/user/applications)
