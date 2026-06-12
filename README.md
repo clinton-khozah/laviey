@@ -1,8 +1,18 @@
-# Lavey — Frontend
+# Laviey — Frontend
 
 TikTok-style dating app UI. Production: [loviey.netlify.app](https://loviey.netlify.app).
 
-The **API is a separate repository:** [github.com/clintonkhozah/laveybackend](https://github.com/clintonkhozah/laveybackend) (deploy on Render).
+**Backend API:** [github.com/clinton-khozah/laviey](https://github.com/clinton-khozah/laviey) (deploy on Render).
+
+## Branches
+
+| Branch | Purpose |
+|--------|---------|
+| `development` | Active feature work |
+| `testing` | QA / staging before production |
+| `main` | Production (auto-deploys to Netlify) |
+
+**Flow:** push to `development` → open PR to `testing` → open PR to `main`.
 
 ## Run locally
 
@@ -13,9 +23,9 @@ cp .env.example .env
 npm run dev
 ```
 
-Or from repo root: `npm run dev` (same thing).
+Or from repo root: `npm run dev`.
 
-Start the backend from its own repo and set in `lavey_frontend/.env`:
+Set in `lavey_frontend/.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:5000/api
@@ -23,12 +33,19 @@ VITE_USE_MOCK_API=false
 VITE_USE_REAL_AUTH=true
 ```
 
-## Deploy (Netlify)
+## Deploy (Netlify via GitHub Actions)
 
-`netlify.toml` is configured for `lavey_frontend/`. Set `VITE_API_BASE_URL` to your hosted API, e.g.:
+Pushes to `main` deploy production. `testing` and `development` get branch deploys.
 
-```env
-VITE_API_BASE_URL=https://your-api.onrender.com/api
-```
+**Repository secrets** (Settings → Secrets and variables → Actions):
+
+- `NETLIFY_AUTH_TOKEN` — from [Netlify user settings](https://app.netlify.com/user/applications)
+- `NETLIFY_SITE_ID` — Site configuration → General → Site ID (loviey site)
+
+**Repository variables** (optional; defaults match `netlify.toml`):
+
+- `VITE_API_BASE_URL` — e.g. `https://laveybackend-3.onrender.com/api`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 See `lavey_frontend/ARCHITECTURE.md` for code layout.
