@@ -2,7 +2,7 @@
 
 TikTok-style dating app UI. Production: [loviey.netlify.app](https://loviey.netlify.app).
 
-**Backend API:** [github.com/clinton-khozah/laviey](https://github.com/clinton-khozah/laviey) (deploy on Render).
+**Backend API:** deploy on Render (separate backend repository). **Frontend repo:** [github.com/clinton-khozah/laviey](https://github.com/clinton-khozah/laviey).
 
 ## Branches
 
