@@ -1,6 +1,8 @@
 .online-dates-page {
   position: absolute;
   inset: 0;
+  --zoom-header-offset: 42px;
+  --zoom-live-rail-height: 66px;
 }
 
 .online-dates-page__create-btn {
@@ -20,33 +22,33 @@
   height: 20px;
 }
 
+.online-dates-page .screen-header {
+  padding: calc(var(--safe-top) + 8px) 16px 2px;
+  background: var(--bg-deep);
+}
+
+.online-dates-page--has-live-rail .screen-header {
+  padding-bottom: 0;
+}
+
 .online-dates-page__live-rail {
   position: absolute;
-  top: calc(var(--safe-top) + 72px);
+  top: calc(var(--safe-top) + var(--zoom-header-offset));
   left: 0;
   right: 0;
   z-index: 12;
   background: var(--bg-deep);
-  border-bottom: 1px solid var(--border-subtle);
+  border: none;
+  pointer-events: none;
+  padding-top: 8px;
 }
 
 .page-scroller--below-live-rail {
-  padding-top: calc(var(--safe-top) + 72px + 98px);
-}
-
-.online-dates-page__top {
-  padding: 8px 14px 0;
-}
-
-.online-dates-page__status {
-  text-align: center;
-  padding: 28px 16px;
-  color: var(--text-secondary);
-  font-size: 13px;
+  padding-top: calc(var(--safe-top) + var(--zoom-header-offset) + var(--zoom-live-rail-height));
 }
 
 .online-dates-page__content {
-  padding: 12px 14px 28px;
+  padding: 20px 14px 28px;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -61,7 +63,7 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .online-dates-page__badge {
@@ -77,20 +79,6 @@
   color: white;
 }
 
-.online-dates-page__live-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-mint);
-  box-shadow: 0 0 10px var(--accent-mint);
-  animation: dateLivePulse 1.2s ease-in-out infinite;
-}
-
-@keyframes dateLivePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.85); }
-}
-
 .online-dates-page__stack {
   display: flex;
   flex-direction: column;
@@ -103,7 +91,7 @@
 
 .online-dates-page__feed {
   height: calc(
-    100dvh - var(--safe-top) - 72px - var(--nav-height) - var(--safe-bottom) - 52px
+    100dvh - var(--safe-top) - var(--zoom-header-offset) - var(--nav-height) - var(--safe-bottom) - 52px
   );
   min-height: 380px;
   overscroll-behavior-y: contain;
@@ -111,8 +99,43 @@
 
 .online-dates-page--has-live-rail .online-dates-page__feed {
   height: calc(
-    100dvh - var(--safe-top) - 72px - 98px - var(--nav-height) - var(--safe-bottom) - 52px
+    100dvh - var(--safe-top) - var(--zoom-header-offset) - var(--zoom-live-rail-height) -
+      var(--nav-height) - var(--safe-bottom) - 52px
   );
+}
+
+.online-dates-page__success-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  border: none;
+  background: rgba(0, 0, 0, 0.52);
+  cursor: default;
+}
+
+.online-dates-page__success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 20px) 24px calc(var(--safe-bottom) + 20px);
+  pointer-events: none;
+}
+
+.online-dates-page__success-overlay .sheet-save-success {
+  width: min(100%, 320px);
+  padding: 28px 22px 22px;
+  border-radius: 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+
+[data-theme='light'] .online-dates-page__success-overlay .sheet-save-success {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.14);
 }
 
 .online-dates-page__toast {

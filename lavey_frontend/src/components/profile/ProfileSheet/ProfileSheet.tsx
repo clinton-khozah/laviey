@@ -26,6 +26,8 @@ interface ProfileSheetProps {
   centeredSm?: boolean;
   /** Full-height sheet anchored to the top (slides down) */
   fromTop?: boolean;
+  /** Extra control in the header (e.g. ⋮ menu), placed before close */
+  headerAction?: ReactNode;
 }
 
 export function ProfileSheet({
@@ -42,6 +44,7 @@ export function ProfileSheet({
   centered,
   centeredSm,
   fromTop,
+  headerAction,
 }: ProfileSheetProps) {
   const anchorPos = useAnchorPosition(Boolean(open && anchored), anchorRef);
   const isPopover = anchored && !centered;
@@ -73,9 +76,12 @@ export function ProfileSheet({
         <h2 id="profile-sheet-title" className="profile-sheet__title">
           {title}
         </h2>
-        <button type="button" className="profile-sheet__close" onClick={onClose} aria-label="Close">
-          ×
-        </button>
+        <div className="profile-sheet__header-actions">
+          {headerAction}
+          <button type="button" className="profile-sheet__close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
       </header>
       <div className="profile-sheet__body">{children}</div>
     </>

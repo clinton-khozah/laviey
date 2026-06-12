@@ -9,7 +9,34 @@
 }
 
 .online-date-card--live {
-  box-shadow: var(--shell-shadow), 0 0 0 1px rgba(52, 211, 153, 0.28);
+  box-shadow:
+    var(--shell-shadow),
+    0 0 0 1px rgba(52, 211, 153, 0.35),
+    0 0 28px rgba(52, 211, 153, 0.22);
+  animation: meetupCardLiveGlow 2.6s ease-in-out infinite;
+}
+
+@keyframes meetupCardLiveGlow {
+  0%, 100% {
+    box-shadow:
+      var(--shell-shadow),
+      0 0 0 1px rgba(52, 211, 153, 0.3),
+      0 0 20px rgba(52, 211, 153, 0.16);
+  }
+  50% {
+    box-shadow:
+      var(--shell-shadow),
+      0 0 0 1px rgba(52, 211, 153, 0.5),
+      0 0 36px rgba(52, 211, 153, 0.32);
+  }
+}
+
+.online-date-card__live-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 0%, rgba(52, 211, 153, 0.18) 0%, transparent 58%);
 }
 
 .online-date-card--feed {
@@ -94,12 +121,43 @@
   pointer-events: none;
 }
 
+.online-date-card__top-end {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .online-date-card__top-badges {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.online-date-card__menu-btn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--text-primary);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+.online-date-card__menu-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.online-date-card__menu-btn:disabled {
+  opacity: 0.55;
 }
 
 .online-date-card__active {
@@ -292,16 +350,3 @@
   border: 1px solid var(--border-subtle);
 }
 
-.online-date-card__delete {
-  width: 100%;
-  padding: 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #f87171;
-  background: var(--bg-elevated);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.online-date-card__delete:disabled {
-  opacity: 0.65;
-}

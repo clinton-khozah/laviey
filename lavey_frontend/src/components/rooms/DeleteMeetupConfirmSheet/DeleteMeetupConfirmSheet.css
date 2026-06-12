@@ -1,0 +1,69 @@
+.delete-meetup-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.delete-meetup-confirm__message {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.delete-meetup-confirm__title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.delete-meetup-confirm__error {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #ef4444;
+}
+
+.delete-meetup-confirm__actions {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 10px;
+}
+
+.delete-meetup-confirm__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.delete-meetup-confirm__btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.delete-meetup-confirm__btn:disabled {
+  opacity: 0.65;
+}
+
+.delete-meetup-confirm__btn--cancel {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+}
+
+.delete-meetup-confirm__btn--delete {
+  color: #fff;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.28);
+}
+
+[data-theme='light'] .delete-meetup-confirm__btn--cancel {
+  background: #f8f8fc;
+}

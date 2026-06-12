@@ -53,6 +53,13 @@
   font-weight: 700;
 }
 
+.profile-sheet__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .profile-sheet__close {
   width: 36px;
   height: 36px;

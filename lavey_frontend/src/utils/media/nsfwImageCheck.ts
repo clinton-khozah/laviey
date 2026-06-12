@@ -1,3 +1,5 @@
+import { FaceMatchError } from '@/utils/face/faceMatcher';
+import { ImageQualityError } from '@/utils/media/imageQualityCheck';
 import * as nsfwjs from 'nsfwjs';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
@@ -72,6 +74,8 @@ export async function validateSafeImage(file: File): Promise<void> {
 
 export function nsfwImageUserMessage(error: unknown): string {
   if (error instanceof NsfwImageError) return error.message;
+  if (error instanceof ImageQualityError) return error.message;
+  if (error instanceof FaceMatchError) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return 'We couldn\'t upload this photo. The file may be unreadable or unsupported — please try a different image.';
 }

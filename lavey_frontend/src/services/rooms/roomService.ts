@@ -8,6 +8,7 @@ import type {
   DateInvite,
   MeetingJoinResult,
   OnlineDate,
+  UpdateDateInput,
 } from '@/types';
 import {
   canJoinMeetup,
@@ -242,6 +243,52 @@ export const roomService = {
     }
 
     await httpClient.delete<ApiResponse<{ ok: boolean }>>(API_ENDPOINTS.dates.byId(dateId));
+  },
+
+  async updateDate(dateId: string, input: UpdateDateInput): Promise<OnlineDate> {
+    if (!usesBackendMeetups()) {
+      await sleep(300);
+      const index = MOCK_ONLINE_DATES.findIndex((item) => item.id === dateId);
+      if (index === -1) throw new Error('Meetup not found');
+      const existing = MOCK_ONLINE_DATES[index]!;
+      if (!existing.isHostedByYou) {
+        throw new Error('Only the host can edit this meetup');
+      }
+
+      const startsInMinutes = Math.max(
+        1,
+        Math.ceil((new Date(input.startsAt).getTime() - Date.now()) / 60_000),
+      );
+
+      const updated: OnlineDate = {
+        ...existing,
+        title: input.title,
+        topic: input.topic,
+        startsAt: input.startsAt,
+        startsInMinutes,
+        scheduledLabel: formatMeetupScheduledLabel(input.startsAt),
+        coverImage: input.coverImageUrl ?? existing.coverImage,
+        status:
+          startsInMinutes <= 0
+            ? 'live'
+            : startsInMinutes <= 15
+              ? 'starting-soon'
+              : 'scheduled',
+      };
+
+      MOCK_ONLINE_DATES[index] = updated;
+      return cloneDate(updated);
+    }
+
+    const res = await httpClient.patch<ApiResponse<OnlineDate>>(API_ENDPOINTS.dates.byId(dateId), {
+      body: {
+        title: input.title,
+        topic: input.topic,
+        startsAt: input.startsAt,
+        coverImageUrl: input.coverImageUrl,
+      },
+    });
+    return enrichDate(res.data);
   },
 
   async respondToInvite(

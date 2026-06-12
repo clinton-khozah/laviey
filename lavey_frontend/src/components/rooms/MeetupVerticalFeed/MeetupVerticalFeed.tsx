@@ -5,10 +5,13 @@ import './MeetupVerticalFeed.css';
 export interface MeetupVerticalFeedProps {
   dates: OnlineDate[];
   joiningId: string | null;
+  deletingId?: string | null;
   className?: string;
   onJoin: (date: OnlineDate) => void;
   onCopyCode: (code: string) => void;
   onCopyLink: (link: string) => void;
+  onEdit?: (date: OnlineDate) => void;
+  onDelete?: (date: OnlineDate) => void;
   onHostClick?: (date: OnlineDate) => void;
   onProfileClick?: (userId: string) => void;
 }
@@ -16,10 +19,13 @@ export interface MeetupVerticalFeedProps {
 export function MeetupVerticalFeed({
   dates,
   joiningId,
+  deletingId = null,
   className = '',
   onJoin,
   onCopyCode,
   onCopyLink,
+  onEdit,
+  onDelete,
   onHostClick,
   onProfileClick,
 }: MeetupVerticalFeedProps) {
@@ -34,9 +40,12 @@ export function MeetupVerticalFeed({
             layout="feed"
             date={date}
             isJoining={joiningId === date.id}
+            isDeleting={deletingId === date.id}
             onCopyCode={onCopyCode}
             onCopyLink={onCopyLink}
             onJoin={() => onJoin(date)}
+            onEdit={date.isHostedByYou ? onEdit : undefined}
+            onDelete={date.isHostedByYou ? onDelete : undefined}
             onHostClick={onHostClick}
             onProfileClick={onProfileClick}
           />

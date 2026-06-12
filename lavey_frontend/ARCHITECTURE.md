@@ -76,7 +76,7 @@ Import via the barrel: `import { FeedItem } from '@/components/feed/FeedItem'`
 | `flameQuotaService` | Freemium daily flame limit |
 | `authService` | Google + email sign-in, session restore |
 
-Set `VITE_USE_MOCK_API=false` and `VITE_API_BASE_URL` when the .NET backend is ready.
+Set `VITE_USE_MOCK_API=false` and `VITE_API_BASE_URL` to point at the Express API (`http://localhost:5000/api` locally, Render URL in production).
 
 Expected response shape from .NET:
 

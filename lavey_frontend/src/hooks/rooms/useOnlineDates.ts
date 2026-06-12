@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { usesBackendMeetups } from '@/config/env';
 import { roomService } from '@/services';
-import type { CreateDateInput, DateInvite, MeetingJoinResult, OnlineDate } from '@/types';
+import type { CreateDateInput, DateInvite, MeetingJoinResult, OnlineDate, UpdateDateInput } from '@/types';
 import { canBrowseMeetup } from '@/utils/meeting/meetupAccess';
 
 export function useOnlineDates() {
@@ -34,9 +35,11 @@ export function useOnlineDates() {
     void fetch();
   }, [fetch]);
 
-  const visibleDates = dates.filter((date) =>
-    canBrowseMeetup(date, { acceptedDateIds }),
-  );
+  // Backend already scopes the list (public + yours + accepted private).
+  // Mock mode still needs client-side visibility rules.
+  const visibleDates = usesBackendMeetups()
+    ? dates
+    : dates.filter((date) => canBrowseMeetup(date, { acceptedDateIds }));
 
   const joinDate = useCallback(async (dateId: string, accessCode: string): Promise<MeetingJoinResult> => {
     setJoiningId(dateId);
@@ -69,6 +72,18 @@ export function useOnlineDates() {
       return created;
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Could not create meetup');
+      throw err;
+    }
+  }, []);
+
+  const updateDate = useCallback(async (dateId: string, input: UpdateDateInput) => {
+    setActionError(null);
+    try {
+      const updated = await roomService.updateDate(dateId, input);
+      setDates((prev) => prev.map((date) => (date.id === dateId ? updated : date)));
+      return updated;
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not update meetup');
       throw err;
     }
   }, []);
@@ -129,6 +144,7 @@ export function useOnlineDates() {
     joinDate,
     joinByCode,
     createDate,
+    updateDate,
     deleteDate,
     respondToInvite,
     clearActionError: () => setActionError(null),

@@ -91,15 +91,32 @@ function imageToDataUrl(img: HTMLImageElement): string {
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
-async function validateClearFaceOnImage(img: HTMLImageElement): Promise<void> {
+export interface FaceValidationOptions {
+  /** Slightly looser thresholds for profile photo uploads. */
+  relaxed?: boolean;
+}
+
+async function validateClearFaceOnImage(
+  img: HTMLImageElement,
+  options?: FaceValidationOptions,
+): Promise<void> {
+  const relaxed = options?.relaxed ?? false;
   const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.48 }))
+    .detectAllFaces(
+      img,
+      new faceapi.TinyFaceDetectorOptions({
+        inputSize: relaxed ? 448 : 512,
+        scoreThreshold: relaxed ? 0.4 : 0.48,
+      }),
+    )
     .withFaceLandmarks();
 
   if (detections.length === 0) {
     throw new FaceMatchError(
       'NO_FACE',
-      'No clear face found. Use a well-lit photo where your face fills most of the frame.',
+      relaxed
+        ? 'We could not see a clear face. Use a well-lit photo where your face is easy to see.'
+        : 'No clear face found. Use a well-lit photo where your face fills most of the frame.',
     );
   }
 
@@ -113,30 +130,35 @@ async function validateClearFaceOnImage(img: HTMLImageElement): Promise<void> {
   const detection = detections[0]!.detection;
   const minDim = Math.min(img.width, img.height);
   const faceSize = Math.max(detection.box.width, detection.box.height);
+  const minFaceRatio = relaxed ? 0.14 : 0.2;
+  const minDetectionScore = relaxed ? 0.44 : 0.52;
 
-  if (faceSize / minDim < 0.2) {
+  if (faceSize / minDim < minFaceRatio) {
     throw new FaceMatchError(
       'FACE_TOO_SMALL',
       'Your face is too small in this photo. Move closer or use a tighter crop.',
     );
   }
 
-  if (detection.score < 0.52) {
+  if (detection.score < minDetectionScore) {
     throw new FaceMatchError(
       'FACE_UNCLEAR',
-      'Face isn\'t clear enough. Avoid blur, heavy filters, hats, or sunglasses.',
+      'Your face is not clear enough. Avoid blur, heavy filters, hats, or sunglasses.',
     );
   }
 }
 
-export async function validateClearFaceImage(file: File): Promise<void> {
+export async function validateClearFaceImage(
+  file: File,
+  options?: FaceValidationOptions,
+): Promise<void> {
   if (!file.type.startsWith('image/')) {
     throw new FaceMatchError('INVALID_IMAGE', 'Please choose a photo file.');
   }
   await loadFaceModels();
   const dataUrl = await readFileAsDataUrl(file);
   const img = await loadImageFromDataUrl(dataUrl);
-  await validateClearFaceOnImage(img);
+  await validateClearFaceOnImage(img, options);
 }
 
 async function detectSingleFaceDescriptor(img: HTMLImageElement): Promise<Float32Array> {

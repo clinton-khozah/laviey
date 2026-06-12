@@ -47,6 +47,7 @@ export type {
   DateStatus,
   InviteStatus,
   CreateDateInput,
+  UpdateDateInput,
   VibeRoom,
   RoomStatus,
 } from './domain/room.types';

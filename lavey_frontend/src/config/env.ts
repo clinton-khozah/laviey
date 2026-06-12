@@ -14,9 +14,15 @@ function resolveApiBaseUrl(): string {
   return DEFAULT_PRODUCTION_API_BASE_URL;
 }
 
+const apiBaseUrl = resolveApiBaseUrl();
+
+if (import.meta.env.DEV) {
+  console.info(`[Lavey] API base URL: ${apiBaseUrl}`);
+}
+
 export const env = {
   /** Must be a full URL in production (Netlify cannot run lavey_backend). */
-  apiBaseUrl: resolveApiBaseUrl(),
+  apiBaseUrl,
   /** Set VITE_USE_MOCK_API=true only for offline UI demos. Production uses the real API. */
   useMockApi: import.meta.env.VITE_USE_MOCK_API === 'true',
   /** Real Supabase auth via lavey_backend (default on). */

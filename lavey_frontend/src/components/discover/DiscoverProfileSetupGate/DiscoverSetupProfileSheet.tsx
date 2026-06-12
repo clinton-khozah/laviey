@@ -45,7 +45,7 @@ export function DiscoverSetupProfileSheet({
       setError(null);
       setUploadStatus('uploading');
       try {
-        const prepared = await prepareImageForUpload(file);
+        const prepared = await prepareImageForUpload(file, undefined, { requireFace: true });
         const url = await contentService.uploadAvatar(prepared);
         setStoredProfileAvatar(profile.id, url);
         setLocalAvatar(url);
@@ -62,7 +62,7 @@ export function DiscoverSetupProfileSheet({
     <ProfileSheet open={open} title="Your profile" onClose={onClose} edit hideHandle>
       <div className="discover-setup-sheet discover-setup-sheet--you">
         <p className="discover-setup-sheet__lead">
-          Tap your photo to upload your profile picture.
+          Upload a clear, well-lit profile photo. Blurry or low-quality pictures are rejected.
         </p>
 
         <div className="discover-setup-sheet__you-hero">

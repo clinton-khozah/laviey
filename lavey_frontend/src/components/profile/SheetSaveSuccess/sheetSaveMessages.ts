@@ -7,7 +7,9 @@ export type SheetSaveAction =
   | 'safety'
   | 'contacts-import'
   | 'verify'
-  | 'platinum';
+  | 'platinum'
+  | 'post'
+  | 'meetup-delete';
 
 export interface SheetSaveCopy {
   title: string;
@@ -60,6 +62,18 @@ export function getSheetSaveCopy(action: SheetSaveAction, detail?: string): Shee
       return {
         title: 'Welcome to Platinum',
         message: 'Every perk is unlocked. Stand out, match faster, and see who’s into you.',
+      };
+    case 'post':
+      return {
+        title: 'Pic is live',
+        message: 'Your photo is on your profile and ready to spark new connections.',
+      };
+    case 'meetup-delete':
+      return {
+        title: 'Meetup deleted',
+        message: detail
+          ? `"${detail}" was removed.`
+          : 'Your meetup was removed.',
       };
     default:
       return {

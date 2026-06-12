@@ -1,8 +1,10 @@
-import { usesBackendAuth } from '@/config/env';
+import { env, usesBackendAuth } from '@/config/env';
 import { apiConfig } from '@/config/api.config';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { getGoogleSignInBlockedMessage } from '@/utils/google/googleEnvironment';
 import { resetOAuthCallbackState } from '@/utils/auth/oauthCallbackState';
+import { isLocalApiBaseUrl, stashOAuthRedirectContext } from '@/utils/auth/oauthRedirectStorage';
+import { requestGoogleIdToken } from '@/utils/google/googleIdTokenSignIn';
 import { markPendingOnboardingQuiz } from '@/utils/onboarding/pendingOnboardingQuiz';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { defaultAvatar } from '@/constants/defaultAvatar';
@@ -118,7 +120,29 @@ export const authService = {
     }
 
     markPendingOnboardingQuiz();
+
+    // Local dev: ID token POST — avoids Supabase PKCE redirect to the live site.
+    const useLocalIdTokenFlow =
+      import.meta.env.DEV && env.googleClientId && isLocalApiBaseUrl(apiConfig.baseUrl);
+
+    if (import.meta.env.DEV) {
+      console.info(
+        `[auth] Google sign-in: ${useLocalIdTokenFlow ? 'local ID token → POST /auth/google' : 'redirect → GET /auth/google'}`,
+        { api: apiConfig.baseUrl, hasClientId: Boolean(env.googleClientId) },
+      );
+    }
+
+    if (useLocalIdTokenFlow) {
+      const idToken = await requestGoogleIdToken();
+      const res = await httpClient.post<ApiResponse<AuthSession>>(API_ENDPOINTS.auth.google, {
+        body: { idToken },
+      });
+      persistSession(res.data);
+      return res.data;
+    }
+
     resetOAuthCallbackState();
+    stashOAuthRedirectContext(apiConfig.baseUrl, window.location.origin);
     const origin = encodeURIComponent(window.location.origin);
     window.location.assign(
       `${apiConfig.baseUrl}${API_ENDPOINTS.auth.google}?origin=${origin}`,

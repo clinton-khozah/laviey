@@ -3,7 +3,8 @@ import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import { usesBackendMeetups } from '@/config/env';
 import { matchService } from '@/services';
 import { contentService } from '@/services/content/contentService';
-import type { CreateDateInput, DateVisibility } from '@/types';
+import type { CreateDateInput, DateVisibility, OnlineDate, UpdateDateInput } from '@/types';
+import { resolveMeetupCover } from '@/utils/meeting/meetupCover';
 import { getMatchedConversations } from '@/utils/meeting/meetupAccess';
 import {
   defaultMeetupStartLocal,
@@ -20,8 +21,10 @@ interface CreateDateSheetProps {
   open: boolean;
   isCreating: boolean;
   error?: string | null;
+  editingDate?: OnlineDate | null;
   onClose: () => void;
   onCreate: (input: CreateDateInput) => Promise<void>;
+  onUpdate?: (dateId: string, input: UpdateDateInput) => Promise<void>;
 }
 
 interface InviteMatchOption {
@@ -44,7 +47,16 @@ function isChipActive(minutes: number, startAtLocal: string): boolean {
   return Math.abs(current.getTime() - target) < 2 * 60_000;
 }
 
-export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: CreateDateSheetProps) {
+export function CreateDateSheet({
+  open,
+  isCreating,
+  error,
+  editingDate = null,
+  onClose,
+  onCreate,
+  onUpdate,
+}: CreateDateSheetProps) {
+  const isEditing = Boolean(editingDate);
   const [title, setTitle] = useState('');
   const [topic, setTopic] = useState('');
   const [visibility, setVisibility] = useState<DateVisibility>('public');
@@ -70,6 +82,22 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
 
   useEffect(() => {
     if (!open) return;
+
+    if (editingDate) {
+      setTitle(editingDate.title);
+      setTopic(editingDate.topic);
+      setVisibility(editingDate.visibility);
+      setStartAtLocal(
+        editingDate.startsAt
+          ? toDatetimeLocalValue(new Date(editingDate.startsAt))
+          : defaultMeetupStartLocal(15),
+      );
+      const cover = resolveMeetupCover(editingDate.coverImage);
+      setCoverPreview(cover || null);
+      setCoverFile(null);
+      setFormError(null);
+      return;
+    }
 
     if (usesBackendMeetups()) {
       setLoadingMatches(true);
@@ -97,7 +125,7 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
         isOnline: conversation.isOnline,
       })),
     );
-  }, [open]);
+  }, [open, editingDate]);
 
   const isPrivate = visibility === 'private';
   const selectedMatch = matchOptions.find((match) => match.userId === inviteProfileId);
@@ -120,7 +148,7 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
     setFormError(null);
     if (!title.trim()) return;
 
-    if (isPrivate) {
+    if (!isEditing && isPrivate) {
       if (!inviteProfileId) {
         setFormError('Pick a match to invite — private meetups are 1-on-1');
         return;
@@ -158,8 +186,20 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
     const base = {
       title: title.trim(),
       startsAt: startsAtDate.toISOString(),
-      coverImageUrl,
+      coverImageUrl: coverImageUrl ?? (editingDate ? resolveMeetupCover(editingDate.coverImage) || undefined : undefined),
     };
+
+    if (isEditing && editingDate && onUpdate) {
+      await onUpdate(editingDate.id, {
+        title: base.title,
+        topic: topic.trim() || editingDate.topic,
+        startsAt: base.startsAt,
+        coverImageUrl: coverImageUrl ?? (editingDate.coverImage ? resolveMeetupCover(editingDate.coverImage) : undefined),
+      });
+      resetForm();
+      onClose();
+      return;
+    }
 
     if (isPrivate) {
       await onCreate({
@@ -186,7 +226,13 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
   const isBusy = isCreating || isUploadingCover;
 
   return (
-    <ProfileSheet open={open} title="Schedule meetup" onClose={onClose} fromTop hideHandle>
+    <ProfileSheet
+      open={open}
+      title={isEditing ? 'Edit meetup' : 'Schedule meetup'}
+      onClose={onClose}
+      fromTop
+      hideHandle
+    >
       <form className="create-date-sheet" onSubmit={(e) => void handleSubmit(e)}>
         <div className="create-date-sheet__cover-block">
           <button
@@ -225,6 +271,7 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
           />
         </label>
 
+        {!isEditing ? (
         <fieldset className="create-date-sheet__fieldset">
           <legend>Visibility</legend>
           <div className="create-date-sheet__visibility">
@@ -245,8 +292,9 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
             />
           </div>
         </fieldset>
+        ) : null}
 
-        {isPrivate && (
+        {!isEditing && isPrivate && (
           <fieldset className="create-date-sheet__fieldset">
             <legend>Invite your match</legend>
             {loadingMatches ? (
@@ -329,15 +377,19 @@ export function CreateDateSheet({ open, isCreating, error, onClose, onCreate }: 
         <button
           type="submit"
           className="create-date-sheet__submit"
-          disabled={isBusy || loadingMatches || (isPrivate && matchOptions.length === 0)}
+          disabled={isBusy || (!isEditing && loadingMatches) || (!isEditing && isPrivate && matchOptions.length === 0)}
         >
           {isBusy
             ? isUploadingCover
               ? 'Uploading cover…'
-              : 'Creating…'
-            : isPrivate
-              ? 'Send invite'
-              : 'Post public meetup'}
+              : isEditing
+                ? 'Saving…'
+                : 'Creating…'
+            : isEditing
+              ? 'Save changes'
+              : isPrivate
+                ? 'Send invite'
+                : 'Post public meetup'}
         </button>
       </form>
     </ProfileSheet>

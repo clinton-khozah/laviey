@@ -1,4 +1,10 @@
 import { usesBackendApi } from '@/config/env';
+import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { httpClient } from '@/services/api/httpClient';
+import type { ApiResponse, LikePostResponse, PostLiker, ProfilePost, ReceivedPostLike } from '@/types';
+import { createComplimentThumbnail } from '@/utils/media/createComplimentThumbnail';
+import { localPhotoCompliment } from '@/utils/media/localPhotoCompliment';
+import { sleep } from '@/utils/sleep';
 
 function usesBackendContent(): boolean {
   return usesBackendApi();
@@ -10,10 +16,11 @@ const UUID_RE =
 function isPersistedPostId(postId: string): boolean {
   return UUID_RE.test(postId);
 }
-import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { httpClient } from '@/services/api/httpClient';
-import type { ApiResponse, LikePostResponse, PostLiker, ProfilePost, ReceivedPostLike } from '@/types';
-import { sleep } from '@/utils/sleep';
+
+export interface PhotoComplimentResult {
+  compliment: string;
+  source: 'ai' | 'fallback';
+}
 
 export interface CreatePostInput {
   file: File;
@@ -57,6 +64,38 @@ export const contentService = {
 
     const res = await httpClient.postForm<ApiResponse<ProfilePost>>(API_ENDPOINTS.content.posts, formData);
     return res.data;
+  },
+
+  async getPhotoCompliment(file: File, displayName = ''): Promise<PhotoComplimentResult> {
+    if (!usesBackendContent()) {
+      await sleep(350);
+      return {
+        compliment: localPhotoCompliment(displayName),
+        source: 'fallback',
+      };
+    }
+
+    try {
+      const thumb = await createComplimentThumbnail(file);
+      const formData = new FormData();
+      formData.append('photo', thumb);
+      const trimmedName = displayName.trim();
+      if (trimmedName) {
+        formData.append('firstName', trimmedName.split(/\s+/)[0] ?? trimmedName);
+      }
+
+      const res = await httpClient.postForm<ApiResponse<PhotoComplimentResult>>(
+        API_ENDPOINTS.content.photoCompliment,
+        formData,
+        { skipErrorPage: true },
+      );
+      return res.data;
+    } catch {
+      return {
+        compliment: localPhotoCompliment(displayName),
+        source: 'fallback',
+      };
+    }
   },
 
   async uploadAvatar(file: File): Promise<string> {

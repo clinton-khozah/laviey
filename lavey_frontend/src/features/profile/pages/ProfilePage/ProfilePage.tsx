@@ -158,7 +158,7 @@ export function ProfilePage() {
       setAvatarUploadError(null);
       setIsUploadingAvatar(true);
       try {
-        const prepared = await prepareImageForUpload(file);
+        const prepared = await prepareImageForUpload(file, undefined, { requireFace: true });
         const avatarUrl = await contentService.uploadAvatar(prepared);
         setStoredProfileAvatar(profile.id, avatarUrl);
         setAvatarOverride(avatarUrl);

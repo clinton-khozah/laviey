@@ -12,6 +12,13 @@ interface RequestConfig {
   body?: unknown;
   headers?: HeadersInit;
   signal?: AbortSignal;
+  /** Optional calls (e.g. photo compliment) should fail quietly without /error navigation */
+  skipErrorPage?: boolean;
+}
+
+interface PostFormOptions {
+  signal?: AbortSignal;
+  skipErrorPage?: boolean;
 }
 
 function buildUrl(path: string, params?: RequestConfig['params']): string {
@@ -84,7 +91,9 @@ async function request<T>(
 
   if (!response.ok) {
     const error = await parseErrorResponse(response);
-    maybeNavigateToErrorPage(error);
+    if (!config.skipErrorPage) {
+      maybeNavigateToErrorPage(error);
+    }
     throw error;
   }
 
@@ -108,7 +117,11 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
-async function postForm<T>(path: string, formData: FormData, signal?: AbortSignal): Promise<T> {
+async function postForm<T>(
+  path: string,
+  formData: FormData,
+  options?: PostFormOptions,
+): Promise<T> {
   const headers: HeadersInit = {
     Accept: 'application/json',
   };
@@ -125,12 +138,14 @@ async function postForm<T>(path: string, formData: FormData, signal?: AbortSigna
     method: 'POST',
     headers,
     body: formData,
-    signal,
+    signal: options?.signal,
   });
 
   if (!response.ok) {
     const error = await parseErrorResponse(response);
-    maybeNavigateToErrorPage(error);
+    if (!options?.skipErrorPage) {
+      maybeNavigateToErrorPage(error);
+    }
     throw error;
   }
 
@@ -141,8 +156,8 @@ async function postForm<T>(path: string, formData: FormData, signal?: AbortSigna
 export const httpClient = {
   get: <T>(path: string, config?: RequestConfig) => request<T>('GET', path, config),
   post: <T>(path: string, config?: RequestConfig) => request<T>('POST', path, config),
-  postForm: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
-    postForm<T>(path, formData, signal),
+  postForm: <T>(path: string, formData: FormData, options?: PostFormOptions) =>
+    postForm<T>(path, formData, options),
   put: <T>(path: string, config?: RequestConfig) => request<T>('PUT', path, config),
   patch: <T>(path: string, config?: RequestConfig) => request<T>('PATCH', path, config),
   delete: <T>(path: string, config?: RequestConfig) => request<T>('DELETE', path, config),

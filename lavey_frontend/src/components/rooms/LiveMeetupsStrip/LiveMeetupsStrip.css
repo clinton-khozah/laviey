@@ -1,47 +1,15 @@
 .live-meetups-strip {
-  padding: 6px 0 10px;
-}
-
-.live-meetups-strip__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px 10px;
-}
-
-.live-meetups-strip__live-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.65);
-  animation: liveStripPulse 1.2s ease-in-out infinite;
-}
-
-@keyframes liveStripPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.55; transform: scale(0.85); }
-}
-
-.live-meetups-strip__title {
-  margin: 0;
-  flex: 1;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.live-meetups-strip__hint {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+  padding: 0 0 8px;
+  pointer-events: auto;
 }
 
 .live-meetups-strip__scroll {
   display: flex;
-  gap: 12px;
-  padding: 4px 16px 6px;
+  gap: 10px;
+  padding: 0 16px 0;
+  justify-content: flex-start;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
@@ -59,6 +27,11 @@
 
 .live-meetups-strip__scroll::-webkit-scrollbar {
   display: none;
+}
+
+.live-meetups-strip__scroll--centered {
+  justify-content: center;
+  overflow-x: hidden;
 }
 
 .live-meetups-strip__item {
@@ -94,7 +67,29 @@
   padding: 2px;
   border-radius: 50%;
   background: linear-gradient(145deg, #ff4d6d 0%, #c026d3 45%, #7c3aed 100%);
-  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.22);
+  box-shadow:
+    0 3px 12px rgba(124, 58, 237, 0.22),
+    0 0 16px rgba(52, 211, 153, 0.28);
+  animation: liveStripRingGlow 2.4s ease-in-out infinite;
+}
+
+.live-meetups-strip__ring--upcoming {
+  background: linear-gradient(145deg, #a855f7 0%, #7c3aed 55%, #6366f1 100%);
+  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.2);
+  animation: none;
+}
+
+@keyframes liveStripRingGlow {
+  0%, 100% {
+    box-shadow:
+      0 3px 12px rgba(124, 58, 237, 0.22),
+      0 0 12px rgba(52, 211, 153, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 3px 14px rgba(124, 58, 237, 0.3),
+      0 0 22px rgba(52, 211, 153, 0.42);
+  }
 }
 
 .live-meetups-strip__avatar {
@@ -115,7 +110,7 @@
   background: linear-gradient(135deg, #7c3aed, #a855f7);
 }
 
-.live-meetups-strip__live-badge {
+.live-meetups-strip__badge {
   position: absolute;
   left: 50%;
   bottom: -3px;
@@ -127,9 +122,28 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: white;
-  background: #ef4444;
   border: 2px solid var(--bg-elevated, #fff);
   line-height: 1.3;
+  white-space: nowrap;
+}
+
+.live-meetups-strip__badge--live {
+  background: #ef4444;
+}
+
+.live-meetups-strip__badge--soon {
+  background: #7c3aed;
+  font-size: 6px;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 2px 4px;
+  max-width: 54px;
+  text-align: center;
+}
+
+.live-meetups-strip__badge--later {
+  background: #6366f1;
+  font-size: 7px;
 }
 
 .live-meetups-strip__name {

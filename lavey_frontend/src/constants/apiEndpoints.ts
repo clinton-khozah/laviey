@@ -4,6 +4,7 @@
 export const API_ENDPOINTS = {
   auth: {
     google: '/auth/google',
+    googleCallback: '/auth/google/callback',
     login: '/auth/login',
     register: '/auth/register',
     verifyEmail: '/auth/verify-email',
@@ -37,10 +38,6 @@ export const API_ENDPOINTS = {
     message: (conversationId: string, messageId: string) =>
       `/messages/conversations/${conversationId}/messages/${messageId}`,
   },
-  rooms: {
-    list: '/rooms/vibe-check',
-    join: (id: string) => `/rooms/vibe-check/${id}/join`,
-  },
   dates: {
     list: '/rooms/vibe-check',
     create: '/dates',
@@ -70,6 +67,7 @@ export const API_ENDPOINTS = {
     postLikes: (id: string) => `/users/me/posts/${id}/likes`,
     receivedPostLikes: '/users/me/received-post-likes',
     avatar: '/users/me/avatar',
+    photoCompliment: '/users/me/photo-compliment',
   },
   posts: {
     like: (postId: string) => `/posts/${postId}/like`,

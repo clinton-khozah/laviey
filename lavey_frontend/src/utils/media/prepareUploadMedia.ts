@@ -1,3 +1,5 @@
+import { validateClearFaceImage } from '@/utils/face/faceMatcher';
+import { validateImageQuality } from '@/utils/media/imageQualityCheck';
 import { validateSafeImage } from '@/utils/media/nsfwImageCheck';
 
 /** Max upload size — matches Supabase content bucket (3 MB) */
@@ -6,6 +8,10 @@ export const MAX_CONTENT_BYTES = 3 * 1024 * 1024;
 export interface PrepareImageOptions {
   /** Skip NSFW screening (internal tooling only). */
   skipSafetyCheck?: boolean;
+  /** Skip blur / lighting / resolution checks (internal tooling only). */
+  skipQualityCheck?: boolean;
+  /** Profile avatars — also require one clear face in frame. */
+  requireFace?: boolean;
 }
 
 export async function prepareImageForUpload(
@@ -19,6 +25,13 @@ export async function prepareImageForUpload(
 
   if (!options?.skipSafetyCheck) {
     await validateSafeImage(file);
+  }
+
+  if (!options?.skipQualityCheck) {
+    await validateImageQuality(file);
+    if (options?.requireFace) {
+      await validateClearFaceImage(file, { relaxed: true });
+    }
   }
 
   if (file.size <= maxBytes && file.type === 'image/webp') {

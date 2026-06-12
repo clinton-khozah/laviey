@@ -1,3 +1,5 @@
+import type { PhotoCropTransform } from './postTemplateCrop';
+import { DEFAULT_CROP_TRANSFORM, drawCoverImageWithTransform } from './postTemplateCrop';
 import previewNone from '@/assets/post-templates/none.jpg';
 import overlaySingle from '@/assets/post-templates/single.png';
 import overlayOpenRelationship from '@/assets/post-templates/open-relationship.png';
@@ -108,27 +110,6 @@ function roundRect(
   ctx.closePath();
 }
 
-function drawCoverImage(
-  ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): void {
-  const iw = image.naturalWidth;
-  const ih = image.naturalHeight;
-  if (iw === 0 || ih === 0) return;
-
-  const scale = Math.max(width / iw, height / ih);
-  const srcW = width / scale;
-  const srcH = height / scale;
-  const srcX = (iw - srcW) / 2;
-  const srcY = (ih - srcH) / 2;
-
-  ctx.drawImage(image, srcX, srcY, srcW, srcH, x, y, width, height);
-}
-
 function drawTextSticker(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -216,9 +197,24 @@ export function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   });
 }
 
+const EXPORT_MAX_EDGE = 1440;
+/** Square export for original + template preview parity */
+const EXPORT_SQUARE_EDGE = 1080;
+
+function fitExportDimensions(width: number, height: number): { width: number; height: number } {
+  const maxEdge = Math.max(width, height);
+  if (maxEdge <= EXPORT_MAX_EDGE) return { width, height };
+  const scale = EXPORT_MAX_EDGE / maxEdge;
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
+}
+
 export async function renderPhotoWithTemplate(
   image: HTMLImageElement,
   template: PostTemplate,
+  transform: PhotoCropTransform = DEFAULT_CROP_TRANSFORM,
 ): Promise<Blob> {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -229,31 +225,58 @@ export async function renderPhotoWithTemplate(
 
   if (template.overlayImage) {
     const overlay = await loadImageFromUrl(template.overlayImage);
-    canvas.width = overlay.naturalWidth;
-    canvas.height = overlay.naturalHeight;
-    drawCoverImage(ctx, image, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(overlay, 0, 0);
+    const fitted = fitExportDimensions(overlay.naturalWidth, overlay.naturalHeight);
+    canvas.width = fitted.width;
+    canvas.height = fitted.height;
+    drawCoverImageWithTransform(ctx, image, 0, 0, canvas.width, canvas.height, transform);
+    ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
   } else {
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
-    ctx.drawImage(image, 0, 0);
+    const fitted = fitExportDimensions(EXPORT_SQUARE_EDGE, EXPORT_SQUARE_EDGE);
+    canvas.width = fitted.width;
+    canvas.height = fitted.height;
+    drawCoverImageWithTransform(ctx, image, 0, 0, canvas.width, canvas.height, transform);
     drawTextSticker(ctx, canvas.width, canvas.height, template);
   }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('Export failed'))),
-      'image/jpeg',
-      0.96,
+      'image/webp',
+      0.92,
     );
   });
 }
 
-export async function fileWithTemplate(file: File, templateId: string): Promise<File> {
+export async function fileWithTemplate(
+  file: File,
+  templateId: string,
+  transform: PhotoCropTransform = DEFAULT_CROP_TRANSFORM,
+  previewFrame?: { width: number; height: number },
+): Promise<File> {
   const template = getPostTemplate(templateId);
-  if (template.id === 'none') return file;
-
   const image = await loadImageFromFile(file);
-  const blob = await renderPhotoWithTemplate(image, template);
-  return new File([blob], file.name, { type: 'image/jpeg' });
+  let exportTransform = transform;
+
+  if (previewFrame && previewFrame.width > 0 && previewFrame.height > 0) {
+    if (template.overlayImage) {
+      const overlay = await loadImageFromUrl(template.overlayImage);
+      const fitted = fitExportDimensions(overlay.naturalWidth, overlay.naturalHeight);
+      exportTransform = {
+        scale: transform.scale,
+        offsetX: transform.offsetX * (fitted.width / previewFrame.width),
+        offsetY: transform.offsetY * (fitted.height / previewFrame.height),
+      };
+    } else {
+      const fitted = fitExportDimensions(EXPORT_SQUARE_EDGE, EXPORT_SQUARE_EDGE);
+      exportTransform = {
+        scale: transform.scale,
+        offsetX: transform.offsetX * (fitted.width / previewFrame.width),
+        offsetY: transform.offsetY * (fitted.height / previewFrame.height),
+      };
+    }
+  }
+
+  const blob = await renderPhotoWithTemplate(image, template, exportTransform);
+  const baseName = file.name.replace(/\.[^.]+$/, '') || 'photo';
+  return new File([blob], `${baseName}.webp`, { type: 'image/webp' });
 }

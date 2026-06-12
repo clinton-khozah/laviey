@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { JoinMeetupConfirmSheet } from '@/components/rooms/JoinMeetupConfirmSheet';
 import type { OnlineDate } from '@/types';
 import './LiveMeetupsStrip.css';
@@ -20,8 +20,45 @@ function shortName(date: OnlineDate): string {
   return first.length > 9 ? `${first.slice(0, 8)}…` : first;
 }
 
+function stripBadge(date: OnlineDate): { label: string; variant: 'live' | 'soon' | 'later' } {
+  if (date.status === 'live') {
+    return { label: 'Live', variant: 'live' };
+  }
+  if (date.status === 'starting-soon') {
+    return { label: 'Coming soon', variant: 'soon' };
+  }
+  return { label: 'Later', variant: 'later' };
+}
+
+function stripAriaLabel(date: OnlineDate): string {
+  const badge = stripBadge(date);
+  if (badge.variant === 'live') {
+    return `Join live meetup: ${date.title} with ${date.hostName}`;
+  }
+  if (badge.variant === 'soon') {
+    return `Coming soon: ${date.title} with ${date.hostName}`;
+  }
+  return `Scheduled meetup: ${date.title} with ${date.hostName}`;
+}
+
 export function LiveMeetupsStrip({ dates, joiningId, onJoin }: LiveMeetupsStripProps) {
   const [confirmDate, setConfirmDate] = useState<OnlineDate | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [fitsScreen, setFitsScreen] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const checkFit = () => {
+      setFitsScreen(el.scrollWidth <= el.clientWidth + 1);
+    };
+
+    checkFit();
+    const observer = new ResizeObserver(checkFit);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [dates.length]);
 
   if (dates.length === 0) return null;
 
@@ -33,16 +70,16 @@ export function LiveMeetupsStrip({ dates, joiningId, onJoin }: LiveMeetupsStripP
 
   return (
     <>
-      <section className="live-meetups-strip" aria-label="Live meetups">
-        <div className="live-meetups-strip__head">
-          <span className="live-meetups-strip__live-dot" aria-hidden />
-          <h2 className="live-meetups-strip__title">Live now</h2>
-          <span className="live-meetups-strip__hint">Swipe</span>
-        </div>
-
-        <div className="live-meetups-strip__scroll" role="list">
+      <section className="live-meetups-strip" aria-label="Live and upcoming meetups">
+        <div
+          ref={scrollRef}
+          className={`live-meetups-strip__scroll${fitsScreen ? ' live-meetups-strip__scroll--centered' : ''}`}
+          role="list"
+        >
           {dates.map((date) => {
             const isJoining = joiningId === date.id;
+            const badge = stripBadge(date);
+            const isLive = badge.variant === 'live';
 
             return (
               <div key={date.id} className="live-meetups-strip__item" role="listitem">
@@ -51,9 +88,12 @@ export function LiveMeetupsStrip({ dates, joiningId, onJoin }: LiveMeetupsStripP
                   className={`live-meetups-strip__story ${isJoining ? 'live-meetups-strip__story--busy' : ''}`}
                   onClick={() => !joiningId && setConfirmDate(date)}
                   disabled={Boolean(joiningId)}
-                  aria-label={`Join live meetup: ${date.title} with ${date.hostName}`}
+                  aria-label={stripAriaLabel(date)}
                 >
-                  <span className="live-meetups-strip__ring" aria-hidden>
+                  <span
+                    className={`live-meetups-strip__ring ${isLive ? '' : 'live-meetups-strip__ring--upcoming'}`}
+                    aria-hidden
+                  >
                     {date.hostAvatar ? (
                       <img src={date.hostAvatar} alt="" className="live-meetups-strip__avatar" />
                     ) : (
@@ -62,7 +102,12 @@ export function LiveMeetupsStrip({ dates, joiningId, onJoin }: LiveMeetupsStripP
                       </span>
                     )}
                   </span>
-                  <span className="live-meetups-strip__live-badge">Live</span>
+                  <span
+                    className={`live-meetups-strip__badge live-meetups-strip__badge--${badge.variant}`}
+                    title={badge.variant === 'soon' ? 'Coming soon' : undefined}
+                  >
+                    {badge.label}
+                  </span>
                 </button>
                 <span className="live-meetups-strip__name">{shortName(date)}</span>
               </div>

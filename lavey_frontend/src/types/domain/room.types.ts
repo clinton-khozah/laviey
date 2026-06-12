@@ -62,3 +62,10 @@ export interface CreateDateInput {
   /** Uploaded cover shown on the meetup card and in the video room */
   coverImageUrl?: string;
 }
+
+export interface UpdateDateInput {
+  title: string;
+  topic: string;
+  startsAt: string;
+  coverImageUrl?: string;
+}

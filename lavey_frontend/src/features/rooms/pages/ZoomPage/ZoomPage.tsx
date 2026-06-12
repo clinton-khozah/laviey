@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { PageScroller } from '@/components/layout/PageScroller';
+import { SheetSaveSuccess } from '@/components/profile/SheetSaveSuccess';
 import { CreateDateSheet } from '@/components/rooms/CreateDateSheet';
 import { DateInviteCard } from '@/components/rooms/DateInviteCard';
+import { DeleteMeetupConfirmSheet } from '@/components/rooms/DeleteMeetupConfirmSheet';
 import { JoinDateModal } from '@/components/rooms/JoinDateModal';
 import { MeetupShareSheet } from '@/components/rooms/MeetupShareSheet';
 import { LiveMeetupsStrip } from '@/components/rooms/LiveMeetupsStrip';
 import { MeetupVerticalFeed } from '@/components/rooms/MeetupVerticalFeed';
-import { OnlineDateCard } from '@/components/rooms/OnlineDateCard';
+import { AppOverlay } from '@/components/ui/AppOverlay';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
@@ -20,7 +22,7 @@ import {
   type ProfileLookup,
 } from '@/hooks';
 import { messageService } from '@/services';
-import type { ActiveMeetingSession, OnlineDate } from '@/types';
+import type { ActiveMeetingSession, OnlineDate, UpdateDateInput } from '@/types';
 import { meetupRequiresAccessCode } from '@/utils/meeting/meetupJoinAccess';
 import { consumePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
 import './ZoomPage.css';
@@ -39,6 +41,7 @@ export function ZoomPage() {
     joinDate,
     joinByCode,
     createDate,
+    updateDate,
     deleteDate,
     respondToInvite,
     clearActionError,
@@ -47,6 +50,8 @@ export function ZoomPage() {
   const { likedIds, sendFlame, isSubmitting: isFlameSubmitting } = useMatchActions();
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingDate, setEditingDate] = useState<OnlineDate | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [profileLookup, setProfileLookup] = useState<ProfileLookup | null>(null);
   const {
     profile: profileModal,
@@ -62,6 +67,8 @@ export function ZoomPage() {
   const [inviteBusyId, setInviteBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<OnlineDate | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<OnlineDate | null>(null);
+  const [deleteSuccessTitle, setDeleteSuccessTitle] = useState<string | null>(null);
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -98,21 +105,61 @@ export function ZoomPage() {
     setProfileLookup(null);
   }, [profileModalError, showToast]);
 
-  const handleDeleteMeetup = useCallback(
-    async (date: OnlineDate) => {
+  const requestDeleteMeetup = useCallback((date: OnlineDate) => {
+    if (!date.isHostedByYou) return;
+    clearActionError();
+    setDeleteTarget(date);
+  }, [clearActionError]);
+
+  const closeDeleteSheet = useCallback(() => {
+    setDeleteTarget(null);
+    clearActionError();
+  }, [clearActionError]);
+
+  const confirmDeleteMeetup = useCallback(async () => {
+    if (!deleteTarget) return;
+    clearActionError();
+    try {
+      const title = deleteTarget.title;
+      await deleteDate(deleteTarget.id);
+      setDeleteTarget(null);
+      setDeleteSuccessTitle(title);
+    } catch {
+      /* actionError set in hook */
+    }
+  }, [clearActionError, deleteDate, deleteTarget]);
+
+  const handleEditMeetup = useCallback(
+    (date: OnlineDate) => {
       if (!date.isHostedByYou) return;
-      const confirmed = window.confirm(`Delete "${date.title}"? This cannot be undone.`);
-      if (!confirmed) return;
+      clearActionError();
+      setEditingDate(date);
+    },
+    [clearActionError],
+  );
+
+  const handleUpdateMeetup = useCallback(
+    async (dateId: string, input: UpdateDateInput) => {
+      setIsUpdating(true);
       clearActionError();
       try {
-        await deleteDate(date.id);
-        showToast('Meetup deleted');
+        await updateDate(dateId, input);
+        setEditingDate(null);
+        showToast('Meetup updated');
       } catch {
         /* actionError set in hook */
+      } finally {
+        setIsUpdating(false);
       }
     },
-    [clearActionError, deleteDate, showToast],
+    [clearActionError, showToast, updateDate],
   );
+
+  const closeMeetupSheet = useCallback(() => {
+    setCreateOpen(false);
+    setEditingDate(null);
+    clearActionError();
+  }, [clearActionError]);
 
   const liveDates = dates.filter((d) => d.status === 'live');
   const upcomingDates = dates.filter((d) => d.status !== 'live');
@@ -123,6 +170,21 @@ export function ZoomPage() {
   const myDates = dates.filter(
     (d) => d.isHostedByYou || acceptedDateIds.has(d.id),
   );
+
+  const feedMeetups = useMemo(() => {
+    const byId = new Map<string, OnlineDate>();
+    for (const date of myDates) byId.set(date.id, date);
+    for (const date of discoverMeetups) byId.set(date.id, date);
+
+    const statusOrder = { live: 0, 'starting-soon': 1, scheduled: 2 } as const;
+    return [...byId.values()].sort((a, b) => {
+      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+      if (statusDiff !== 0) return statusDiff;
+      if (a.isHostedByYou && !b.isHostedByYou) return -1;
+      if (!a.isHostedByYou && b.isHostedByYou) return 1;
+      return 0;
+    });
+  }, [discoverMeetups, myDates]);
 
   const enterMeeting = useCallback(
     (date: OnlineDate, accessCode: string) => {
@@ -256,7 +318,10 @@ export function ZoomPage() {
     showToast('Link copied');
   };
 
-  const hasLiveRail = !isLoading && !error && liveDates.length > 0;
+  const meetupSheetOpen = createOpen || editingDate !== null;
+  const stripMeetups = feedMeetups;
+  const hasLiveRail = !isLoading && !error && stripMeetups.length > 0;
+  const hasMeetupContent = invites.length > 0 || feedMeetups.length > 0;
 
   return (
     <div className={`online-dates-page ${hasLiveRail ? 'online-dates-page--has-live-rail' : ''}`}>
@@ -279,7 +344,7 @@ export function ZoomPage() {
       {hasLiveRail && (
         <div className="online-dates-page__live-rail">
           <LiveMeetupsStrip
-            dates={liveDates}
+            dates={stripMeetups}
             joiningId={joiningId}
             onJoin={(date) => void joinMeetup(date)}
           />
@@ -314,46 +379,30 @@ export function ZoomPage() {
               </section>
             )}
 
-            {myDates.length > 0 && (
-              <section className="online-dates-page__section">
-                <h2 className="online-dates-page__section-title">Your meetups</h2>
-                <div className="online-dates-page__stack">
-                  {myDates.map((date) => (
-                    <OnlineDateCard
-                      key={date.id}
-                      date={date}
-                      isJoining={joiningId === date.id}
-                      isDeleting={deletingId === date.id}
-                      onCopyCode={copyCode}
-                      onCopyLink={copyLink}
-                      onJoin={() => void joinMeetup(date)}
-                      onHostClick={(d) => void openHostProfile(d)}
-                      onProfileClick={(userId) => openProfileByUserId(userId)}
-                      onDelete={
-                        date.isHostedByYou
-                          ? () => void handleDeleteMeetup(date)
-                          : undefined
-                      }
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {discoverMeetups.length > 0 && (
+            {feedMeetups.length > 0 && (
               <section className="online-dates-page__section online-dates-page__section--feed">
-                <h2 className="online-dates-page__section-title">For you</h2>
                 <MeetupVerticalFeed
                   className="online-dates-page__feed"
-                  dates={discoverMeetups}
+                  dates={feedMeetups}
                   joiningId={joiningId}
+                  deletingId={deletingId}
                   onCopyCode={copyCode}
                   onCopyLink={copyLink}
                   onJoin={(date) => void joinMeetup(date)}
+                  onEdit={handleEditMeetup}
+                  onDelete={requestDeleteMeetup}
                   onHostClick={(d) => void openHostProfile(d)}
                   onProfileClick={(userId) => openProfileByUserId(userId)}
                 />
               </section>
+            )}
+
+            {!hasMeetupContent && (
+              <FeedState
+                message="No meetups yet. Tap + to schedule a public room or invite a match."
+                onRetry={() => void refetch()}
+                retryLabel="Refresh"
+              />
             )}
           </div>
         )}
@@ -374,15 +423,41 @@ export function ZoomPage() {
       />
 
       <CreateDateSheet
-        open={createOpen}
-        isCreating={isCreating}
-        error={createOpen ? actionError : null}
-        onClose={() => {
-          setCreateOpen(false);
-          clearActionError();
-        }}
+        open={meetupSheetOpen}
+        isCreating={isCreating || isUpdating}
+        editingDate={editingDate}
+        error={meetupSheetOpen ? actionError : null}
+        onClose={closeMeetupSheet}
         onCreate={handleCreate}
+        onUpdate={handleUpdateMeetup}
       />
+
+      <DeleteMeetupConfirmSheet
+        open={deleteTarget !== null}
+        date={deleteTarget}
+        isDeleting={Boolean(deleteTarget && deletingId === deleteTarget.id)}
+        error={deleteTarget ? actionError : null}
+        onClose={closeDeleteSheet}
+        onConfirm={() => void confirmDeleteMeetup()}
+      />
+
+      {deleteSuccessTitle && (
+        <AppOverlay>
+          <button
+            type="button"
+            className="online-dates-page__success-backdrop"
+            onClick={() => setDeleteSuccessTitle(null)}
+            aria-label="Close"
+          />
+          <div className="online-dates-page__success-overlay">
+            <SheetSaveSuccess
+              action="meetup-delete"
+              detail={deleteSuccessTitle}
+              onComplete={() => setDeleteSuccessTitle(null)}
+            />
+          </div>
+        </AppOverlay>
+      )}
 
       <JoinDateModal
         open={joinModalOpen && !activeMeeting}

@@ -61,7 +61,7 @@ export function DiscoverSetupGallerySheet({
     <ProfileSheet open={open} title="Your profile gallery" onClose={onClose} compact>
       <div className="discover-setup-sheet discover-setup-sheet--posts">
         <p className="discover-setup-sheet__lead">
-          Add up to {MAX_PROFILE_POSTS} photos for your match card — inappropriate images are blocked.
+          Add up to {MAX_PROFILE_POSTS} clear photos for your match card. Blurry or low-quality images are rejected.
         </p>
 
         {isSaving ? (
