@@ -1,11 +1,17 @@
-# Used when Netlify base / package directory is set to lavey_frontend.
+# Only used if Netlify "Base directory" is set to lavey_frontend.
+# Prefer repo-root netlify.toml with Base directory left empty.
 
 [build]
-  command = "npm run build"
+  command = "npm install --no-audit --no-fund && npm run build"
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
+  VITE_API_BASE_URL = "https://laveybackend-3.onrender.com/api"
+  VITE_USE_MOCK_API = "false"
+  VITE_USE_REAL_AUTH = "true"
+  VITE_SUPABASE_URL = "https://wgyqotbvjnkafmwmhvbj.supabase.co"
+  VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_F9_1U8m0og8iS3tQmBD6YQ_xV-AVFlL"
 
 [[redirects]]
   from = "/*"

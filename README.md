@@ -33,15 +33,32 @@ VITE_USE_MOCK_API=false
 VITE_USE_REAL_AUTH=true
 ```
 
-## Deploy (Netlify via GitHub Actions)
+## Deploy on Netlify (link GitHub repo)
 
-Pushes to `main` deploy production. `testing` and `development` get branch deploys.
+Repo: **clinton-khozah/laviey** → connect to your existing **loviey** site (do not create a second site unless you mean to).
 
-**Netlify site settings** (Site configuration → Build & deploy):
+**Site configuration → Build & deploy → Build settings** — use exactly one of these setups:
 
-- Either leave **Base directory** empty and let root `netlify.toml` drive the build, **or** set Base directory to `lavey_frontend` (uses `lavey_frontend/netlify.toml`).
-- **Publish directory** must end up as `lavey_frontend/dist` (root config) or `dist` (when base is `lavey_frontend`).
-- If you use GitHub Actions to deploy, turn off Netlify’s own **Build** hook (Build settings → Stop builds) so only Actions uploads `dist`.
+| Setting | Option A (recommended) | Option B |
+|--------|------------------------|----------|
+| **Base directory** | *(leave empty)* | `lavey_frontend` |
+| **Build command** | *(leave empty — uses `netlify.toml`)* | *(leave empty)* |
+| **Publish directory** | *(leave empty — uses `netlify.toml`)* | `dist` |
+
+Do **not** set Publish to `lavey_frontend/dist` when Base is already `lavey_frontend` (that double-paths and causes a 404).
+
+After linking, open the latest deploy → **Deploy file explorer** and confirm `index.html` exists at the site root. If the folder is empty, the publish path is wrong.
+
+Production branch: **main**. Then **Trigger deploy → Clear cache and deploy site**.
+
+### “Page not found” / “Log in with a different user”
+
+- **404 on a new `*.netlify.app` URL** — publish directory is wrong, or the build failed. Fix settings above and redeploy.
+- **“Log in with a different user”** — you are on the wrong Netlify account or a protected deploy preview. Open [app.netlify.com](https://app.netlify.com), confirm you see the **loviey** site, and visit **loviey.netlify.app** (not an old preview URL). If GitHub login fails, sign in with email + password, then reconnect GitHub under User settings → Connected accounts.
+
+## Deploy (optional: GitHub Actions)
+
+Pushes to `main` deploy production. `testing` and `development` get branch deploys. If you use this, turn off Netlify’s own Git builds (Build settings → Stop builds) to avoid double deploys.
 
 **Repository secrets** (Settings → Secrets and variables → Actions):
 
