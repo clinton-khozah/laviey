@@ -14,19 +14,6 @@
   color: var(--text-secondary);
 }
 
-.profile-likes-panel__section {
-  margin-bottom: 16px;
-}
-
-.profile-likes-panel__section-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 10px;
-}
-
 .profile-likes-panel__list {
   list-style: none;
   display: flex;
@@ -37,20 +24,29 @@
 .profile-likes-panel__row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 8px 8px 10px;
   border-radius: 14px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255, 77, 109, 0.22);
+  background: rgba(255, 77, 109, 0.05);
 }
 
-.profile-likes-panel__row--revealed {
-  border-color: rgba(255, 77, 109, 0.25);
-  background: rgba(255, 77, 109, 0.06);
+.profile-likes-panel__row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  text-align: left;
+  color: inherit;
 }
 
-.profile-likes-panel__row--locked {
-  opacity: 0.95;
+.profile-likes-panel__row-main:disabled {
+  cursor: default;
 }
 
 .profile-likes-panel__avatar {
@@ -59,22 +55,7 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-}
-
-.profile-likes-panel__avatar--blur {
-  overflow: hidden;
-  padding: 0;
-  border: none;
-  background: var(--bg-deep);
-}
-
-.profile-likes-panel__avatar--blur img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(10px) brightness(0.7);
-  transform: scale(1.15);
+  border: 2px solid rgba(255, 77, 109, 0.35);
 }
 
 .profile-likes-panel__info {
@@ -82,7 +63,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .profile-likes-panel__name {
@@ -90,18 +71,18 @@
   font-weight: 700;
 }
 
-.profile-likes-panel__name--blur {
-  color: var(--text-muted);
-}
-
 .profile-likes-panel__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--accent-flame-end);
 }
 
-.profile-likes-panel__flame,
-.profile-likes-panel__lock {
-  font-size: 18px;
+.profile-likes-panel__meta svg {
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
 }
 
@@ -113,12 +94,43 @@
   flex-shrink: 0;
 }
 
-.profile-likes-panel__thumb--blur {
-  filter: blur(6px) brightness(0.75);
+.profile-likes-panel__action {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 88px;
+  padding: 8px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  background: var(--gradient-flame);
+  border: none;
+  box-shadow: 0 4px 14px rgba(255, 77, 109, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.profile-likes-panel__action svg {
+  width: 13px;
+  height: 13px;
+}
+
+.profile-likes-panel__action:active {
+  transform: scale(0.96);
+}
+
+.profile-likes-panel__action--chat {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  box-shadow: none;
 }
 
 .profile-likes-panel__empty {
   font-size: 14px;
   color: var(--text-muted);
   padding: 12px 0;
+  line-height: 1.45;
 }

@@ -12,8 +12,8 @@ import { authService, onboardingService } from '@/services';
 import { ApiError } from '@/services/api/apiError';
 import type { AuthSession, EmailSignInRequest, EmailSignUpRequest, OnboardingQuizAnswers } from '@/types';
 import { clearUserProfileCache } from '@/hooks/profile/useUserProfile';
-import { saveOnboardingQuizAnswers } from '@/utils/onboarding/onboardingQuizStorage';
-import { clearPendingOnboardingQuiz, consumePendingOnboardingQuiz } from '@/utils/onboarding/pendingOnboardingQuiz';
+import { saveOnboardingQuizAnswers, loadOnboardingQuizAnswers } from '@/utils/onboarding/onboardingQuizStorage';
+import { clearPendingOnboardingQuiz } from '@/utils/onboarding/pendingOnboardingQuiz';
 
 export interface AuthContextValue {
   user: AuthSession['user'] | null;
@@ -39,6 +39,22 @@ export interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+async function resolveNeedsOnboardingQuiz(): Promise<boolean> {
+  const localAnswers = loadOnboardingQuizAnswers();
+
+  if (!usesBackendAuth()) {
+    return !localAnswers;
+  }
+
+  try {
+    const status = await onboardingService.getOnboardingStatus();
+    if (status.completed) return false;
+    return !localAnswers;
+  } catch {
+    return !localAnswers;
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -69,19 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled && !onOAuthCallback && restored) {
           setSession(restored);
 
-          if (usesBackendAuth()) {
-            try {
-              const status = await onboardingService.getOnboardingStatus();
-              if (!status.completed) {
-                setNeedsOnboardingQuiz(true);
-              }
-            } catch {
-              if (consumePendingOnboardingQuiz()) {
-                setNeedsOnboardingQuiz(true);
-              }
-            }
-          } else if (consumePendingOnboardingQuiz()) {
-            setNeedsOnboardingQuiz(true);
+          const needsQuiz = await resolveNeedsOnboardingQuiz();
+          if (!cancelled) {
+            setNeedsOnboardingQuiz(needsQuiz);
           }
         }
       } finally {
@@ -98,15 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const syncOnboardingAfterAuth = useCallback(async () => {
-    if (!usesBackendAuth()) return;
-    try {
-      const status = await onboardingService.getOnboardingStatus();
-      if (!status.completed) {
-        setNeedsOnboardingQuiz(true);
-      }
-    } catch {
-      setNeedsOnboardingQuiz(true);
-    }
+    setNeedsOnboardingQuiz(await resolveNeedsOnboardingQuiz());
   }, []);
 
   const sendVerificationEmail = useCallback(async (email: string) => {
@@ -164,19 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(next);
     setIsLoading(false);
 
-    if (usesBackendAuth()) {
-      void onboardingService.getOnboardingStatus().then((status) => {
-        if (!status.completed) {
-          setNeedsOnboardingQuiz(true);
-        }
-      }).catch(() => {
-        if (consumePendingOnboardingQuiz()) {
-          setNeedsOnboardingQuiz(true);
-        }
-      });
-    } else if (consumePendingOnboardingQuiz()) {
-      setNeedsOnboardingQuiz(true);
-    }
+    void resolveNeedsOnboardingQuiz().then((needsQuiz) => {
+      setNeedsOnboardingQuiz(needsQuiz);
+    });
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -190,10 +178,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       verificationStatus,
       resendCooldownSec,
-      signInWithGoogle: () =>
-        runAuth(() => authService.signInWithGoogle(), () => {
-          setNeedsOnboardingQuiz(true);
-        }),
+      signInWithGoogle: async () => {
+        setError(null);
+        setIsSubmitting(true);
+        try {
+          const next = await authService.signInWithGoogle();
+          await completeSession(next);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Sign in failed. Try again.';
+          setError(message);
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
       signInWithEmail: async (payload) => {
         setError(null);
         setVerificationStatus(null);

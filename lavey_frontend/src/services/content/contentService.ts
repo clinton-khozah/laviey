@@ -44,6 +44,7 @@ export const contentService = {
         type: 'image',
         src: url,
         likeCount: 0,
+        caption: input.caption,
       };
     }
 

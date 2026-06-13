@@ -53,14 +53,14 @@
   --chip-bg: rgba(0, 0, 0, 0.05);
   --feed-scrim-top: linear-gradient(
     to bottom,
-    rgba(244, 244, 248, 0.92) 0%,
-    rgba(244, 244, 248, 0.35) 55%,
+    rgba(0, 0, 0, 0.42) 0%,
+    rgba(0, 0, 0, 0.12) 55%,
     transparent 100%
   );
   --feed-scrim-bottom: linear-gradient(
     to top,
-    rgba(244, 244, 248, 0.94) 0%,
-    rgba(244, 244, 248, 0.45) 45%,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.38) 42%,
     transparent 100%
   );
   --text-primary: #12121a;

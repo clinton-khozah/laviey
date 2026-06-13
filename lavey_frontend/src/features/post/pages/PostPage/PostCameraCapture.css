@@ -117,8 +117,8 @@
 
 .post-camera__template-frame {
   position: relative;
-  width: min(100%, calc(100vh - 240px));
-  aspect-ratio: 1;
+  width: min(72vw, 280px);
+  aspect-ratio: 4 / 5;
   max-height: 100%;
 }
 

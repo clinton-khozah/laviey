@@ -1,2 +1,1 @@
-export { MessageFilters } from './MessageFilters';
-export type { MessageFilter } from './MessageFilters';
+export { MessagesHeader, type MessageFilter } from '../MessagesHeader';

@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConversationListItem } from '@/components/messages/ConversationListItem';
 import { ChatThread } from '@/components/messages/ChatThread';
+import { NotificationThread } from '@/components/messages/NotificationThread';
 import type { ChatConversationAction } from '@/components/messages/ChatSendOptionsMenu';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
-import { MessagesHeader } from '@/components/messages/MessagesHeader';
-import { MessageFilters, type MessageFilter } from '@/components/messages/MessageFilters';
-import { OnlineMatchesStrip } from '@/components/messages/OnlineMatchesStrip';
+import { MessagesHeader, type MessageFilter } from '@/components/messages/MessagesHeader';
+import { OnlineMatchesStrip, RecentMatchesStrip } from '@/components/messages/MessageMatchStrip';
 import { PageScroller } from '@/components/layout/PageScroller';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { ConversationOptionsSheet } from '@/components/messages/ConversationOptionsSheet';
 import { DeleteChatSheet } from '@/components/messages/DeleteChatSheet';
-import { useChatThread, useConversations, useMatchProfile } from '@/hooks';
+import { APP_IMAGES } from '@/constants/images';
+import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
+import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox } from '@/hooks';
 import { messageService } from '@/services';
 import { privacyService } from '@/services/privacy/privacyService';
 import type { Conversation, DeleteConversationScope } from '@/types';
+import { isMatchConversation, sortConversations } from '@/utils/messages/sortConversations';
+import { openChatWithProfile } from '@/utils/navigation/appNav';
 import './MessagesPage.css';
 
 function takePendingGreeting(): { profileId: string; text: string } | null {
@@ -42,6 +46,7 @@ export function MessagesPage() {
     deleteConversation,
     toggleConversationStar,
   } = useConversations();
+  const { likedIds, sendFlame } = useMatchActions();
   const [activeId, setActiveId] = useState<string | null>(null);
   // Used to auto-send a greeting from `MatchProfileModal` after we switch into the chat.
   const [pendingAutoMessage, setPendingAutoMessage] = useState<string | null>(null);
@@ -50,10 +55,10 @@ export function MessagesPage() {
   const [optionsTarget, setOptionsTarget] = useState<Conversation | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [mutedConversationIds, setMutedConversationIds] = useState<Set<string>>(() => new Set());
-  const [actionToast, setActionToast] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<{ text: string; success?: boolean } | null>(null);
 
-  const showActionToast = useCallback((message: string) => {
-    setActionToast(message);
+  const showActionToast = useCallback((message: string, success = false) => {
+    setActionToast({ text: message, success });
     window.setTimeout(() => setActionToast(null), 2600);
   }, []);
 
@@ -62,14 +67,28 @@ export function MessagesPage() {
     isLoading: threadLoading,
     isSending,
     sendMessage,
+    sendPhoto,
     notifyTyping,
     reactToMessage,
     deleteMessage,
-  } = useChatThread(activeId);
+  } = useChatThread(activeId === NOTIFICATIONS_CONVERSATION_ID ? null : activeId);
+
+  const {
+    notifications,
+    isLoading: notificationsLoading,
+    error: notificationsError,
+    refetch: refetchNotifications,
+    markRead: markNotificationsRead,
+  } = useNotificationInbox(activeId === NOTIFICATIONS_CONVERSATION_ID);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
+  );
+
+  const matchConversations = useMemo(
+    () => conversations.filter(isMatchConversation),
+    [conversations],
   );
 
   useEffect(() => {
@@ -88,24 +107,45 @@ export function MessagesPage() {
     () => ({
       all: conversations.length,
       unread: conversations.filter((c) => c.unreadCount > 0).length,
-      online: conversations.filter((c) => c.isOnline).length,
+      online: matchConversations.filter((c) => c.isOnline).length,
     }),
+    [conversations, matchConversations],
+  );
+
+  const sortedConversations = useMemo(
+    () => sortConversations(conversations),
     [conversations],
   );
 
+  const recentStrip = useMemo(
+    () => sortedConversations.slice(0, 12),
+    [sortedConversations],
+  );
+
   const filtered = useMemo(() => {
-    let list = [...conversations];
+    let list = sortedConversations;
 
     if (filter === 'unread') list = list.filter((c) => c.unreadCount > 0);
-    if (filter === 'online') list = list.filter((c) => c.isOnline);
+    if (filter === 'online') list = list.filter((c) => c.isOnline && isMatchConversation(c));
 
-    return list.sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      if (a.unreadCount !== b.unreadCount) return b.unreadCount - a.unreadCount;
-      return 0;
+    return list;
+  }, [sortedConversations, filter]);
+
+  const handleMarkNotificationsRead = useCallback(() => {
+    void markNotificationsRead().then(() => {
+      void refetch(true);
     });
-  }, [conversations, filter]);
+  }, [markNotificationsRead, refetch]);
+
+  const handleNotificationLikeBack = useCallback(
+    (profileId: string) => {
+      void sendFlame(profileId).then(() => {
+        void refetchNotifications(true);
+        void refetch(true);
+      });
+    },
+    [sendFlame, refetchNotifications, refetch],
+  );
 
   const openProfile = (conversation: Conversation) => {
     setProfileConversation(conversation);
@@ -261,7 +301,19 @@ export function MessagesPage() {
 
   return (
     <>
-      {activeConversation ? (
+      {activeConversation?.conversationKind === 'notifications' ? (
+        <NotificationThread
+          notifications={notifications}
+          isLoading={notificationsLoading}
+          error={notificationsError}
+          likedProfileIds={likedIds}
+          onBack={() => setActiveId(null)}
+          onLikeBack={handleNotificationLikeBack}
+          onChat={(profileId) => openChatWithProfile(profileId)}
+          onMarkRead={handleMarkNotificationsRead}
+          onRetry={() => void refetchNotifications()}
+        />
+      ) : activeConversation ? (
         <ChatThread
           conversation={activeConversation}
           messages={messages}
@@ -269,18 +321,34 @@ export function MessagesPage() {
           isSending={isSending}
           onBack={() => setActiveId(null)}
           onSend={(text) => void sendMessage(text)}
+          onSendPhoto={sendPhoto}
           onTypingChange={notifyTyping}
           onProfileClick={() => openProfile(activeConversation)}
           onReact={(messageId, emoji) => void reactToMessage(messageId, emoji)}
-          onDeleteMessage={(messageId, scope) => void deleteMessage(messageId, scope)}
+          onDeleteMessage={async (messageId, scope) => {
+            await deleteMessage(messageId, scope);
+            showActionToast(
+              scope === 'for_both' ? 'Message unsent for everyone' : 'Message removed for you',
+              true,
+            );
+          }}
           onConversationAction={handleConversationAction}
           isMuted={activeConversation ? mutedConversationIds.has(activeConversation.id) : false}
         />
       ) : (
         <div className="messages-page">
+          <div className="messages-page__hero" aria-hidden />
+          <div className="messages-page__watermark" aria-hidden>
+            <img src={APP_IMAGES.logo} alt="" className="messages-page__watermark-logo" />
+          </div>
           <div className="messages-page__sticky">
-            <MessagesHeader unreadTotal={unreadTotal} matchCount={conversations.length} />
-            <MessageFilters active={filter} onChange={setFilter} counts={filterCounts} />
+            <MessagesHeader
+              unreadTotal={unreadTotal}
+              matchCount={matchConversations.length}
+              filter={filter}
+              filterCounts={filterCounts}
+              onFilterChange={setFilter}
+            />
           </div>
 
           <PageScroller className="messages-page__scroll">
@@ -289,42 +357,76 @@ export function MessagesPage() {
 
             {!isLoading && !error && (
               <>
-                {filter === 'all' && (
-                  <OnlineMatchesStrip
-                    conversations={conversations}
-                    onSelect={setActiveId}
-                    onAvatarClick={openProfile}
-                  />
+                {filter === 'all' && matchConversations.length > 0 && (
+                  <div className="messages-page__strips">
+                    <OnlineMatchesStrip
+                      conversations={sortedConversations.filter(isMatchConversation)}
+                      onSelect={setActiveId}
+                      onAvatarClick={openProfile}
+                    />
+                    <RecentMatchesStrip
+                      conversations={recentStrip.filter(isMatchConversation)}
+                      onSelect={setActiveId}
+                      onAvatarClick={openProfile}
+                    />
+                  </div>
                 )}
 
                 {filtered.length === 0 ? (
-                  <div className="messages-page__empty">
-                    <span className="messages-page__empty-icon" aria-hidden>
-                      💬
-                    </span>
-                    <p>
+                  <div
+                    className={`messages-page__empty messages-page__empty--${filter === 'all' ? 'none' : filter}`}
+                  >
+                    {filter === 'all' && (
+                      <span className="messages-page__empty-icon" aria-hidden>
+                        <span className="messages-page__empty-emoji">💬</span>
+                      </span>
+                    )}
+                    <h2 className="messages-page__empty-title">
                       {conversations.length === 0
-                        ? 'No matches yet — like people on For You to start chatting'
-                        : 'No conversations found'}
+                        ? 'No matches yet'
+                        : filter === 'online'
+                          ? 'No one online'
+                          : filter === 'unread'
+                            ? 'All caught up'
+                            : 'Nothing here'}
+                    </h2>
+                    <p className="messages-page__empty-text">
+                      {conversations.length === 0
+                        ? 'Like people on For You to start chatting'
+                        : filter === 'online'
+                          ? 'None of your matches are online right now'
+                          : filter === 'unread'
+                            ? 'You have no unread messages'
+                            : 'No conversations found'}
                     </p>
                     {filter !== 'all' && (
-                      <button type="button" onClick={() => setFilter('all')}>
-                        Clear filters
+                      <button
+                        type="button"
+                        className="messages-page__empty-btn"
+                        onClick={() => setFilter('all')}
+                      >
+                        Show all chats
                       </button>
                     )}
                   </div>
                 ) : (
                   <div className="messages-page__list">
-                    <h2 className="messages-page__list-title">
-                      {filtered.some((c) => c.isPinned) ? 'Starred & recent' : 'Recent'}
-                    </h2>
+                    {filter !== 'all' && (
+                      <h2 className="messages-page__list-title">
+                        {filter === 'unread' ? 'Unread' : 'Online'}
+                      </h2>
+                    )}
                     {filtered.map((c) => (
                       <ConversationListItem
                         key={c.id}
                         conversation={c}
                         onClick={() => setActiveId(c.id)}
-                        onAvatarClick={() => openProfile(c)}
-                        onMoreClick={() => openOptionsSheet(c)}
+                        onAvatarClick={() =>
+                          c.conversationKind === 'notifications' ? setActiveId(c.id) : openProfile(c)
+                        }
+                        onMoreClick={
+                          c.conversationKind === 'notifications' ? undefined : () => openOptionsSheet(c)
+                        }
                       />
                     ))}
                   </div>
@@ -364,11 +466,21 @@ export function MessagesPage() {
         />
       )}
 
-      {actionToast && (
-        <div className="messages-page__toast" role="status">
-          {actionToast}
+      {actionToast ? (
+        <div
+          className={`messages-page__toast ${actionToast.success ? 'messages-page__toast--success' : ''}`}
+          role="status"
+        >
+          {actionToast.success ? (
+            <span className="messages-page__toast-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </span>
+          ) : null}
+          <span>{actionToast.text}</span>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

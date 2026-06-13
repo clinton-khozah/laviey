@@ -1,9 +1,9 @@
 const ANALYSIS_MAX_EDGE = 480;
-const MIN_SHORT_EDGE = 360;
-/** Laplacian variance — low values mean blur. Kept lenient for phone photos. */
-const MIN_SHARPNESS = 36;
-const MIN_BRIGHTNESS = 24;
-const MAX_BRIGHTNESS = 252;
+const MIN_SHORT_EDGE = 480;
+/** Laplacian variance — low values mean blur. */
+const MIN_SHARPNESS = 58;
+const MIN_BRIGHTNESS = 32;
+const MAX_BRIGHTNESS = 248;
 
 export class ImageQualityError extends Error {
   constructor(message = 'This photo looks low quality. Please upload a clear, well-lit picture.') {
@@ -97,7 +97,7 @@ function averageBrightness(data: ImageData): number {
   return total / count;
 }
 
-/** Reject very blurry, tiny, or badly lit photos. Thresholds are intentionally lenient. */
+/** Reject blurry, tiny, or badly lit photos. */
 export async function validateImageQuality(file: File): Promise<void> {
   if (!file.type.startsWith('image/')) {
     throw new ImageQualityError('Please choose a photo file.');
@@ -108,7 +108,7 @@ export async function validateImageQuality(file: File): Promise<void> {
 
   if (shortEdge < MIN_SHORT_EDGE) {
     throw new ImageQualityError(
-      'This photo is too small. Upload a clearer picture with at least 360px on the shortest side.',
+      'This photo is too small. Upload a clearer picture with at least 480px on the shortest side.',
     );
   }
 

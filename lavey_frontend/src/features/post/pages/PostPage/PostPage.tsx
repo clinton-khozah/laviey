@@ -69,6 +69,30 @@ function buildPhotoAlert(displayName: string, raw: string): PhotoAlert {
       message: `${name}, this photo is too small. Please upload a higher resolution image.`,
     };
   }
+  if (lower.includes('does not look like you') || lower.includes("doesn't look like you")) {
+    return {
+      title: 'That is not you',
+      message: `${name}, this photo does not look like you. Only post pictures where you are in the shot.`,
+    };
+  }
+  if (lower.includes('must be in this photo') || lower.includes('without being in the picture')) {
+    return {
+      title: 'You need to be in the photo',
+      message: `${name}, you must be in this photo. You cannot post someone else without being in the picture too.`,
+    };
+  }
+  if (lower.includes('profile photo first')) {
+    return {
+      title: 'Add a profile photo first',
+      message: `${name}, upload a clear profile photo first so we can verify you are in your posts.`,
+    };
+  }
+  if (lower.includes('could not detect anyone')) {
+    return {
+      title: 'Face not visible',
+      message: `${name}, we could not see you clearly in this photo. Try a sharper, well-lit picture.`,
+    };
+  }
 
   return {
     title: "Couldn't use this photo",
@@ -223,7 +247,7 @@ export function PostPage() {
     setPublishError(null);
     setIsPublishing(true);
     try {
-      const prepared = await prepareImageForUpload(draft.file);
+      const prepared = await prepareImageForUpload(draft.file, undefined, { galleryUpload: true });
       const trimmedCaption = caption.trim();
       const tags = extractTagsFromCaption(trimmedCaption);
       await contentService.createPost({
@@ -270,7 +294,7 @@ export function PostPage() {
           <div className="post-page__header-glow" aria-hidden />
           <p className="post-page__eyebrow">New post</p>
           <h1 className="post-page__title">Post a pic</h1>
-          <p className="post-page__subtitle">Share a moment — photos only, all vibe</p>
+          <p className="post-page__subtitle">Vertical phone pics only — clear and well-lit</p>
         </header>
 
         <div className="post-page__body">
@@ -309,7 +333,7 @@ export function PostPage() {
                       </svg>
                     </span>
                     <p className="post-page__preview-label">Tap to add your pic</p>
-                    <span className="post-page__preview-hint">Clear & sharp · JPG or PNG</span>
+                    <span className="post-page__preview-hint">Portrait · clear · you in frame</span>
                   </div>
                 ) : (
                   <img className="post-page__preview-media" src={draft.url} alt="Your post preview" />

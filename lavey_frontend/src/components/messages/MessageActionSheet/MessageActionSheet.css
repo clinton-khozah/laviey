@@ -41,6 +41,41 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+.message-action-sheet__actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.message-action-sheet__actions-row .message-action-sheet__label {
+  margin-bottom: 0;
+}
+
+.message-action-sheet__delete-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.24);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.message-action-sheet__delete-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.message-action-sheet__delete-icon:active {
+  transform: scale(0.94);
+  background: rgba(239, 68, 68, 0.16);
+}
+
 .message-action-sheet__label {
   display: block;
   font-size: 11px;
@@ -79,11 +114,6 @@
   transform: scale(0.92);
 }
 
-.message-action-sheet__icons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
 
 .message-action-sheet__icon-btn {
   width: 48px;

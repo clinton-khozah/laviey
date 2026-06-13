@@ -1,0 +1,95 @@
+.delete-message-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.delete-message-sheet__lead {
+  margin: 0 0 4px;
+  padding: 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.delete-message-sheet__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+[data-theme='light'] .delete-message-sheet__option {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.delete-message-sheet__option:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.delete-message-sheet__option:disabled {
+  opacity: 0.6;
+}
+
+.delete-message-sheet__option--danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.22);
+}
+
+[data-theme='light'] .delete-message-sheet__option--danger {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.delete-message-sheet__option-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.delete-message-sheet__option--danger .delete-message-sheet__option-title {
+  color: #f87171;
+}
+
+.delete-message-sheet__option-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.delete-message-sheet__cancel {
+  width: 100%;
+  margin-top: 2px;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+}
+
+.delete-message-sheet__cancel:disabled {
+  opacity: 0.55;
+}
+
+.profile-sheet--from-top:has(.delete-message-sheet) {
+  max-height: min(72vh, calc(100dvh - var(--safe-top) - 48px));
+}
+
+.profile-sheet--from-top:has(.delete-message-sheet) .profile-sheet__title {
+  text-transform: none;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}

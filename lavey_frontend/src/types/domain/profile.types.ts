@@ -12,6 +12,7 @@ export interface ProfilePost {
   src: string;
   poster?: string;
   durationSec?: number;
+  caption?: string;
   /** Likes on this clip / photo */
   likeCount?: number;
   /** Whether the current user liked this post */

@@ -12,6 +12,8 @@ import './DiscoverSetupSheets.css';
 interface DiscoverSetupGallerySheetProps {
   open: boolean;
   posts: ProfilePost[];
+  userId?: string;
+  avatarUrl?: string;
   onClose: () => void;
   onMomentAdded: () => void | Promise<void>;
 }
@@ -45,7 +47,7 @@ export function DiscoverSetupGallerySheet({
 
       setIsSaving(true);
       try {
-        const prepared = await prepareImageForUpload(file);
+        const prepared = await prepareImageForUpload(file, undefined, { galleryUpload: true });
         const created = await contentService.createPost({ file: prepared });
         setLocalPosts((prev) => [created, ...prev]);
         await onMomentAdded();
@@ -61,7 +63,7 @@ export function DiscoverSetupGallerySheet({
     <ProfileSheet open={open} title="Your profile gallery" onClose={onClose} compact>
       <div className="discover-setup-sheet discover-setup-sheet--posts">
         <p className="discover-setup-sheet__lead">
-          Add up to {MAX_PROFILE_POSTS} clear photos for your match card. Blurry or low-quality images are rejected.
+          Add up to {MAX_PROFILE_POSTS} clear photos for your match card.
         </p>
 
         {isSaving ? (

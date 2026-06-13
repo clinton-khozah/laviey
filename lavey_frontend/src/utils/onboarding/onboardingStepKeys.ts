@@ -3,13 +3,21 @@ import type { OnboardingOptionDto, QuizOptionView } from '@/types/domain/onboard
 
 export type QuizAnswerField = keyof Pick<
   OnboardingQuizAnswers,
-  'purpose' | 'dateOfBirth' | 'agePreference' | 'interestedIn' | 'orientation' | 'religion' | 'interests'
+  | 'purpose'
+  | 'dateOfBirth'
+  | 'agePreference'
+  | 'interestedIn'
+  | 'gender'
+  | 'orientation'
+  | 'religion'
+  | 'interests'
 >;
 
 const STEP_TO_ANSWER_FIELD: Record<string, QuizAnswerField> = {
   purpose: 'purpose',
   age_preference: 'agePreference',
   interested_in: 'interestedIn',
+  gender: 'gender',
   orientation: 'orientation',
   religion: 'religion',
   interests: 'interests',

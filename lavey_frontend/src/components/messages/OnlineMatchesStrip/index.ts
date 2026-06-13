@@ -1,1 +1,1 @@
-export { OnlineMatchesStrip } from './OnlineMatchesStrip';
+export { OnlineMatchesStrip, RecentMatchesStrip, MessageMatchStrip } from '../MessageMatchStrip';

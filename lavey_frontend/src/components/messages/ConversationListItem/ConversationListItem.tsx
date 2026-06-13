@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { Conversation } from '@/types';
 import './ConversationListItem.css';
 
@@ -8,84 +9,134 @@ interface ConversationListItemProps {
   onMoreClick?: () => void;
 }
 
+const LONG_PRESS_MS = 480;
+
+function formatPreview(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('📷')) return 'Sent a photo';
+  return trimmed;
+}
+
+function buildSubtitle(conversation: Conversation): string {
+  if (conversation.conversationKind === 'notifications') {
+    const preview = formatPreview(conversation.lastMessage);
+    const time = conversation.lastMessageAt?.trim();
+    if (preview && time) return `${preview} · ${time}`;
+    return preview || 'Likes & crushes';
+  }
+
+  if (conversation.isTyping) return 'Typing…';
+  if (conversation.isOnline) return 'Active now';
+
+  const preview = formatPreview(conversation.lastMessage);
+  const time = conversation.lastMessageAt?.trim();
+
+  if (preview && time) return `${preview} · ${time}`;
+  if (preview) return preview;
+  if (conversation.lastSeenLabel?.trim()) return conversation.lastSeenLabel.trim();
+  if (time) return time;
+
+  return '';
+}
+
 export function ConversationListItem({
   conversation,
   onClick,
   onAvatarClick,
   onMoreClick,
 }: ConversationListItemProps) {
+  const isNotifications = conversation.conversationKind === 'notifications';
   const hasUnread = conversation.unreadCount > 0;
+  const longPressTimer = useRef<number | null>(null);
+  const longPressTriggered = useRef(false);
+
+  const clearLongPress = () => {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleRowPointerDown = () => {
+    if (!onMoreClick) return;
+    longPressTriggered.current = false;
+    clearLongPress();
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTriggered.current = true;
+      onMoreClick();
+    }, LONG_PRESS_MS);
+  };
+
+  const handleRowClick = () => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    onClick();
+  };
 
   return (
     <div
-      className={`conversation-item ${hasUnread ? 'conversation-item--unread' : ''} ${conversation.isPinned ? 'conversation-item--starred' : ''}`}
+      className={[
+        'conversation-item',
+        hasUnread ? 'conversation-item--unread' : '',
+        conversation.isOnline ? 'conversation-item--online' : '',
+        conversation.isPinned || isNotifications ? 'conversation-item--starred' : '',
+        isNotifications ? 'conversation-item--notifications' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       <button
         type="button"
-        className="conversation-item__avatar-wrap"
-        onClick={onAvatarClick}
-        aria-label={`View ${conversation.participantName}'s profile`}
+        className="conversation-item__avatar-btn"
+        onClick={isNotifications ? onClick : onAvatarClick}
+        aria-label={
+          isNotifications ? 'Open notifications' : `View ${conversation.participantName}'s profile`
+        }
       >
-        <img src={conversation.participantAvatar} alt="" className="conversation-item__avatar" />
-        {conversation.isOnline && <span className="conversation-item__online" title="Online" />}
-        {conversation.isPinned && (
-          <span className="conversation-item__star" aria-label="Starred">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        {isNotifications ? (
+          <span className="conversation-item__notifications-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5-6.71V3a2 2 0 1 0-4 0v1.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z" />
             </svg>
           </span>
+        ) : (
+          <img src={conversation.participantAvatar} alt="" className="conversation-item__avatar" />
+        )}
+        {!isNotifications && conversation.isOnline && (
+          <span className="conversation-item__online" title="Active now" />
         )}
       </button>
 
-      <button type="button" className="conversation-item__body" onClick={onClick}>
-        <div className="conversation-item__top">
-          <div className="conversation-item__name-row">
-            <span className="conversation-item__name">
-              {conversation.participantName}
-              {conversation.isPinned && (
-                <span className="conversation-item__star-inline" aria-hidden>
-                  ★
-                </span>
-              )}
+      <button
+        type="button"
+        className="conversation-item__body"
+        onClick={handleRowClick}
+        onPointerDown={handleRowPointerDown}
+        onPointerUp={clearLongPress}
+        onPointerLeave={clearLongPress}
+        onPointerCancel={clearLongPress}
+        onContextMenu={(e) => {
+          if (!onMoreClick) return;
+          e.preventDefault();
+          onMoreClick();
+        }}
+      >
+        <span className="conversation-item__name">
+          {conversation.participantName}
+          {(conversation.isPinned || isNotifications) && (
+            <span className="conversation-item__pin" aria-label="Pinned">
+              ★
             </span>
-            <span className="conversation-item__vibe">{conversation.vibeScore}% vibe</span>
-          </div>
-          <span className="conversation-item__time">{conversation.lastMessageAt}</span>
-        </div>
-
-        <div className="conversation-item__bottom">
-          {conversation.isTyping ? (
-            <span className="conversation-item__typing">
-              <span className="conversation-item__typing-dots">
-                <span /><span /><span />
-              </span>
-              writing to you…
-            </span>
-          ) : (
-            <p className="conversation-item__preview">{conversation.lastMessage}</p>
           )}
-          {hasUnread && (
-            <span className="conversation-item__badge">{conversation.unreadCount}</span>
-          )}
-        </div>
+        </span>
+        <span className="conversation-item__subtitle">{buildSubtitle(conversation)}</span>
       </button>
-
-      {onMoreClick && (
-        <button
-          type="button"
-          className="conversation-item__more"
-          onClick={(e) => {
-            e.stopPropagation();
-            onMoreClick();
-          }}
-          aria-label={`Options for chat with ${conversation.participantName}`}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <circle cx="12" cy="5" r="2" />
-            <circle cx="12" cy="12" r="2" />
-            <circle cx="12" cy="19" r="2" />
-          </svg>
-        </button>
+      {hasUnread && (
+        <span className="conversation-item__badge" aria-label={`${conversation.unreadCount} unread`}>
+          {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+        </span>
       )}
     </div>
   );

@@ -17,32 +17,50 @@ export function TopBar({
   const max = quota?.max ?? '—';
   const showUpgrade = !isPremium && onUpgrade;
 
+  const discoveryFilterButton = onDiscoveryFiltersClick ? (
+    <button
+      type="button"
+      className="top-bar__filter"
+      onClick={onDiscoveryFiltersClick}
+      aria-label="Discovery filters"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <path d="M4 6h16M6 12h12M8 18h8" />
+        <circle cx="18" cy="6" r="2" fill="currentColor" stroke="none" />
+        <circle cx="6" cy="12" r="2" fill="currentColor" stroke="none" />
+        <circle cx="16" cy="18" r="2" fill="currentColor" stroke="none" />
+      </svg>
+      {hasActiveDiscoveryFilters && <span className="top-bar__filter-dot" aria-hidden />}
+    </button>
+  ) : null;
+
   return (
     <header className="top-bar">
       <div className="top-bar__brand">
-        {onDiscoveryFiltersClick ? (
+        {showUpgrade ? (
           <button
             type="button"
-            className="top-bar__filter"
-            onClick={onDiscoveryFiltersClick}
-            aria-label="Discovery filters"
+            className="top-bar__upgrade"
+            onClick={onUpgrade}
+            aria-label="Upgrade to Platinum"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M4 6h16M6 12h12M8 18h8" />
-              <circle cx="18" cy="6" r="2" fill="currentColor" stroke="none" />
-              <circle cx="6" cy="12" r="2" fill="currentColor" stroke="none" />
-              <circle cx="16" cy="18" r="2" fill="currentColor" stroke="none" />
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="top-bar__upgrade-crown">
+              <path d="M5 16 3 8l5.2 3.3L12 4l3.8 7.3L21 8l-2 8H5zm-1 2h18v2H4v-2z" />
             </svg>
-            {hasActiveDiscoveryFilters && (
-              <span className="top-bar__filter-dot" aria-hidden />
-            )}
+            Upgrade
           </button>
         ) : (
-          <span className="top-bar__logo" aria-hidden>
-            L
-          </span>
+          discoveryFilterButton ?? (
+            <span className="top-bar__logo" aria-hidden>
+              L
+            </span>
+          )
         )}
       </div>
+
+      {showUpgrade && discoveryFilterButton ? (
+        <div className="top-bar__filter-slot">{discoveryFilterButton}</div>
+      ) : null}
 
       <nav className="top-bar__tabs" aria-label="Feed filter">
         <button
@@ -82,23 +100,17 @@ export function TopBar({
           </button>
         )}
 
-        {showUpgrade ? (
-          <button
-            type="button"
-            className="top-bar__flames top-bar__flames--upgrade"
-            onClick={onUpgrade}
-            aria-label={`Upgrade for unlimited crushes. ${remaining} of ${max} left today`}
+        {isPremium ? (
+          <div
+            className="top-bar__flames"
+            title={quota ? `${remaining} crushes left today` : 'Loading quota'}
             aria-busy={isQuotaLoading}
           >
-            <span className="top-bar__upgrade-label">Upgrade</span>
-            <span className="top-bar__flames-divider" aria-hidden />
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="top-bar__flame-icon">
               <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.39 13.5.67z" />
             </svg>
-            <span className="top-bar__flame-count">
-              {remaining}/{max}
-            </span>
-          </button>
+            <span className="top-bar__flame-count">∞</span>
+          </div>
         ) : (
           <div
             className="top-bar__flames"
@@ -109,7 +121,7 @@ export function TopBar({
               <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.39 13.5.67z" />
             </svg>
             <span className="top-bar__flame-count">
-              {isPremium ? '∞' : `${remaining}/${max}`}
+              {remaining}/{max}
             </span>
           </div>
         )}

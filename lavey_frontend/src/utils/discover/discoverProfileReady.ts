@@ -1,5 +1,6 @@
 import { defaultAvatar } from '@/constants/defaultAvatar';
 import type { ProfilePost } from '@/types';
+import { isPlaceholderMediaUrl } from '@/utils/profile/feedMedia';
 
 /** OAuth sign-in avatars (Google, Facebook, etc.) are not treated as uploaded profile photos. */
 export function isOAuthProviderAvatar(avatarUrl: string): boolean {
@@ -20,8 +21,8 @@ export function hasCustomProfileAvatar(avatarUrl?: string): boolean {
   if (!avatarUrl?.trim()) return false;
   if (avatarUrl === defaultAvatar) return false;
   if (isOAuthProviderAvatar(avatarUrl)) return false;
-  const lower = avatarUrl.toLowerCase();
-  return !lower.includes('/none.') && !lower.includes('none.jpg') && !lower.includes('post-templates/none');
+  if (isPlaceholderMediaUrl(avatarUrl)) return false;
+  return true;
 }
 
 export function hasAtLeastOnePost(posts: ProfilePost[] | undefined): boolean {

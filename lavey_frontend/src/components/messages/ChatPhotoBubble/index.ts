@@ -1,0 +1,1 @@
+export { ChatPhotoBubble } from './ChatPhotoBubble';

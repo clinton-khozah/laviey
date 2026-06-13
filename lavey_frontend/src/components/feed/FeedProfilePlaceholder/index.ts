@@ -1,0 +1,1 @@
+export { FeedProfilePlaceholder } from './FeedProfilePlaceholder';

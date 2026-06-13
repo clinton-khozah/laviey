@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
   matches: {
     flame: '/matches/flame',
     list: '/matches',
+    greetings: '/matches/greetings',
   },
   subscription: {
     flameQuota: '/subscription/flame-quota',
@@ -30,6 +31,7 @@ export const API_ENDPOINTS = {
     conversationByProfile: (profileId: string) => `/messages/conversations/by-profile/${profileId}`,
     thread: (id: string) => `/messages/conversations/${id}`,
     sendMessage: (id: string) => `/messages/conversations/${id}/messages`,
+    sendPhoto: (id: string) => `/messages/conversations/${id}/photos`,
     markRead: (id: string) => `/messages/conversations/${id}/read`,
     typing: (id: string) => `/messages/conversations/${id}/typing`,
     delete: (id: string) => `/messages/conversations/${id}`,
@@ -37,6 +39,11 @@ export const API_ENDPOINTS = {
     presence: '/messages/presence',
     message: (conversationId: string, messageId: string) =>
       `/messages/conversations/${conversationId}/messages/${messageId}`,
+    chatAssist: (conversationId: string) =>
+      `/messages/conversations/${conversationId}/chat-assist`,
+    notifications: '/messages/notifications',
+    notificationsSummary: '/messages/notifications/summary',
+    notificationsRead: '/messages/notifications/read',
   },
   dates: {
     list: '/rooms/vibe-check',

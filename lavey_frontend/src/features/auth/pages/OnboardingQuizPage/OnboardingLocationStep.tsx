@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { LocationProvinceMap } from '@/components/location/LocationProvinceMap';
 import type { UserLocationSnapshot } from '@/types/domain/onboardingQuiz.types';
 
 import type { LocationRequestStatus } from '@/hooks/geolocation/useLiveUserLocation';
@@ -12,6 +13,7 @@ export interface OnboardingLocationStepProps {
   error: string | null;
   isResolvingPlace: boolean;
   onRequestLocation: () => void;
+  onMapReadyChange?: (ready: boolean) => void;
 }
 
 function formatCoords(latitude: number, longitude: number): string {
@@ -24,6 +26,7 @@ export function OnboardingLocationStep({
   error,
   isResolvingPlace,
   onRequestLocation,
+  onMapReadyChange,
 }: OnboardingLocationStepProps) {
   useEffect(() => {
     if (status === 'idle') {
@@ -31,28 +34,34 @@ export function OnboardingLocationStep({
     }
   }, [status, onRequestLocation]);
 
+  const hasCoords = Boolean(
+    location && Number.isFinite(location.latitude) && Number.isFinite(location.longitude),
+  );
   const hasPlace = Boolean(location?.suburb && location?.province && location?.country);
+  const mapReady = hasCoords && hasPlace && !isResolvingPlace;
   const isPending = status === 'requesting' || status === 'idle';
   const isWatching = status === 'watching';
 
+  useEffect(() => {
+    onMapReadyChange?.(mapReady);
+  }, [mapReady, onMapReadyChange]);
+
+  useEffect(() => {
+    return () => onMapReadyChange?.(false);
+  }, [onMapReadyChange]);
+
   return (
     <section className="onboarding-location">
-      <div className="onboarding-quiz__visual" aria-hidden>
-        <span className="onboarding-quiz__visual-ring" />
-        <span className="onboarding-quiz__visual-emoji">📍</span>
-      </div>
-
       <h1 className="onboarding-quiz__title">Share your location</h1>
-      <p className="onboarding-quiz__subtitle">
-        We use this to find people near you — suburb level only, never your exact address on your
-        profile.
-      </p>
 
       <div className="onboarding-location__panel">
         {isPending && (
-          <p className="onboarding-location__status" role="status">
-            Waiting for location permission…
-          </p>
+          <div className="onboarding-location__map-slot">
+            <div className="onboarding-location__map-placeholder" role="status">
+              <span className="onboarding-location__map-spinner" aria-hidden />
+              <span>Waiting for location permission…</span>
+            </div>
+          </div>
         )}
 
         {status === 'denied' && (
@@ -77,8 +86,19 @@ export function OnboardingLocationStep({
           </>
         )}
 
-        {isWatching && location && (
+        {isWatching && location && hasCoords && (
           <>
+            <div className="onboarding-location__map-slot">
+              <LocationProvinceMap
+                latitude={location.latitude}
+                longitude={location.longitude}
+                country={location.country || 'South Africa'}
+                province={location.province || ''}
+                suburb={location.suburb || undefined}
+                isLoading={!mapReady}
+              />
+            </div>
+
             <dl className="onboarding-location__details">
               <div className="onboarding-location__row">
                 <dt>Suburb</dt>
@@ -103,16 +123,6 @@ export function OnboardingLocationStep({
                 Pinpointing your area…
               </p>
             )}
-
-            {hasPlace && !isResolvingPlace && (
-              <p className="onboarding-location__hint onboarding-location__hint--ok" role="status">
-                Location locked in. You can start exploring when ready.
-              </p>
-            )}
-
-            <button type="button" className="onboarding-location__refresh" onClick={onRequestLocation}>
-              Refresh location
-            </button>
           </>
         )}
       </div>

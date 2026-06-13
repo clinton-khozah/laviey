@@ -1,47 +1,182 @@
 .messages-header {
-  padding: calc(var(--safe-top) + 8px) 12px 8px;
-  background: linear-gradient(to bottom, var(--bg-deep) 85%, transparent);
+  padding: calc(var(--safe-top) + 10px) 16px 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .messages-header__top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.messages-header__brand {
+  min-width: 0;
 }
 
 .messages-header__title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.03em;
-  margin-bottom: 2px;
+  letter-spacing: -0.04em;
+  margin-bottom: 4px;
+  color: var(--text-primary);
 }
 
-.messages-header__subtitle {
+.messages-header__stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.messages-header__stat {
   font-size: 12px;
-  color: var(--text-secondary);
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
-.messages-header__unread {
+.messages-header__stat--unread {
   color: var(--accent-flame-end);
   font-weight: 600;
 }
 
 .messages-header__compose {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: var(--gradient-flame);
-  box-shadow: 0 2px 12px rgba(255, 77, 109, 0.35);
-  color: white;
+  border-radius: 50%;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.messages-header__compose:active {
+  transform: scale(0.94);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .messages-header__compose svg {
   width: 18px;
   height: 18px;
+}
+
+[data-theme='light'] .messages-header__compose {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Single compact segmented filter bar */
+.messages-header__filters {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+[data-theme='light'] .messages-header__filters {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+.messages-header__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: #737373;
+  background: transparent;
+  border: none;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.messages-header__filter:active {
+  transform: scale(0.97);
+}
+
+.messages-header__filter-label {
+  letter-spacing: -0.01em;
+}
+
+.messages-header__filter-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: #525252;
+  min-width: 0.75em;
+  text-align: center;
+}
+
+.messages-header__filter--active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.messages-header__filter--active .messages-header__filter-count {
+  color: var(--text-secondary);
+}
+
+.messages-header__filter--active[data-filter='all'] {
+  color: #e9d5ff;
+  background: rgba(124, 58, 237, 0.22);
+}
+
+.messages-header__filter--active[data-filter='all'] .messages-header__filter-count {
+  color: #c4b5fd;
+}
+
+.messages-header__filter--active[data-filter='unread'] {
+  color: #fecdd3;
+  background: rgba(255, 77, 109, 0.2);
+}
+
+.messages-header__filter--active[data-filter='unread'] .messages-header__filter-count {
+  color: #fda4af;
+}
+
+.messages-header__filter--active[data-filter='online'] {
+  color: #bbf7d0;
+  background: rgba(52, 211, 153, 0.18);
+}
+
+.messages-header__filter--active[data-filter='online'] .messages-header__filter-count {
+  color: #86efac;
+}
+
+[data-theme='light'] .messages-header__filter {
+  color: #737373;
+}
+
+[data-theme='light'] .messages-header__filter--active {
+  background: rgba(0, 0, 0, 0.07);
+  color: var(--text-primary);
+}
+
+[data-theme='light'] .messages-header__filter--active[data-filter='all'] {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
+[data-theme='light'] .messages-header__filter--active[data-filter='unread'] {
+  background: rgba(255, 77, 109, 0.12);
+  color: #e11d48;
+}
+
+[data-theme='light'] .messages-header__filter--active[data-filter='online'] {
+  background: rgba(52, 211, 153, 0.14);
+  color: #059669;
 }

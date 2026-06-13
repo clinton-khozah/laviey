@@ -1,8 +1,11 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ChatAssistPanel } from '@/components/messages/ChatAssistPanel';
+import { ChatPhotoBubble } from '@/components/messages/ChatPhotoBubble';
 import {
   ChatSendOptionsMenu,
   type ChatConversationAction,
 } from '@/components/messages/ChatSendOptionsMenu';
+import { DeleteMessageSheet } from '@/components/messages/DeleteMessageSheet';
 import { MessageActionSheet } from '@/components/messages/MessageActionSheet';
 import { AppOverlay } from '@/components/ui/AppOverlay';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
@@ -22,10 +25,11 @@ interface ChatThreadProps {
   isSending: boolean;
   onBack: () => void;
   onSend: (text: string) => void;
+  onSendPhoto?: (file: File) => Promise<void>;
   onTypingChange?: (isTyping: boolean) => void;
   onProfileClick: () => void;
   onReact: (messageId: string, emoji: string) => void;
-  onDeleteMessage: (messageId: string, scope: DeleteMessageScope) => void;
+  onDeleteMessage: (messageId: string, scope: DeleteMessageScope) => void | Promise<void>;
   onConversationAction: (action: ChatConversationAction) => void;
   isMuted?: boolean;
 }
@@ -37,6 +41,7 @@ export function ChatThread({
   isSending,
   onBack,
   onSend,
+  onSendPhoto,
   onTypingChange,
   onProfileClick,
   onReact,
@@ -48,8 +53,12 @@ export function ChatThread({
   const [sendMenuOpen, setSendMenuOpen] = useState(false);
   const [stickerTrayOpen, setStickerTrayOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState<ChatMessage | null>(null);
+  const [deleteMessageTarget, setDeleteMessageTarget] = useState<ChatMessage | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const scrollEndRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -99,11 +108,23 @@ export function ChatThread({
     onReact(actionMessage.id, emoji);
   };
 
-  const handleDelete = (scope: DeleteMessageScope) => {
-    if (!actionMessage) return;
-    onDeleteMessage(actionMessage.id, scope);
-    closeActions();
+  const handlePhotoPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !onSendPhoto) return;
+
+    setPhotoError(null);
+    try {
+      await onSendPhoto(file);
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Could not send that photo.');
+      window.setTimeout(() => setPhotoError(null), 3200);
+    }
   };
+
+  useEffect(() => {
+    scrollEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages.length, messages.at(-1)?.id, messages.at(-1)?.sending]);
 
   return (
     <AppOverlay>
@@ -173,6 +194,16 @@ export function ChatThread({
         />
 
         <div className="chat-thread__body">
+          <ChatAssistPanel
+            conversationId={conversation.id}
+            participantName={conversation.participantName}
+            messages={messages}
+            onPickSuggestion={(text) => {
+              setDraft(text);
+              setStickerTrayOpen(false);
+              onTypingChange?.(text.trim().length > 0);
+            }}
+          />
           <div className="chat-thread__watermark" aria-hidden>
             <img src={APP_IMAGES.logo} alt="" />
           </div>
@@ -183,25 +214,37 @@ export function ChatThread({
               <div className="chat-thread__messages">
                 <div className="chat-thread__date-pill">Today</div>
                 {messages.map((msg) => {
-                  const isSticker = isChatStickerMessage(msg.text);
+                  const isPhoto = msg.kind === 'image';
+                  const isSendingPhoto = isPhoto && msg.sending;
+                  const isSticker = !isPhoto && isChatStickerMessage(msg.text);
                   return (
                 <div
                   key={msg.id}
-                  className={`chat-bubble-wrap chat-bubble-wrap--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble-wrap--sticker' : ''}`}
+                  className={`chat-bubble-wrap chat-bubble-wrap--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble-wrap--sticker' : ''} ${isPhoto ? 'chat-bubble-wrap--photo' : ''} ${isSendingPhoto ? 'chat-bubble-wrap--sending' : ''} ${msg.reaction ? 'chat-bubble-wrap--has-reaction' : ''}`}
                 >
                   <button
                     type="button"
-                    className={`chat-bubble chat-bubble--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble--sticker' : ''}`}
-                    onPointerDown={() => handlePointerDown(msg)}
-                    onPointerUp={() => handlePointerUp(msg)}
+                    className={`chat-bubble chat-bubble--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble--sticker' : ''} ${isPhoto ? 'chat-bubble--photo' : ''}`}
+                    disabled={isSendingPhoto}
+                    onPointerDown={() => !isPhoto && handlePointerDown(msg)}
+                    onPointerUp={() => !isPhoto && handlePointerUp(msg)}
                     onPointerLeave={clearPressTimer}
                     onPointerCancel={clearPressTimer}
                     onContextMenu={(e) => {
+                      if (isSendingPhoto) return;
                       e.preventDefault();
                       openActions(msg);
                     }}
                   >
-                    <p className={isSticker ? 'chat-bubble__sticker' : 'chat-bubble__text'}>{msg.text}</p>
+                    {isPhoto ? (
+                      <ChatPhotoBubble
+                        message={msg}
+                        onOpenActions={() => openActions(msg)}
+                        onRequestDelete={() => setDeleteMessageTarget(msg)}
+                      />
+                    ) : (
+                      <p className={isSticker ? 'chat-bubble__sticker' : 'chat-bubble__text'}>{msg.text}</p>
+                    )}
                     <div className="chat-bubble__meta">
                       <span className="chat-bubble__time">{msg.sentAt}</span>
                       {msg.senderId === 'me' && (
@@ -213,22 +256,25 @@ export function ChatThread({
                     </div>
                   </button>
                   {msg.reaction && (
-                    <span
-                      className={`chat-bubble__reaction chat-bubble__reaction--${msg.senderId === 'me' ? 'me' : 'them'}`}
-                      aria-label={`Reaction ${msg.reaction}`}
-                    >
+                    <span className="chat-bubble__reaction" aria-label={`Reaction ${msg.reaction}`}>
                       {msg.reaction}
                     </span>
                   )}
                 </div>
                   );
                 })}
+                <div ref={scrollEndRef} className="chat-thread__scroll-end" aria-hidden />
               </div>
             )}
           </PageScroller>
         </div>
 
         <div className="chat-thread__footer">
+          {photoError ? (
+            <p className="chat-thread__photo-error" role="alert">
+              {photoError}
+            </p>
+          ) : null}
           {stickerTrayOpen ? (
             <div className="chat-thread__sticker-tray" role="toolbar" aria-label="Stickers">
               {CHAT_STICKERS.map((sticker) => (
@@ -246,6 +292,29 @@ export function ChatThread({
             </div>
           ) : null}
           <form className="chat-thread__composer" onSubmit={handleSubmit}>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="chat-thread__photo-input"
+              tabIndex={-1}
+              aria-hidden
+              onChange={(e) => void handlePhotoPick(e)}
+            />
+            {onSendPhoto ? (
+              <button
+                type="button"
+                className="chat-thread__photo-btn"
+                aria-label="Send photo"
+                disabled={isSending}
+                onClick={() => photoInputRef.current?.click()}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                  <path d="M4 7a3 3 0 013-3h10a3 3 0 013 3v10a3 3 0 01-3 3H7a3 3 0 01-3-3V7z" />
+                  <circle cx="12" cy="12" r="3.25" />
+                </svg>
+              </button>
+            ) : null}
             <button
               type="button"
               className={`chat-thread__sticker-toggle ${stickerTrayOpen ? 'chat-thread__sticker-toggle--active' : ''}`}
@@ -291,7 +360,21 @@ export function ChatThread({
         message={actionMessage}
         onClose={closeActions}
         onReact={handleReact}
-        onDelete={handleDelete}
+        onRequestDelete={() => {
+          setDeleteMessageTarget(actionMessage);
+        }}
+      />
+
+      <DeleteMessageSheet
+        open={deleteMessageTarget !== null}
+        message={deleteMessageTarget}
+        participantName={conversation.participantName}
+        onClose={() => setDeleteMessageTarget(null)}
+        onDelete={async (scope) => {
+          if (!deleteMessageTarget) return;
+          await onDeleteMessage(deleteMessageTarget.id, scope);
+          setDeleteMessageTarget(null);
+        }}
       />
     </AppOverlay>
   );

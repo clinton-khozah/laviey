@@ -1,4 +1,8 @@
-import { validateClearFaceImage } from '@/utils/face/faceMatcher';
+import {
+  FaceMatchError,
+  validateClearFaceImage,
+  validateUserInPostPhoto,
+} from '@/utils/face/faceMatcher';
 import { validateImageQuality } from '@/utils/media/imageQualityCheck';
 import { validateSafeImage } from '@/utils/media/nsfwImageCheck';
 
@@ -10,8 +14,15 @@ export interface PrepareImageOptions {
   skipSafetyCheck?: boolean;
   /** Skip blur / lighting / resolution checks (internal tooling only). */
   skipQualityCheck?: boolean;
-  /** Profile avatars — also require one clear face in frame. */
+  /** Profile avatars — quality and safety only (no face-size rules). */
+  avatarUpload?: boolean;
+  /** Profile avatars — require one clear face in frame (strict). */
   requireFace?: boolean;
+  /** Gallery / post photos — quality and safety only (no face-match rules). */
+  galleryUpload?: boolean;
+  /** Posts — uploader must appear in the photo (matched to profile reference). */
+  requireUserInPhoto?: boolean;
+  userReferenceUrl?: string;
 }
 
 export async function prepareImageForUpload(
@@ -30,8 +41,18 @@ export async function prepareImageForUpload(
   if (!options?.skipQualityCheck) {
     await validateImageQuality(file);
     if (options?.requireFace) {
-      await validateClearFaceImage(file, { relaxed: true });
+      await validateClearFaceImage(file);
     }
+  }
+
+  if (options?.requireUserInPhoto) {
+    if (!options.userReferenceUrl?.trim()) {
+      throw new FaceMatchError(
+        'NO_REFERENCE',
+        'Add a clear profile photo first so we can verify you are in the picture.',
+      );
+    }
+    await validateUserInPostPhoto(file, options.userReferenceUrl);
   }
 
   if (file.size <= maxBytes && file.type === 'image/webp') {

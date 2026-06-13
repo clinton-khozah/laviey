@@ -6,6 +6,7 @@ import {
   getCropPreviewLayout,
   type PhotoCropTransform,
 } from './postTemplateCrop';
+import { PostForYouPreview } from './PostForYouPreview';
 import {
   DEFAULT_POST_TEMPLATE_ID,
   fileWithTemplate,
@@ -13,6 +14,11 @@ import {
   POST_TEMPLATES,
   templateStickerGradient,
 } from './postTemplates';
+import {
+  isLandscapePhoto,
+  POST_PHOTO_FRAME_HEIGHT,
+  POST_PHOTO_FRAME_WIDTH,
+} from '@/utils/media/postPhotoOrientation';
 import './PostPhotoTemplatePicker.css';
 
 interface PostPhotoTemplatePickerProps {
@@ -74,7 +80,10 @@ export function PostPhotoTemplatePicker({
   const [activeTemplateId, setActiveTemplateId] = useState(DEFAULT_POST_TEMPLATE_ID);
   const [transformsByTemplate, setTransformsByTemplate] = useState<Record<string, PhotoCropTransform>>({});
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [frameSize, setFrameSize] = useState({ width: 280, height: 280 });
+  const [frameSize, setFrameSize] = useState({
+    width: POST_PHOTO_FRAME_WIDTH,
+    height: POST_PHOTO_FRAME_HEIGHT,
+  });
   const [isApplying, setIsApplying] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -84,6 +93,7 @@ export function PostPhotoTemplatePicker({
   const activeTemplate = getPostTemplate(activeTemplateId);
   const usesFrameOverlay = Boolean(activeTemplate.overlayImage);
   const transform = transformsByTemplate[activeTemplateId] ?? DEFAULT_CROP_TRANSFORM;
+  const isLandscape = imageSize.width > 0 && isLandscapePhoto(imageSize.width, imageSize.height);
 
   const setTransform = useCallback(
     (updater: PhotoCropTransform | ((prev: PhotoCropTransform) => PhotoCropTransform)) => {
@@ -107,6 +117,21 @@ export function PostPhotoTemplatePicker({
     setImageSize({ width: 0, height: 0 });
     setOptionsOpen(false);
   }, [open, photoUrl]);
+
+  useEffect(() => {
+    if (!photoUrl) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (!cancelled) {
+        setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+      }
+    };
+    img.src = photoUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [photoUrl]);
 
   useEffect(() => {
     const el = frameRef.current;
@@ -225,9 +250,36 @@ export function PostPhotoTemplatePicker({
       fromTop
       hideHandle
       compact
-      headerAction={optionsMenuButton}
+      headerAction={isLandscape ? undefined : optionsMenuButton}
     >
       <div className="post-template-picker">
+        {isLandscape ? (
+          <div className="post-template-picker__landscape">
+            <div className="post-template-picker__landscape-alert" role="alert">
+              <span className="post-template-picker__landscape-icon" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                  <rect x="3" y="7" width="18" height="10" rx="2" />
+                  <path d="M8 12h8" />
+                </svg>
+              </span>
+              <div>
+                <p className="post-template-picker__landscape-title">Portrait photos only</p>
+                <p className="post-template-picker__landscape-copy">
+                  Lavey is built for vertical phone pics. Horizontal shots don&apos;t look good in the feed.
+                </p>
+              </div>
+            </div>
+            <PostForYouPreview
+              imageUrl={photoUrl}
+              imageWidth={imageSize.width}
+              imageHeight={imageSize.height}
+            />
+          </div>
+        ) : (
+          <>
+              <p className="post-template-picker__portrait-hint">
+                Portrait crop · matches how posts appear on For You
+              </p>
         <div className="post-template-picker__stage">
           <div
             ref={frameRef}
@@ -347,15 +399,22 @@ export function PostPhotoTemplatePicker({
             </div>
           </div>
         ) : null}
+          </>
+        )}
 
         <button
           type="button"
           className="post-template-picker__use-btn"
-          disabled={isApplying}
+          disabled={isApplying || isLandscape}
           onClick={() => void handleUsePhoto()}
         >
-          {isApplying ? 'Saving…' : 'Use photo'}
+          {isLandscape ? 'Choose a vertical photo' : isApplying ? 'Saving…' : 'Use photo'}
         </button>
+        {isLandscape ? (
+          <button type="button" className="post-template-picker__choose-btn" onClick={onClose}>
+            Pick another photo
+          </button>
+        ) : null}
       </div>
     </ProfileSheet>
   );

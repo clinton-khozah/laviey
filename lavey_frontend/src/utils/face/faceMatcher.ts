@@ -161,6 +161,64 @@ export async function validateClearFaceImage(
   await validateClearFaceOnImage(img, options);
 }
 
+async function detectAllFaceDescriptors(img: HTMLImageElement): Promise<Float32Array[]> {
+  const detections = await faceapi
+    .detectAllFaces(
+      img,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.48 }),
+    )
+    .withFaceLandmarks()
+    .withFaceDescriptors();
+
+  return detections.map((detection) => detection.descriptor);
+}
+
+/** Posts must include the uploader — solo shots must be you; group shots must include you. */
+export async function validateUserInPostPhoto(
+  file: File,
+  referenceUrl: string,
+): Promise<void> {
+  if (!referenceUrl.trim()) {
+    throw new FaceMatchError(
+      'NO_REFERENCE',
+      'Add a clear profile photo first so we can verify you are in the picture.',
+    );
+  }
+
+  await loadFaceModels();
+  const dataUrl = await readFileAsDataUrl(file);
+  const postImg = await loadImageFromDataUrl(dataUrl);
+  const refImg = await loadImageSource(referenceUrl);
+  const referenceDescriptor = await detectSingleFaceDescriptor(refImg);
+  const postDescriptors = await detectAllFaceDescriptors(postImg);
+
+  if (postDescriptors.length === 0) {
+    throw new FaceMatchError(
+      'NO_FACE',
+      'We could not detect anyone in this photo. Use a clear picture where your face is visible.',
+    );
+  }
+
+  const userPresent = postDescriptors.some(
+    (descriptor) =>
+      faceapi.euclideanDistance(referenceDescriptor, descriptor) <= FACE_MATCH_THRESHOLD,
+  );
+
+  if (userPresent) return;
+
+  if (postDescriptors.length === 1) {
+    throw new FaceMatchError(
+      'NOT_YOU',
+      'This photo does not look like you. Only post pictures where you are in the shot.',
+    );
+  }
+
+  throw new FaceMatchError(
+    'USER_NOT_IN_PHOTO',
+    'You must be in this photo. You cannot post someone else without being in the picture too.',
+  );
+}
+
 async function detectSingleFaceDescriptor(img: HTMLImageElement): Promise<Float32Array> {
   const detections = await faceapi
     .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 }))

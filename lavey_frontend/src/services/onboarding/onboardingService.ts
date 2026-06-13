@@ -67,6 +67,7 @@ export const onboardingService = {
           purpose: answers.purpose,
           agePreference: answers.agePreference[0],
           interestedIn: answers.interestedIn[0],
+          gender: answers.gender,
           orientation: answers.orientation,
           religion: answers.religion,
           interests: answers.interests,

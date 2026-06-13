@@ -5,7 +5,6 @@ import { getGoogleSignInBlockedMessage } from '@/utils/google/googleEnvironment'
 import { resetOAuthCallbackState } from '@/utils/auth/oauthCallbackState';
 import { isLocalApiBaseUrl, stashOAuthRedirectContext } from '@/utils/auth/oauthRedirectStorage';
 import { requestGoogleIdToken } from '@/utils/google/googleIdTokenSignIn';
-import { markPendingOnboardingQuiz } from '@/utils/onboarding/pendingOnboardingQuiz';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { defaultAvatar } from '@/constants/defaultAvatar';
 import { httpClient } from '@/services/api/httpClient';
@@ -105,7 +104,6 @@ export const authService = {
       await sleep(500);
       const session = mockGoogleSession();
       persistSession(session);
-      markPendingOnboardingQuiz();
       return session;
     }
 
@@ -118,8 +116,6 @@ export const authService = {
     if (webViewMessage) {
       throw new Error(webViewMessage);
     }
-
-    markPendingOnboardingQuiz();
 
     // Local dev: ID token POST — avoids Supabase PKCE redirect to the live site.
     const useLocalIdTokenFlow =
@@ -161,7 +157,6 @@ export const authService = {
 
     const session: AuthSession = { token, user: response.data };
     persistSession(session);
-    markPendingOnboardingQuiz();
     return session;
   },
 

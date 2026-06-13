@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { ProfileInitialAvatar } from '@/components/ui/ProfileInitialAvatar';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { getLikeButtonLabel } from '@/utils/likeButtonLabel';
-import { hasFeedDisplayMedia } from '@/utils/profile/feedMedia';
+import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
 import type { ActionRailProps } from './ActionRail.types';
 import './ActionRail.css';
 
@@ -15,7 +15,7 @@ export function ActionRail({
 }: ActionRailProps) {
   const isMutual = liked && profile.likedYou;
   const likeLabel = getLikeButtonLabel(liked, profile.likedYou);
-  const avatarSrc = hasFeedDisplayMedia(profile.avatar) ? profile.avatar : undefined;
+  const avatarSrc = hasCustomProfileAvatar(profile.avatar) ? profile.avatar : undefined;
 
   return (
     <aside className="action-rail" aria-label="Profile actions">

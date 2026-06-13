@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { subscribeChatUpdates } from '@/lib/supabaseClient';
 import { messageService } from '@/services';
+import { notificationService } from '@/services/messages/notificationService';
 import type { Conversation, DeleteConversationScope } from '@/types';
+import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
+
+async function mergeConversations(matchRows: Conversation[]): Promise<Conversation[]> {
+  const withoutNotifications = matchRows.filter((row) => row.id !== NOTIFICATIONS_CONVERSATION_ID);
+  try {
+    const summary = await notificationService.getSummary();
+    return [summary, ...withoutNotifications];
+  } catch {
+    return withoutNotifications;
+  }
+}
 
 export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -14,7 +26,8 @@ export function useConversations() {
       setError(null);
     }
     try {
-      setConversations(await messageService.getConversations());
+      const matchRows = await messageService.getConversations();
+      setConversations(await mergeConversations(matchRows));
     } catch (err) {
       if (!silent) {
         setError(err instanceof Error ? err.message : 'Failed to load messages');
@@ -46,6 +59,7 @@ export function useConversations() {
 
   const deleteConversation = useCallback(
     async (conversationId: string, scope: DeleteConversationScope) => {
+      if (conversationId === NOTIFICATIONS_CONVERSATION_ID) return;
       await messageService.deleteConversation(conversationId, scope);
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
     },
@@ -53,6 +67,8 @@ export function useConversations() {
   );
 
   const toggleConversationStar = useCallback(async (conversationId: string) => {
+    if (conversationId === NOTIFICATIONS_CONVERSATION_ID) return;
+
     let nextPinned = false;
     setConversations((prev) => {
       const current = prev.find((c) => c.id === conversationId);

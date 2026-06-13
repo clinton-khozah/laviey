@@ -3,9 +3,9 @@ import type { ProfileInterestItem, ProfilePost } from '@/types';
 import { ProfileInterestPicker } from '@/components/profile/ProfileInterestPicker';
 import { onboardingService } from '@/services/onboarding/onboardingService';
 import { defaultAvatar } from '@/constants/defaultAvatar';
+import { APP_IMAGES } from '@/constants/images';
 import { MAX_PROFILE_INTERESTS, PROFILE_INTERESTS_LIMIT_MESSAGE } from '@/constants/profileInterests';
 import { MAX_PROFILE_POSTS, POST_LIMIT_MESSAGE } from '@/constants/profilePosts';
-import { PageScroller } from '@/components/layout/PageScroller';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { LogoLoader } from '@/components/ui/LogoLoader';
@@ -68,7 +68,12 @@ export function ProfilePage() {
   const { signOut, isSubmitting } = useAuth();
   const { profile, isLoading, error, refetch } = useUserProfile();
   const { likedIds, sendFlame } = useMatchActions();
-  const { count: receivedLikeCount } = useProfilesWhoLikedYou();
+  const {
+    profiles: receivedLikers,
+    count: receivedLikeCount,
+    isLoading: likersLoading,
+    refetch: refetchLikers,
+  } = useProfilesWhoLikedYou();
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [sheet, setSheet] = useState<ProfileSheetId>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -158,7 +163,7 @@ export function ProfilePage() {
       setAvatarUploadError(null);
       setIsUploadingAvatar(true);
       try {
-        const prepared = await prepareImageForUpload(file, undefined, { requireFace: true });
+        const prepared = await prepareImageForUpload(file, undefined, { avatarUpload: true });
         const avatarUrl = await contentService.uploadAvatar(prepared);
         setStoredProfileAvatar(profile.id, avatarUrl);
         setAvatarOverride(avatarUrl);
@@ -213,7 +218,7 @@ export function ProfilePage() {
       setPhotoUploadError(null);
       setIsUploadingPhoto(true);
       try {
-        const prepared = await prepareImageForUpload(pendingPhotoFile);
+        const prepared = await prepareImageForUpload(pendingPhotoFile, undefined, { galleryUpload: true });
         const created = await contentService.createPost({ file: prepared });
         setProfilePosts((prev) => [created, ...(prev ?? profile?.posts ?? [])]);
         await refetch();
@@ -313,9 +318,13 @@ export function ProfilePage() {
 
   return (
     <div className="profile-page">
-      <PageScroller>
-        {isLoading && !profile && <PageTransitionSplash />}
-        {error && !profile && (
+      <div className="profile-page__bg" aria-hidden>
+        <div className="profile-page__bg-glow" />
+        <img src={APP_IMAGES.logo} alt="" className="profile-page__bg-logo" />
+      </div>
+      {!profile && isLoading && <PageTransitionSplash />}
+      {!profile && error && (
+        <div className="profile-page__fallback">
           <FeedState
             message={error}
             onRetry={() =>
@@ -323,10 +332,24 @@ export function ProfilePage() {
             }
             retryLabel={error === SESSION_EXPIRED_MESSAGE ? 'Sign in again' : 'Try again'}
           />
-        )}
+        </div>
+      )}
 
-        {profile && (
+      {profile && (
           <div className="profile-page__content">
+            {!profile.isPremium ? (
+              <button
+                type="button"
+                className="profile-page__upgrade"
+                onClick={() => setSheet('platinum')}
+                aria-label="Upgrade to Platinum"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="profile-page__upgrade-crown">
+                  <path d="M5 16 3 8l5.2 3.3L12 4l3.8 7.3L21 8l-2 8H5zm-1 2h18v2H4v-2z" />
+                </svg>
+                Upgrade
+              </button>
+            ) : null}
             <button
               ref={menuTriggerRef}
               type="button"
@@ -339,6 +362,7 @@ export function ProfilePage() {
               </svg>
             </button>
 
+            <div className="profile-page__header">
             <div className="profile-page__hero">
               <input
                 ref={avatarInputRef}
@@ -403,42 +427,37 @@ export function ProfilePage() {
               <h2 className="profile-page__name">
                 {profile.displayName}
               </h2>
-              <p className="profile-page__email">{profile.email}</p>
               {profile.isPremium ? (
                 <span className="profile-page__premium">Platinum member</span>
-              ) : (
-                <button
-                  type="button"
-                  className="profile-page__upgrade-pill"
-                  onClick={() => setSheet('platinum')}
-                >
-                  Upgrade to Platinum
-                </button>
-              )}
+              ) : null}
               <p className="profile-page__bio">{profile.bio}</p>
               <div className="profile-page__interests" aria-label="Interests">
-                {profile.interests.map((item) => (
-                  <span key={item.key} className="profile-page__tag" data-interest={item.key}>
-                    {item.emoji && (
-                      <span className="profile-page__tag-emoji" aria-hidden>
-                        {item.emoji}
-                      </span>
-                    )}
-                    <span className="profile-page__tag-label">#{item.label}</span>
-                  </span>
-                ))}
+                <div className="profile-page__interests-row">
+                  {profile.interests.map((item) => (
+                    <span key={item.key} className="profile-page__tag" data-interest={item.key}>
+                      {item.emoji && (
+                        <span className="profile-page__tag-emoji" aria-hidden>
+                          {item.emoji}
+                        </span>
+                      )}
+                      <span className="profile-page__tag-label">#{item.label}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="profile-page__stats">
+            <div className="profile-page__stats" aria-label="Profile stats">
               <div className="profile-page__stat">
                 <span className="profile-page__stat-value">{profile.stats.flamesSent}</span>
                 <span className="profile-page__stat-label">Crushes</span>
               </div>
+              <div className="profile-page__stat-divider" aria-hidden />
               <div className="profile-page__stat">
                 <span className="profile-page__stat-value">{profile.stats.matches}</span>
                 <span className="profile-page__stat-label">Matches</span>
               </div>
+              <div className="profile-page__stat-divider" aria-hidden />
               <div className="profile-page__stat">
                 <span className="profile-page__stat-value">{profile.stats.profileViews}</span>
                 <span className="profile-page__stat-label">Views</span>
@@ -446,32 +465,35 @@ export function ProfilePage() {
             </div>
 
             <div className="profile-page__tabs" role="tablist" aria-label="Profile content">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'posts'}
-                className={`profile-page__tab ${tab === 'posts' ? 'profile-page__tab--active' : ''}`}
-                onClick={() => setTab('posts')}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z" />
-                </svg>
-                Posts
-                <span className="profile-page__tab-count">{profile.posts.length}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'likes'}
-                className={`profile-page__tab ${tab === 'likes' ? 'profile-page__tab--active' : ''}`}
-                onClick={() => setTab('likes')}
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
-                Likes
-                <span className="profile-page__tab-count">{receivedLikeCount}</span>
-              </button>
+              <div className="profile-page__tabs-inner">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'posts'}
+                  className={`profile-page__tab ${tab === 'posts' ? 'profile-page__tab--active' : ''}`}
+                  onClick={() => setTab('posts')}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z" />
+                  </svg>
+                  Posts
+                  <span className="profile-page__tab-count">{profile.posts.length}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'likes'}
+                  className={`profile-page__tab ${tab === 'likes' ? 'profile-page__tab--active' : ''}`}
+                  onClick={() => setTab('likes')}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  </svg>
+                  Likes
+                  <span className="profile-page__tab-count">{receivedLikeCount}</span>
+                </button>
+              </div>
+            </div>
             </div>
 
             <div className="profile-page__tab-panel" role="tabpanel">
@@ -486,12 +508,19 @@ export function ProfilePage() {
                   addButtonLabel="Add"
                 />
               ) : (
-                <ProfileLikesPanel reciprocatedIds={likedIds} />
+                <ProfileLikesPanel
+                  profileLikers={receivedLikers}
+                  reciprocatedIds={likedIds}
+                  isLoadingProfiles={likersLoading}
+                  onLikeBack={(profileId) => {
+                    void sendFlame(profileId).then(() => refetchLikers());
+                  }}
+                  onChat={(profileId) => openChatWithProfile(profileId)}
+                />
               )}
             </div>
           </div>
         )}
-      </PageScroller>
 
       {profile && (
         <ProfilePostViewer

@@ -12,6 +12,8 @@ export type OnboardingAgePreference =
 
 export type OnboardingInterestedIn = 'men' | 'women' | 'nonbinary' | 'everyone';
 
+export type OnboardingGender = 'man' | 'woman' | 'nonbinary' | 'prefer-not-to-say';
+
 export type OnboardingOrientation =
   | 'straight'
   | 'gay'
@@ -66,6 +68,7 @@ export interface OnboardingQuizAnswers {
   dateOfBirth: string;
   agePreference: OnboardingAgePreference[];
   interestedIn: OnboardingInterestedIn[];
+  gender: OnboardingGender;
   orientation: OnboardingOrientation;
   religion: OnboardingReligion;
   interests: OnboardingInterest[];

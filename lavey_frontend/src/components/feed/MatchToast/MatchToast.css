@@ -170,7 +170,7 @@
   font-weight: 700;
 }
 
-.match-toast__ai {
+.match-toast__greetings {
   text-align: left;
   padding: 14px;
   border-radius: 16px;
@@ -179,38 +179,18 @@
   margin-bottom: 14px;
 }
 
-[data-theme='light'] .match-toast__ai {
+[data-theme='light'] .match-toast__greetings {
   background: rgba(0, 0, 0, 0.03);
 }
 
-.match-toast__ai-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.match-toast__ai-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-violet);
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
-}
-
-.match-toast__ai-prompt {
+.match-toast__greeting-prompt {
   font-size: 17px;
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 4px;
 }
 
-.match-toast__ai-hint {
+.match-toast__greeting-hint {
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 12px;

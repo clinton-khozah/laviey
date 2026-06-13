@@ -57,6 +57,7 @@ function mockProfileFromSession(): UserProfile {
         poster: pickMockFeedImage(0),
         durationSec: 10,
         likeCount: 248,
+        caption: 'Golden hour vibes #Travel',
       },
       {
         id: 'me-2',
@@ -65,12 +66,14 @@ function mockProfileFromSession(): UserProfile {
         poster: pickMockFeedImage(1),
         durationSec: 10,
         likeCount: 412,
+        caption: 'Coffee and good energy ☕',
       },
       {
         id: 'me-3',
         type: 'image',
         src: pickMockFeedImage(2),
         likeCount: 189,
+        caption: 'Main character moment',
       },
     ],
   };

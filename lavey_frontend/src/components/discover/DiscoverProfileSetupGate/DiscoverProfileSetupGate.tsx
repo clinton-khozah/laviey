@@ -179,6 +179,8 @@ export function DiscoverProfileSetupGate({
       <DiscoverSetupGallerySheet
         open={gallerySheetOpen}
         posts={profile.posts}
+        userId={profile.id}
+        avatarUrl={profile.avatarUrl}
         onClose={() => setGallerySheetOpen(false)}
         onMomentAdded={onMomentAdded}
       />

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type TouchEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppOverlay } from '@/components/ui/AppOverlay';
 import { LogoLoader } from '@/components/ui/LogoLoader';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { useMatchGreetings } from '@/hooks/match/useMatchGreetings';
 import { getProfilePhotoUrls } from '@/utils/profilePhotos';
+import { MatchProfilePhotoViewer } from './MatchProfilePhotoViewer';
 import type { MatchProfileModalProps } from './MatchProfileModal.types';
 import './MatchProfileModal.css';
 
@@ -37,6 +39,45 @@ function getModalLikeLabel(
   return 'Send Like';
 }
 
+const SWIPE_THRESHOLD_PX = 40;
+
+function usePhotoSwipe(
+  photoCount: number,
+  onSwipe: (direction: -1 | 1) => void,
+): {
+  onTouchStart: (event: TouchEvent) => void;
+  onTouchEnd: (event: TouchEvent) => void;
+  onPointerDown: (event: PointerEvent) => void;
+  onPointerUp: (event: PointerEvent) => void;
+} {
+  const startXRef = useRef<number | null>(null);
+
+  const handleStart = (clientX: number) => {
+    startXRef.current = clientX;
+  };
+
+  const handleEnd = (clientX: number) => {
+    if (startXRef.current === null || photoCount <= 1) return;
+    const delta = clientX - startXRef.current;
+    startXRef.current = null;
+    if (Math.abs(delta) < SWIPE_THRESHOLD_PX) return;
+    onSwipe(delta < 0 ? 1 : -1);
+  };
+
+  return {
+    onTouchStart: (event) => handleStart(event.touches[0]?.clientX ?? 0),
+    onTouchEnd: (event) => handleEnd(event.changedTouches[0]?.clientX ?? 0),
+    onPointerDown: (event) => {
+      if (event.pointerType === 'touch') return;
+      handleStart(event.clientX);
+    },
+    onPointerUp: (event) => {
+      if (event.pointerType === 'touch') return;
+      handleEnd(event.clientX);
+    },
+  };
+}
+
 export function MatchProfileModal({
   open,
   mode,
@@ -53,11 +94,29 @@ export function MatchProfileModal({
 }: MatchProfileModalProps) {
   const photos = profile ? getProfilePhotoUrls(profile) : [];
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [fullscreenPhotoIndex, setFullscreenPhotoIndex] = useState<number | null>(null);
   const isDiscover = mode === 'discover';
   const showLikedYouHint = likedYou && !liked;
   const isMutual = liked && likedYou;
   const likeLabel = getModalLikeLabel(liked, likedYou, isSubmittingFlame);
   const firstName = profile?.name?.trim().split(' ')[0] || 'there';
+  const showGreetings = Boolean(onSendMessage && (conversation || isMutual));
+  const greetingContext = useMemo(
+    () => ({
+      bio: profile?.bio,
+      interests: profile?.interests,
+    }),
+    [profile?.bio, profile?.interests],
+  );
+  const greetingSuggestions = useMatchGreetings(
+    profile?.name ?? '',
+    open && showGreetings,
+    greetingContext,
+  );
+  const distanceLabel =
+    profile?.distance?.trim() && !/^unknown distance$/i.test(profile.distance.trim())
+      ? profile.distance.trim()
+      : null;
   const relationStatusLabel = isMutual
     ? 'Matched'
     : liked
@@ -65,14 +124,6 @@ export function MatchProfileModal({
       : likedYou
         ? 'Likes you'
         : 'New';
-
-  const aiHiText = `Hi ${firstName} 💖`;
-  const aiOptions = [
-    aiHiText,
-    `How's your day going, ${firstName}? 💕`,
-    `Your profile caught my eye 😍`,
-    `Want to chat sometime? 💗`,
-  ];
 
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
@@ -83,12 +134,15 @@ export function MatchProfileModal({
 
   useEffect(() => {
     if (open) setPhotoIndex(0);
+    if (!open) setFullscreenPhotoIndex(null);
   }, [open, profile?.id]);
 
-  const goPhoto = (dir: -1 | 1) => {
+  const goPhoto = (direction: -1 | 1) => {
     if (photos.length <= 1) return;
-    setPhotoIndex((i) => (i + dir + photos.length) % photos.length);
+    setPhotoIndex((current) => (current + direction + photos.length) % photos.length);
   };
+
+  const gallerySwipe = usePhotoSwipe(photos.length, goPhoto);
 
   const canRender = !isLoading && profile && (isDiscover || conversation);
 
@@ -133,22 +187,33 @@ export function MatchProfileModal({
 
               {canRender && (
                 <>
-                  <div className="match-profile-modal__gallery">
+                  <div
+                    className="match-profile-modal__gallery"
+                    {...gallerySwipe}
+                  >
                     <div
                       className="match-profile-modal__photos"
                       style={{ transform: `translateX(-${photoIndex * 100}%)` }}
                     >
                       {photos.map((src) => (
-                        <img
-                          key={src}
-                          src={src}
-                          alt=""
-                          className="match-profile-modal__photo"
-                        />
+                        <div key={src} className="match-profile-modal__photo-slot">
+                          <img src={src} alt="" className="match-profile-modal__photo" />
+                        </div>
                       ))}
                     </div>
 
-                    <div className="match-profile-modal__gallery-fade" />
+                    {photos.length > 0 ? (
+                      <button
+                        type="button"
+                        className="match-profile-modal__expand"
+                        onClick={() => setFullscreenPhotoIndex(photoIndex)}
+                        aria-label="View photo full screen"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                          <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" />
+                        </svg>
+                      </button>
+                    ) : null}
 
                     {photos.length > 1 && (
                       <>
@@ -178,7 +243,10 @@ export function MatchProfileModal({
                       </>
                     )}
 
-                    <div className="match-profile-modal__gallery-meta">
+                  </div>
+
+                  <div className="match-profile-modal__body">
+                    <div className="match-profile-modal__header-meta">
                       <h2 id="match-profile-title" className="match-profile-modal__name">
                         {profile.name}
                         {profile.age > 0 ? `, ${profile.age}` : ''}
@@ -186,11 +254,11 @@ export function MatchProfileModal({
                           <VerifiedBadge size="md" className="match-profile-modal__verified" />
                         )}
                       </h2>
-                      <p className="match-profile-modal__distance">{profile.distance}</p>
+                      {distanceLabel ? (
+                        <p className="match-profile-modal__distance">{distanceLabel}</p>
+                      ) : null}
                     </div>
-                  </div>
 
-                  <div className="match-profile-modal__body">
                     <div className="match-profile-modal__chips">
                       <span className="match-profile-modal__chip match-profile-modal__chip--like">
                         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="match-profile-modal__chip-heart">
@@ -231,25 +299,18 @@ export function MatchProfileModal({
                       </div>
                     )}
 
-                    {onSendMessage && (conversation || isMutual) && (
-                      <div className="match-profile-modal__ai-greeting">
-                        <div className="match-profile-modal__ai-title">
-                          <span className="match-profile-modal__ai-spark" aria-hidden>
-                            *
-                          </span>
-                          AI message
-                        </div>
-                        <div className="match-profile-modal__ai-message">Say hi to {firstName}</div>
-                        <div className="match-profile-modal__ai-sub">
-                          Tap a greeting below to send it in Chat.
-                        </div>
-                        <div className="match-profile-modal__ai-suggestions">
-                          {aiOptions.map((text) => (
+                    {showGreetings && (
+                      <div className="match-profile-modal__greetings">
+                        <p className="match-profile-modal__greeting-hint">
+                          Say hi to {firstName} · tap to send
+                        </p>
+                        <div className="match-profile-modal__greeting-suggestions">
+                          {greetingSuggestions.map((text, index) => (
                             <button
-                              key={text}
+                              key={`${index}-${text}`}
                               type="button"
-                              className="match-profile-modal__ai-suggestion"
-                              onClick={() => onSendMessage(text)}
+                              className="match-profile-modal__greeting-suggestion"
+                              onClick={() => onSendMessage?.(text)}
                             >
                               {text}
                             </button>
@@ -319,7 +380,8 @@ export function MatchProfileModal({
                             type="button"
                             className="match-profile-modal__pill match-profile-modal__pill--message"
                             onClick={() => {
-                              if (onSendMessage) onSendMessage(aiHiText);
+                              const greeting = greetingSuggestions[0] ?? `Hi ${firstName} 💖`;
+                              if (onSendMessage) onSendMessage(greeting);
                               else onMessage?.();
                             }}
                           >
@@ -335,6 +397,18 @@ export function MatchProfileModal({
                 </>
               )}
             </motion.div>
+
+            {fullscreenPhotoIndex !== null && photos.length > 0 ? (
+              <MatchProfilePhotoViewer
+                photos={photos}
+                index={fullscreenPhotoIndex}
+                onClose={() => setFullscreenPhotoIndex(null)}
+                onIndexChange={(nextIndex) => {
+                  setFullscreenPhotoIndex(nextIndex);
+                  setPhotoIndex(nextIndex);
+                }}
+              />
+            ) : null}
           </>
         )}
       </AnimatePresence>

@@ -1,0 +1,1 @@
+export { ChatAssistPanel } from './ChatAssistPanel';

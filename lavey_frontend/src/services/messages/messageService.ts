@@ -90,6 +90,33 @@ export const messageService = {
     return res.data;
   },
 
+  async sendPhoto(conversationId: string, file: File): Promise<ChatMessage> {
+    if (!usesBackendMessages()) {
+      await sleep(350);
+      const url = URL.createObjectURL(file);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      return {
+        id: `m-photo-${Date.now()}`,
+        conversationId,
+        senderId: 'me',
+        text: '📷 Photo',
+        kind: 'image',
+        imageUrl: url,
+        expiresAt,
+        sentAt: 'Just now',
+        read: true,
+      };
+    }
+
+    const form = new FormData();
+    form.append('photo', file, file.name || 'photo.webp');
+    const res = await httpClient.postForm<ApiResponse<ChatMessage>>(
+      API_ENDPOINTS.messages.sendPhoto(conversationId),
+      form,
+    );
+    return res.data;
+  },
+
   async markConversationRead(conversationId: string): Promise<void> {
     if (!usesBackendMessages()) return;
     await httpClient.post(API_ENDPOINTS.messages.markRead(conversationId), {});

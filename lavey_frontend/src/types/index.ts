@@ -23,6 +23,7 @@ export type {
   MatchListItem,
   MatchToastProfile,
 } from './domain/match.types';
+export type { MatchGreetingRequest, MatchGreetingResult } from './domain/matchGreeting.types';
 export type { FlameQuota } from './domain/subscription.types';
 export type { PlatinumCatalog, PlatinumPlan, PlatinumFeature } from './domain/platinum.types';
 export type {
@@ -39,7 +40,14 @@ export type {
   ChatMessage,
   DeleteConversationScope,
   DeleteMessageScope,
+  ConversationKind,
 } from './domain/message.types';
+export type { NotificationEvent, NotificationKind } from './domain/notification.types';
+export { isActionableNotification, notificationKindLabel } from './domain/notification.types';
+export type {
+  ChatAssistMessage,
+  ChatAssistResult,
+} from './domain/chatAssist.types';
 export type {
   OnlineDate,
   DateInvite,
@@ -71,6 +79,7 @@ export type {
   OnboardingVibe,
   OnboardingAgePreference,
   OnboardingInterestedIn,
+  OnboardingGender,
   OnboardingOrientation,
   OnboardingReligion,
   OnboardingInterest,

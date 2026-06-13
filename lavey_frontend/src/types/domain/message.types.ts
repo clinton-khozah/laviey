@@ -1,3 +1,5 @@
+export type ConversationKind = 'match' | 'notifications';
+
 export interface Conversation {
   id: string;
   /** Links to discover `Profile.id` for full match profile modal */
@@ -16,6 +18,7 @@ export interface Conversation {
   matchedAt: string;
   vibeScore: number;
   isPinned?: boolean;
+  conversationKind?: ConversationKind;
 }
 
 export interface ChatMessage {
@@ -27,6 +30,16 @@ export interface ChatMessage {
   read: boolean;
   /** Emoji reaction on this message */
   reaction?: string;
+  /** text (default) or ephemeral photo */
+  kind?: 'text' | 'image';
+  /** Short-lived signed URL for chat photos */
+  imageUrl?: string;
+  /** ISO expiry — photos auto-delete after 24h */
+  expiresAt?: string;
+  /** Photo TTL passed — content removed server-side */
+  expired?: boolean;
+  /** Optimistic upload in progress */
+  sending?: boolean;
 }
 
 /** Hide locally, or remove for both participants */

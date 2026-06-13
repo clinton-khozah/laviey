@@ -49,6 +49,8 @@ type QuizAnswersState = {
 
   interestedIn: OnboardingQuizAnswers['interestedIn'];
 
+  gender: OnboardingQuizAnswers['gender'] | null;
+
   orientation: OnboardingQuizAnswers['orientation'] | null;
 
   religion: OnboardingQuizAnswers['religion'] | null;
@@ -80,6 +82,8 @@ const INITIAL_ANSWERS: QuizAnswersState = {
   agePreference: [],
 
   interestedIn: [],
+
+  gender: null,
 
   orientation: null,
 
@@ -165,6 +169,8 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [isLocationMapReady, setIsLocationMapReady] = useState(false);
+
   const continueShake = useAnimationControls();
 
   const hintShake = useAnimationControls();
@@ -235,13 +241,7 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
   const progressPct = totalSteps > 0 ? Math.round(((stepIndex + 1) / totalSteps) * 100) : 0;
 
-  const hasLocationReady = Boolean(
-    liveLocation &&
-      liveLocation.country &&
-      liveLocation.province &&
-      liveLocation.suburb &&
-      !isResolvingPlace,
-  );
+  const hasLocationReady = isLocationMapReady;
 
 
 
@@ -515,6 +515,8 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
       answers.interestedIn.length > 0 &&
 
+      answers.gender !== null &&
+
       answers.orientation !== null &&
 
       answers.religion !== null &&
@@ -524,6 +526,11 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
     );
 
   }, [answers]);
+
+
+
+  const canStartExploring =
+    canFinish && hasLocationReady && Boolean(liveLocation) && !isSubmitting;
 
 
 
@@ -543,7 +550,7 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
   const handleFinish = () => {
 
-    if (!canFinish || !hasLocationReady || !liveLocation || isSubmitting) return;
+    if (!canStartExploring || !liveLocation) return;
 
 
 
@@ -558,6 +565,8 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
       agePreference: answers.agePreference,
 
       interestedIn: answers.interestedIn,
+
+      gender: answers.gender!,
 
       orientation: answers.orientation!,
 
@@ -820,6 +829,8 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
                   onRequestLocation={requestLocation}
 
+                  onMapReadyChange={setIsLocationMapReady}
+
                 />
 
               </motion.section>
@@ -1032,9 +1043,9 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
             type="button"
 
-            className="onboarding-quiz__continue"
+            className={`onboarding-quiz__continue ${!canStartExploring ? 'onboarding-quiz__continue--inactive' : ''}`}
 
-            disabled={!canFinish || !hasLocationReady || isSubmitting}
+            disabled={!canStartExploring}
             onClick={handleFinish}
 
             initial={{ opacity: 0, y: 12 }}

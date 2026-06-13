@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppOverlay } from '@/components/ui/AppOverlay';
 import { MESSAGE_REACTION_EMOJIS } from '@/constants/messageReactions';
-import type { ChatMessage, DeleteMessageScope } from '@/types';
+import type { ChatMessage } from '@/types';
 import './MessageActionSheet.css';
 
 interface MessageActionSheetProps {
@@ -10,7 +10,7 @@ interface MessageActionSheetProps {
   message: ChatMessage | null;
   onClose: () => void;
   onReact: (emoji: string) => void;
-  onDelete: (scope: DeleteMessageScope) => void;
+  onRequestDelete: () => void;
 }
 
 export function MessageActionSheet({
@@ -18,10 +18,8 @@ export function MessageActionSheet({
   message,
   onClose,
   onReact,
-  onDelete,
+  onRequestDelete,
 }: MessageActionSheetProps) {
-  const isOwn = message?.senderId === 'me';
-
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     return () => {
@@ -34,8 +32,8 @@ export function MessageActionSheet({
     onClose();
   };
 
-  const handleDelete = (scope: DeleteMessageScope) => {
-    onDelete(scope);
+  const handleRequestDelete = () => {
+    onRequestDelete();
     onClose();
   };
 
@@ -84,34 +82,19 @@ export function MessageActionSheet({
               </div>
 
               <div className="message-action-sheet__section message-action-sheet__section--actions">
-                <span className="message-action-sheet__label">Message</span>
-                <div className="message-action-sheet__icons">
+                <div className="message-action-sheet__actions-row">
+                  <span className="message-action-sheet__label">Message</span>
                   <button
                     type="button"
-                    className="message-action-sheet__icon-btn"
-                    onClick={() => handleDelete('for_you')}
-                    aria-label="Remove message for you"
-                    title="Remove for you"
+                    className="message-action-sheet__delete-icon"
+                    onClick={handleRequestDelete}
+                    aria-label="Delete message"
+                    title="Delete message"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                       <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
                     </svg>
                   </button>
-
-                  {isOwn && (
-                    <button
-                      type="button"
-                      className="message-action-sheet__icon-btn message-action-sheet__icon-btn--danger"
-                      onClick={() => handleDelete('for_both')}
-                      aria-label="Unsend message for everyone"
-                      title="Unsend for everyone"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" />
-                        <path d="M3 3v5h5" />
-                      </svg>
-                    </button>
-                  )}
                 </div>
               </div>
             </motion.div>

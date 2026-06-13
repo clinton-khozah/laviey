@@ -198,8 +198,9 @@ export function loadImageFromFile(file: File): Promise<HTMLImageElement> {
 }
 
 const EXPORT_MAX_EDGE = 1440;
-/** Square export for original + template preview parity */
-const EXPORT_SQUARE_EDGE = 1080;
+/** Portrait export (4:5) for original + template preview parity */
+const EXPORT_PORTRAIT_WIDTH = 1080;
+const EXPORT_PORTRAIT_HEIGHT = 1350;
 
 function fitExportDimensions(width: number, height: number): { width: number; height: number } {
   const maxEdge = Math.max(width, height);
@@ -231,7 +232,7 @@ export async function renderPhotoWithTemplate(
     drawCoverImageWithTransform(ctx, image, 0, 0, canvas.width, canvas.height, transform);
     ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
   } else {
-    const fitted = fitExportDimensions(EXPORT_SQUARE_EDGE, EXPORT_SQUARE_EDGE);
+    const fitted = fitExportDimensions(EXPORT_PORTRAIT_WIDTH, EXPORT_PORTRAIT_HEIGHT);
     canvas.width = fitted.width;
     canvas.height = fitted.height;
     drawCoverImageWithTransform(ctx, image, 0, 0, canvas.width, canvas.height, transform);
@@ -267,7 +268,7 @@ export async function fileWithTemplate(
         offsetY: transform.offsetY * (fitted.height / previewFrame.height),
       };
     } else {
-      const fitted = fitExportDimensions(EXPORT_SQUARE_EDGE, EXPORT_SQUARE_EDGE);
+      const fitted = fitExportDimensions(EXPORT_PORTRAIT_WIDTH, EXPORT_PORTRAIT_HEIGHT);
       exportTransform = {
         scale: transform.scale,
         offsetX: transform.offsetX * (fitted.width / previewFrame.width),

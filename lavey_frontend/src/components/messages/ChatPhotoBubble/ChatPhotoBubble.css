@@ -1,0 +1,227 @@
+.chat-photo {
+  width: min(68vw, 220px);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.chat-photo--sending,
+button.chat-photo--sending {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0f0f12;
+  min-height: 140px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  display: block;
+  cursor: pointer;
+}
+
+.chat-photo__img--preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: blur(1px);
+}
+
+.chat-photo__sending-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+}
+
+.chat-photo__sending-overlay p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+
+.chat-photo__sending-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  animation: chat-photo-spin 0.75s linear infinite;
+}
+
+@keyframes chat-photo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.chat-photo--expired {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 112px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px dashed var(--border-subtle);
+  text-align: center;
+}
+
+.chat-photo--expired p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.chat-photo__expired-icon {
+  font-size: 22px;
+  opacity: 0.7;
+}
+
+.chat-photo__expired-hint {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chat-photo--own .chat-photo__shield {
+  background: none;
+}
+
+.chat-photo--own .chat-photo__watermark {
+  opacity: 0.06;
+}
+
+.chat-photo__tap {
+  width: 100%;
+  min-height: 112px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  background: linear-gradient(145deg, rgba(124, 58, 237, 0.18), rgba(124, 58, 237, 0.06));
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  transition: transform 0.15s ease;
+}
+
+.chat-photo__tap:active {
+  transform: scale(0.98);
+}
+
+.chat-photo__tap-icon {
+  font-size: 26px;
+}
+
+.chat-photo__tap-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.chat-photo__tap-hint {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-muted);
+  max-width: 160px;
+}
+
+.chat-photo__viewer {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0f0f12;
+  line-height: 0;
+  cursor: zoom-in;
+}
+
+.chat-photo__img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.chat-photo__shield {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    -24deg,
+    transparent,
+    transparent 42px,
+    rgba(255, 255, 255, 0.03) 42px,
+    rgba(255, 255, 255, 0.03) 84px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-photo__watermark {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  opacity: 0.22;
+  filter: blur(0.2px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.chat-photo__ttl {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.chat-bubble-wrap--photo .chat-bubble {
+  padding: 6px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.chat-bubble-wrap--photo.chat-bubble-wrap--me .chat-bubble,
+.chat-bubble-wrap--photo.chat-bubble-wrap--them .chat-bubble {
+  background: transparent;
+}
+
+.chat-bubble-wrap--photo .chat-bubble__meta {
+  padding: 4px 4px 0;
+}
+
+.chat-thread__scroll-end {
+  height: 1px;
+  flex-shrink: 0;
+}
+
+.chat-bubble-wrap--sending {
+  opacity: 0.95;
+}

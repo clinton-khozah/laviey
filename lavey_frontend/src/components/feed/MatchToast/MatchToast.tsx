@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { TouchEvent, WheelEvent } from 'react';
 import { AppOverlay } from '@/components/ui/AppOverlay';
+import { useMatchGreetings } from '@/hooks/match/useMatchGreetings';
 import type { MatchToastProps } from './MatchToast.types';
 import './MatchToast.css';
 
@@ -15,6 +16,7 @@ function MatchHeartIcon() {
 export function MatchToast({ match, onClose, onSendGreeting }: MatchToastProps) {
   const firstName = match?.name?.trim().split(' ')[0] ?? 'there';
   const dualAvatars = Boolean(match?.myAvatar?.trim());
+  const suggestions = useMatchGreetings(match?.name ?? '', Boolean(match));
   const subtitle =
     match?.subtitle ??
     (match ? (
@@ -22,13 +24,6 @@ export function MatchToast({ match, onClose, onSendGreeting }: MatchToastProps) 
         You and <strong>{match.name}</strong> liked each other
       </>
     ) : null);
-  const aiHiText = `Hi ${firstName} 💖`;
-  const suggestions = [
-    aiHiText,
-    `How's your day going, ${firstName}? 💕`,
-    `Your profile caught my eye 😍`,
-    `Want to chat sometime? 💗`,
-  ];
 
   const blockBackgroundScroll = (event: WheelEvent | TouchEvent) => {
     event.preventDefault();
@@ -113,17 +108,13 @@ export function MatchToast({ match, onClose, onSendGreeting }: MatchToastProps) 
                 </h3>
                 <p className="match-toast__text">{subtitle}</p>
 
-                <div className="match-toast__ai">
-                  <div className="match-toast__ai-label">
-                    <span className="match-toast__ai-dot" aria-hidden />
-                    AI message
-                  </div>
-                  <p className="match-toast__ai-prompt">Say hi to {firstName}</p>
-                  <p className="match-toast__ai-hint">Tap a greeting to send it in Chat</p>
+                <div className="match-toast__greetings">
+                  <p className="match-toast__greeting-prompt">Say hi to {firstName}</p>
+                  <p className="match-toast__greeting-hint">Tap a greeting to send it in Chat</p>
                   <div className="match-toast__suggestions">
-                    {suggestions.map((text) => (
+                    {suggestions.map((text, index) => (
                       <button
-                        key={text}
+                        key={`${index}-${text}`}
                         type="button"
                         className="match-toast__suggestion"
                         onClick={() => onSendGreeting(text)}

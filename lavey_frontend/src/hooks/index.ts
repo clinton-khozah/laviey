@@ -12,6 +12,7 @@ export { useFlameQuota } from './subscription/useFlameQuota';
 export { usePlatinumCatalog } from './subscription/usePlatinumCatalog';
 export { useAuth } from './auth/useAuth';
 export { useConversations } from './messages/useConversations';
+export { useNotificationInbox } from './messages/useNotificationInbox';
 export { useChatThread } from './messages/useChatThread';
 export { useMatchProfile, type ProfileLookup } from './messages/useMatchProfile';
 export { useOnlineDates } from './rooms/useOnlineDates';

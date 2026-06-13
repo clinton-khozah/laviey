@@ -71,7 +71,7 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 20px rgba(255, 77, 109, 0.15);
+  text-shadow: none;
 }
 
 [data-chat-typing-style='romantic'] .conversation-item__typing,
@@ -90,7 +90,7 @@
 [data-chat-typing-style='romantic'] .chat-thread__typing-dots span,
 :root:not([data-chat-typing-style]) .chat-thread__typing-dots span {
   background: linear-gradient(145deg, #ff4d6d, #ec4899);
-  box-shadow: 0 0 6px rgba(255, 77, 109, 0.45);
+  box-shadow: 0 0 5px rgba(255, 77, 109, 0.35);
 }
 
 [data-chat-typing-style='romantic'] .chat-thread__input,
@@ -109,26 +109,26 @@
 [data-theme='light']:not([data-chat-typing-style]) .chat-thread__input,
 :root:not([data-theme='night'])[data-chat-typing-style='romantic'] .chat-thread__input,
 :root:not([data-theme='night']):not([data-chat-typing-style]) .chat-thread__input {
-  color: #5c1a33;
-  background: #fff;
-  border: 1px solid rgba(255, 77, 109, 0.28);
+  color: #831843;
+  background: rgba(255, 77, 109, 0.06);
+  border: 1px solid rgba(255, 77, 109, 0.22);
   box-shadow:
-    0 1px 6px rgba(255, 77, 109, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 1px 6px rgba(255, 77, 109, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 [data-theme='light'][data-chat-typing-style='romantic'] .chat-thread__input::placeholder,
 [data-theme='light']:not([data-chat-typing-style]) .chat-thread__input::placeholder,
 :root:not([data-theme='night'])[data-chat-typing-style='romantic'] .chat-thread__input::placeholder,
 :root:not([data-theme='night']):not([data-chat-typing-style]) .chat-thread__input::placeholder {
-  color: rgba(157, 23, 77, 0.5);
+  color: rgba(157, 23, 77, 0.48);
 }
 
 [data-theme='night'][data-chat-typing-style='romantic'] .chat-thread__input,
 [data-theme='night']:not([data-chat-typing-style]) .chat-thread__input {
   color: #fce7f3;
-  background: rgba(28, 18, 32, 0.92);
-  border: 1px solid rgba(255, 77, 109, 0.32);
+  background: rgba(255, 77, 109, 0.08);
+  border: 1px solid rgba(255, 77, 109, 0.26);
   box-shadow:
     0 2px 12px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -141,17 +141,17 @@
 
 [data-chat-typing-style='romantic'] .chat-thread__composer:focus-within .chat-thread__input,
 :root:not([data-chat-typing-style]) .chat-thread__composer:focus-within .chat-thread__input {
-  border-color: rgba(255, 77, 109, 0.5);
+  border-color: rgba(255, 77, 109, 0.42);
   box-shadow:
-    0 1px 6px rgba(255, 77, 109, 0.14),
-    0 0 0 3px rgba(255, 77, 109, 0.12);
+    0 1px 6px rgba(255, 77, 109, 0.08),
+    0 0 0 3px rgba(255, 77, 109, 0.1);
 }
 
 [data-theme='night'][data-chat-typing-style='romantic'] .chat-thread__composer:focus-within .chat-thread__input,
 [data-theme='night']:not([data-chat-typing-style]) .chat-thread__composer:focus-within .chat-thread__input {
   box-shadow:
     0 2px 12px rgba(0, 0, 0, 0.35),
-    0 0 0 3px rgba(255, 77, 109, 0.15);
+    0 0 0 3px rgba(255, 77, 109, 0.14);
 }
 
 /* —— Classic —— */
@@ -291,8 +291,29 @@
 /* —— Your sent messages —— */
 [data-chat-typing-style='romantic'] .chat-bubble--me:not(.chat-bubble--sticker),
 :root:not([data-chat-typing-style]) .chat-bubble--me:not(.chat-bubble--sticker) {
-  background: linear-gradient(135deg, #ff4d6d 0%, #ec4899 48%, #a855f7 100%);
-  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.32);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 77, 109, 0.24) 0%,
+    rgba(236, 72, 153, 0.28) 52%,
+    rgba(168, 85, 247, 0.2) 100%
+  );
+  border: 1px solid rgba(255, 77, 109, 0.36);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 14px rgba(255, 77, 109, 0.12);
+}
+
+[data-chat-typing-style='classic'] .chat-bubble--me:not(.chat-bubble--sticker) {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 77, 109, 0.22) 0%,
+    rgba(236, 72, 153, 0.26) 52%,
+    rgba(168, 85, 247, 0.18) 100%
+  );
+  border: 1px solid rgba(255, 77, 109, 0.34);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 2px 14px rgba(255, 77, 109, 0.12);
 }
 
 [data-chat-typing-style='romantic'] .chat-bubble--me .chat-bubble__text,
@@ -301,11 +322,6 @@
   font-style: italic;
   letter-spacing: 0.02em;
   line-height: 1.5;
-}
-
-[data-chat-typing-style='classic'] .chat-bubble--me:not(.chat-bubble--sticker) {
-  background: var(--gradient-flame);
-  box-shadow: 0 4px 16px rgba(255, 77, 109, 0.25);
 }
 
 [data-chat-typing-style='classic'] .chat-bubble--me .chat-bubble__text {
