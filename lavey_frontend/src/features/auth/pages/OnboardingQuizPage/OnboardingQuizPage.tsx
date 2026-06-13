@@ -169,8 +169,6 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [isLocationMapReady, setIsLocationMapReady] = useState(false);
-
   const continueShake = useAnimationControls();
 
   const hintShake = useAnimationControls();
@@ -241,7 +239,10 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
   const progressPct = totalSteps > 0 ? Math.round(((stepIndex + 1) / totalSteps) * 100) : 0;
 
-  const hasLocationReady = isLocationMapReady;
+  const hasLocationReady =
+    locationStatus === 'watching' &&
+    Boolean(liveLocation?.suburb && liveLocation?.province && liveLocation?.country) &&
+    !isResolvingPlace;
 
 
 
@@ -828,8 +829,6 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
                   isResolvingPlace={isResolvingPlace}
 
                   onRequestLocation={requestLocation}
-
-                  onMapReadyChange={setIsLocationMapReady}
 
                 />
 

@@ -1,6 +1,3 @@
-import { useEffect } from 'react';
-
-import { LocationProvinceMap } from '@/components/location/LocationProvinceMap';
 import type { UserLocationSnapshot } from '@/types/domain/onboardingQuiz.types';
 
 import type { LocationRequestStatus } from '@/hooks/geolocation/useLiveUserLocation';
@@ -13,7 +10,6 @@ export interface OnboardingLocationStepProps {
   error: string | null;
   isResolvingPlace: boolean;
   onRequestLocation: () => void;
-  onMapReadyChange?: (ready: boolean) => void;
 }
 
 function formatCoords(latitude: number, longitude: number): string {
@@ -26,48 +22,56 @@ export function OnboardingLocationStep({
   error,
   isResolvingPlace,
   onRequestLocation,
-  onMapReadyChange,
 }: OnboardingLocationStepProps) {
-  useEffect(() => {
-    if (status === 'idle') {
-      onRequestLocation();
-    }
-  }, [status, onRequestLocation]);
-
-  const hasCoords = Boolean(
-    location && Number.isFinite(location.latitude) && Number.isFinite(location.longitude),
-  );
-  const hasPlace = Boolean(location?.suburb && location?.province && location?.country);
-  const mapReady = hasCoords && hasPlace && !isResolvingPlace;
-  const isPending = status === 'requesting' || status === 'idle';
+  const needsPermissionPrompt = status === 'idle';
+  const isPending = status === 'requesting';
   const isWatching = status === 'watching';
-
-  useEffect(() => {
-    onMapReadyChange?.(mapReady);
-  }, [mapReady, onMapReadyChange]);
-
-  useEffect(() => {
-    return () => onMapReadyChange?.(false);
-  }, [onMapReadyChange]);
 
   return (
     <section className="onboarding-location">
       <h1 className="onboarding-quiz__title">Share your location</h1>
+      <p className="onboarding-quiz__subtitle">
+        We use this to find people near you — suburb level only, never your exact address on your
+        profile.
+      </p>
 
       <div className="onboarding-location__panel">
-        {isPending && (
-          <div className="onboarding-location__map-slot">
-            <div className="onboarding-location__map-placeholder" role="status">
-              <span className="onboarding-location__map-spinner" aria-hidden />
-              <span>Waiting for location permission…</span>
-            </div>
+        {needsPermissionPrompt && (
+          <div
+            className="onboarding-location__prompt"
+            role="dialog"
+            aria-labelledby="onboarding-location-prompt-title"
+          >
+            <h2 id="onboarding-location-prompt-title" className="onboarding-location__prompt-title">
+              Allow location access
+            </h2>
+            <p className="onboarding-location__prompt-copy">
+              Tap below and your browser will ask to share your location. Choose{' '}
+              <strong>Allow</strong> so we can show you nearby matches.
+            </p>
+            <button
+              type="button"
+              className="onboarding-location__prompt-btn"
+              onClick={onRequestLocation}
+            >
+              Allow location
+            </button>
           </div>
+        )}
+
+        {isPending && (
+          <p className="onboarding-location__status" role="status">
+            Waiting for location permission…
+          </p>
         )}
 
         {status === 'denied' && (
           <>
             <p className="onboarding-location__status onboarding-location__status--error" role="alert">
               {error ?? 'Location access was blocked.'}
+            </p>
+            <p className="onboarding-location__hint">
+              Enable location for this site in your browser settings, then try again.
             </p>
             <button type="button" className="onboarding-location__action" onClick={onRequestLocation}>
               Try again
@@ -86,19 +90,8 @@ export function OnboardingLocationStep({
           </>
         )}
 
-        {isWatching && location && hasCoords && (
+        {isWatching && location && (
           <>
-            <div className="onboarding-location__map-slot">
-              <LocationProvinceMap
-                latitude={location.latitude}
-                longitude={location.longitude}
-                country={location.country || 'South Africa'}
-                province={location.province || ''}
-                suburb={location.suburb || undefined}
-                isLoading={!mapReady}
-              />
-            </div>
-
             <dl className="onboarding-location__details">
               <div className="onboarding-location__row">
                 <dt>Suburb</dt>
@@ -123,6 +116,10 @@ export function OnboardingLocationStep({
                 Pinpointing your area…
               </p>
             )}
+
+            <button type="button" className="onboarding-location__refresh" onClick={onRequestLocation}>
+              Refresh location
+            </button>
           </>
         )}
       </div>

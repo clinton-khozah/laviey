@@ -14,45 +14,54 @@
   border: 1px solid var(--border-subtle);
 }
 
-.onboarding-location__panel .location-province-map {
-  width: 100%;
-}
-
-.onboarding-location__map-slot {
-  width: 100%;
-}
-
-.onboarding-location__map-placeholder {
+.onboarding-location__prompt {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  min-height: 200px;
+  gap: 12px;
+  padding: 18px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(59, 89, 216, 0.14);
-  background: linear-gradient(180deg, #f7f9ff 0%, #eef2ff 100%);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
   text-align: center;
+  background: linear-gradient(
+    165deg,
+    rgba(124, 58, 237, 0.08) 0%,
+    rgba(255, 77, 109, 0.06) 100%
+  );
+  border: 1px solid rgba(124, 58, 237, 0.18);
 }
 
-.onboarding-location__map-spinner {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid rgba(59, 89, 216, 0.18);
-  border-top-color: #3b59d8;
-  animation: onboarding-location-spin 0.8s linear infinite;
+.onboarding-location__prompt-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
 }
 
-@keyframes onboarding-location-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.onboarding-location__prompt-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 28rem;
+}
+
+.onboarding-location__prompt-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--gradient-flame);
+  box-shadow: 0 6px 18px rgba(255, 77, 109, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.onboarding-location__prompt-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(255, 77, 109, 0.34);
 }
 
 .onboarding-location__status {
@@ -108,11 +117,8 @@
   text-align: center;
 }
 
-.onboarding-location__hint--ok {
-  color: var(--accent-mint);
-}
-
-.onboarding-location__action {
+.onboarding-location__action,
+.onboarding-location__refresh {
   padding: 11px 14px;
   border-radius: 11px;
   font-size: 13px;
@@ -123,7 +129,8 @@
   transition: border-color 0.2s, background 0.2s;
 }
 
-.onboarding-location__action:hover {
+.onboarding-location__action:hover,
+.onboarding-location__refresh:hover {
   border-color: rgba(124, 58, 237, 0.35);
   background: rgba(124, 58, 237, 0.06);
 }
