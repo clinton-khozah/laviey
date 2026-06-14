@@ -18,7 +18,15 @@ export type MeetingStringKey =
   | 'captionLanguage'
   | 'autoTranslatedFrom'
   | 'doubleDate'
-  | 'oneOnOne';
+  | 'oneOnOne'
+  | 'liveTranscript'
+  | 'liveTranscriptLead'
+  | 'listeningForSpeech'
+  | 'captionsPaused'
+  | 'transcribing'
+  | 'transcriptEmpty'
+  | 'clearTranscript'
+  | 'openTranscript';
 
 const STRINGS: Record<MeetingStringKey, Record<MeetingLanguageCode, string>> = {
   live: {
@@ -200,6 +208,86 @@ const STRINGS: Record<MeetingStringKey, Record<MeetingLanguageCode, string>> = {
     ja: '1対1',
     ko: '1:1',
     zh: '一对一',
+  },
+  liveTranscript: {
+    en: 'Live transcript',
+    es: 'Transcripción en vivo',
+    fr: 'Transcription en direct',
+    de: 'Live-Transkript',
+    pt: 'Transcrição ao vivo',
+    ja: 'ライブ文字起こし',
+    ko: '실시간 자막',
+    zh: '实时字幕',
+  },
+  liveTranscriptLead: {
+    en: 'We listen to the meetup audio and write captions in your language — like YouTube live.',
+    es: 'Escuchamos el audio del meetup y escribimos subtítulos en tu idioma, como en YouTube.',
+    fr: 'Nous écoutons l’audio du meetup et écrivons des sous-titres dans votre langue, comme sur YouTube.',
+    de: 'Wir hören das Meetup-Audio und schreiben Untertitel in deiner Sprache — wie bei YouTube Live.',
+    pt: 'Ouvimos o áudio do meetup e escrevemos legendas no seu idioma — como no YouTube ao vivo.',
+    ja: 'ミートアップの音声を聞き取り、YouTubeライブのようにあなたの言語で字幕を表示します。',
+    ko: '밋업 오디오를 듣고 YouTube 라이브처럼 당신의 언어로 자막을 표시합니다.',
+    zh: '我们聆听会议音频，并像 YouTube 直播一样用您的语言显示字幕。',
+  },
+  listeningForSpeech: {
+    en: 'Listening…',
+    es: 'Escuchando…',
+    fr: 'Écoute…',
+    de: 'Hört zu…',
+    pt: 'Ouvindo…',
+    ja: '聞き取り中…',
+    ko: '듣는 중…',
+    zh: '正在聆听…',
+  },
+  captionsPaused: {
+    en: 'Captions paused',
+    es: 'Subtítulos en pausa',
+    fr: 'Sous-titres en pause',
+    de: 'Untertitel pausiert',
+    pt: 'Legendas pausadas',
+    ja: '字幕一時停止',
+    ko: '자막 일시정지',
+    zh: '字幕已暂停',
+  },
+  transcribing: {
+    en: 'Transcribing',
+    es: 'Transcribiendo',
+    fr: 'Transcription',
+    de: 'Transkribiert',
+    pt: 'Transcrevendo',
+    ja: '文字起こし中',
+    ko: '변환 중',
+    zh: '转写中',
+  },
+  transcriptEmpty: {
+    en: 'Start talking — captions will appear here as people speak.',
+    es: 'Empieza a hablar: los subtítulos aparecerán aquí.',
+    fr: 'Parlez — les sous-titres apparaîtront ici.',
+    de: 'Sprich — Untertitel erscheinen hier.',
+    pt: 'Fale — as legendas aparecerão aqui.',
+    ja: '話し始めると、ここに字幕が表示されます。',
+    ko: '말하기 시작하면 여기에 자막이 표시됩니다.',
+    zh: '开始说话后，字幕会显示在这里。',
+  },
+  clearTranscript: {
+    en: 'Clear',
+    es: 'Borrar',
+    fr: 'Effacer',
+    de: 'Löschen',
+    pt: 'Limpar',
+    ja: 'クリア',
+    ko: '지우기',
+    zh: '清除',
+  },
+  openTranscript: {
+    en: 'Open live transcript',
+    es: 'Abrir transcripción en vivo',
+    fr: 'Ouvrir la transcription',
+    de: 'Live-Transkript öffnen',
+    pt: 'Abrir transcrição ao vivo',
+    ja: 'ライブ文字起こしを開く',
+    ko: '실시간 자막 열기',
+    zh: '打开实时字幕',
   },
 };
 

@@ -16,6 +16,15 @@ function CcIcon() {
   );
 }
 
+function TranscriptIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <path d="M14 2v6h6M8 13h8M8 17h6" />
+    </svg>
+  );
+}
+
 function GlobeIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -26,11 +35,14 @@ function GlobeIcon() {
 }
 
 export function MeetingCaptions({
-  line,
   displayText,
+  showTranslationNote,
+  sourceLanguage,
   language,
   captionsEnabled,
+  transcriptOpen,
   onToggleCaptions,
+  onOpenTranscript,
   onLanguageChange,
   t,
 }: MeetingCaptionsProps) {
@@ -47,6 +59,15 @@ export function MeetingCaptions({
           aria-pressed={captionsEnabled}
         >
           <CcIcon />
+        </button>
+        <button
+          type="button"
+          className={`meeting-captions__icon-btn ${transcriptOpen ? 'meeting-captions__icon-btn--on' : ''}`}
+          onClick={onOpenTranscript}
+          aria-label={t('openTranscript')}
+          aria-pressed={transcriptOpen}
+        >
+          <TranscriptIcon />
         </button>
         <div className="meeting-captions__lang-wrap">
           <button
@@ -87,12 +108,12 @@ export function MeetingCaptions({
         </div>
       </div>
 
-      {captionsEnabled && line && displayText && (
+      {captionsEnabled && displayText && (
         <div className="meeting-captions__display" role="status" aria-live="polite">
           <p className="meeting-captions__text">{displayText}</p>
-          {line.sourceLang !== language && (
+          {showTranslationNote && sourceLanguage && (
             <p className="meeting-captions__source">
-              {t('autoTranslatedFrom', { lang: sourceLanguageLabel(line.sourceLang) })}
+              {t('autoTranslatedFrom', { lang: sourceLanguageLabel(sourceLanguage) })}
             </p>
           )}
         </div>

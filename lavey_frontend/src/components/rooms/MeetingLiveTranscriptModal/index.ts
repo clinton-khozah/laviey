@@ -1,0 +1,1 @@
+export { MeetingLiveTranscriptModal } from './MeetingLiveTranscriptModal';

@@ -1,41 +1,31 @@
 .meeting-reaction-overlay {
   position: absolute;
-  left: 50%;
-  bottom: 28%;
-  transform: translateX(-50%);
-  width: min(280px, 70%);
-  height: 160px;
+  right: 14px;
+  bottom: calc(var(--safe-bottom) + 84px);
+  top: calc(var(--safe-top) + 72px);
+  width: 84px;
   pointer-events: none;
-  z-index: 4;
+  z-index: 6;
   overflow: visible;
 }
 
 .meeting-reaction-overlay__burst {
   position: absolute;
-  left: 50%;
+  right: 0;
   bottom: 0;
-  transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  line-height: 1;
+  will-change: transform, opacity;
 }
 
 .meeting-reaction-overlay__burst--local {
-  filter: drop-shadow(0 4px 12px rgba(255, 77, 109, 0.45));
+  filter: drop-shadow(0 6px 16px rgba(255, 77, 109, 0.55));
 }
 
 .meeting-reaction-overlay__emoji {
-  font-size: 36px;
+  display: block;
   line-height: 1;
-}
-
-.meeting-reaction-overlay__name {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 99px;
-  background: rgba(0, 0, 0, 0.55);
-  color: white;
-  white-space: nowrap;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }

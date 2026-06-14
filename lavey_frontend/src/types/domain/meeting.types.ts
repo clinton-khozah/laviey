@@ -37,3 +37,19 @@ export interface MeetingChatMessage {
   likeUserIds?: string[];
   isLocal?: boolean;
 }
+
+export interface MeetingTranscriptEntry {
+  id: string;
+  originalText: string;
+  translatedText: string;
+  detectedLanguage: string;
+  createdAt: string;
+  source: 'ai' | 'fallback';
+}
+
+export interface MeetingTranscriptResult {
+  originalText: string;
+  translatedText: string;
+  detectedLanguage: string;
+  source: 'ai' | 'fallback';
+}

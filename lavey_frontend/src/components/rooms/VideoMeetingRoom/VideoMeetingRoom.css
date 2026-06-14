@@ -274,13 +274,19 @@
 
 .video-meeting__self {
   position: absolute;
-  right: 12px;
-  bottom: calc(var(--safe-bottom) + 140px);
   z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  width: 108px;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.video-meeting__self--dragging {
+  cursor: grabbing;
 }
 
 .video-meeting__self-frame {
@@ -441,8 +447,14 @@
 .video-meeting__tile--waiting .video-meeting__tile-placeholder {
   flex-direction: column;
   gap: 12px;
-  color: var(--text-secondary);
   font-size: 13px;
+}
+
+.video-meeting__tile-waiting-text {
+  margin: 0;
+  font-weight: 700;
+  color: #fda4af;
+  text-shadow: 0 0 18px rgba(255, 77, 109, 0.35);
 }
 
 .video-meeting__tile-connecting {

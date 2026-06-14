@@ -19,7 +19,7 @@ interface UseMeetingReactionsOptions {
   localDisplayName: string;
 }
 
-const BURST_LIFETIME_MS = 2600;
+const BURST_LIFETIME_MS = 3000;
 
 export function useMeetingReactions({
   meetupId,

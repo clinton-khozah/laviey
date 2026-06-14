@@ -42,10 +42,11 @@ interface PeerRecord {
   pendingCandidates: RTCIceCandidateInit[];
 }
 
-function parsePresenceMeta(raw: unknown): MeetupPresenceMeta | null {
+function parsePresenceMeta(raw: unknown, presenceKey?: string): MeetupPresenceMeta | null {
   if (!raw || typeof raw !== 'object') return null;
   const obj = raw as Record<string, unknown>;
-  const odUserId = typeof obj.odUserId === 'string' ? obj.odUserId.trim() : '';
+  const odUserId =
+    (typeof obj.odUserId === 'string' ? obj.odUserId.trim() : '') || (presenceKey?.trim() ?? '');
   if (!odUserId) return null;
   return {
     odUserId,
@@ -73,10 +74,25 @@ function peerToParticipant(record: PeerRecord): MeetingParticipant {
     avatarUrl: record.meta.avatarUrl,
     isHost: record.meta.isHost,
     stream: record.stream,
-    isConnecting: !record.stream,
+    isConnecting: !record.stream?.getTracks().some((track) => track.readyState === 'live'),
     isVideoOff: isRemoteVideoOff(record.stream),
     isMuted: isRemoteMuted(record.stream),
   };
+}
+
+function attachRemoteTrack(record: PeerRecord, track: MediaStreamTrack) {
+  if (!record.stream) {
+    record.stream = new MediaStream();
+  }
+  if (!record.stream.getTracks().some((existing) => existing.id === track.id)) {
+    record.stream.addTrack(track);
+  }
+}
+
+function ensureReceiveTransceivers(pc: RTCPeerConnection) {
+  if (pc.getTransceivers().length > 0) return;
+  pc.addTransceiver('audio', { direction: 'recvonly' });
+  pc.addTransceiver('video', { direction: 'recvonly' });
 }
 
 export function useMeetupWebRTC({
@@ -112,19 +128,36 @@ export function useMeetupWebRTC({
     });
   }, []);
 
-  const attachLocalTracks = useCallback((pc: RTCPeerConnection) => {
-    const stream = localStreamRef.current;
-    if (!stream) return false;
+  const lookupPresenceMeta = useCallback((odUserId: string): MeetupPresenceMeta | null => {
+    const channel = channelRef.current;
+    if (!channel) return null;
 
-    let attached = false;
-    for (const track of stream.getTracks()) {
-      const senders = pc.getSenders();
-      if (!senders.some((sender) => sender.track?.kind === track.kind)) {
-        pc.addTrack(track, stream);
-        attached = true;
+    const state = channel.presenceState<MeetupPresenceMeta>();
+    for (const [key, presences] of Object.entries(state)) {
+      for (const raw of presences) {
+        const meta = parsePresenceMeta(raw, key);
+        if (meta?.odUserId === odUserId) return meta;
       }
     }
-    return attached;
+    return null;
+  }, []);
+
+  const attachLocalTracks = useCallback((pc: RTCPeerConnection) => {
+    const stream = localStreamRef.current;
+    if (stream) {
+      let attached = false;
+      for (const track of stream.getTracks()) {
+        const senders = pc.getSenders();
+        if (!senders.some((sender) => sender.track?.kind === track.kind)) {
+          pc.addTrack(track, stream);
+          attached = true;
+        }
+      }
+      return attached;
+    }
+
+    ensureReceiveTransceivers(pc);
+    return false;
   }, []);
 
   const flushPendingCandidates = useCallback(async (record: PeerRecord) => {
@@ -140,6 +173,25 @@ export function useMeetupWebRTC({
     }
   }, []);
 
+  const renegotiatePeer = useCallback(
+    async (peerId: string, record: PeerRecord) => {
+      if (record.pc.signalingState !== 'stable') return;
+      try {
+        const offer = await record.pc.createOffer();
+        await record.pc.setLocalDescription(offer);
+        sendSignal({
+          type: 'offer',
+          from: localUserId,
+          to: peerId,
+          sdp: offer,
+        });
+      } catch {
+        /* ignore renegotiation races */
+      }
+    },
+    [localUserId, sendSignal],
+  );
+
   const createPeerConnection = useCallback(
     (meta: MeetupPresenceMeta): PeerRecord => {
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -148,8 +200,11 @@ export function useMeetupWebRTC({
 
       pc.ontrack = (event) => {
         const [remoteStream] = event.streams;
-        if (!remoteStream) return;
-        record.stream = remoteStream;
+        if (remoteStream) {
+          record.stream = remoteStream;
+        } else if (event.track) {
+          attachRemoteTrack(record, event.track);
+        }
         syncParticipants();
       };
 
@@ -179,7 +234,6 @@ export function useMeetupWebRTC({
 
   const createOffer = useCallback(
     async (meta: MeetupPresenceMeta) => {
-      if (!localStreamRef.current) return;
       if (peersRef.current.has(meta.odUserId)) return;
 
       const record = createPeerConnection(meta);
@@ -203,35 +257,46 @@ export function useMeetupWebRTC({
       if (payload.type === 'offer' && payload.sdp) {
         let record = peersRef.current.get(payload.from);
         if (!record) {
-          record = createPeerConnection({
-            odUserId: payload.from,
-            name: 'Guest',
-            avatarUrl: '',
-            isHost: false,
-          });
+          const presenceMeta = lookupPresenceMeta(payload.from);
+          record = createPeerConnection(
+            presenceMeta ?? {
+              odUserId: payload.from,
+              name: 'Guest',
+              avatarUrl: '',
+              isHost: false,
+            },
+          );
         }
 
-        await record.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-        attachLocalTracks(record.pc);
-        const answer = await record.pc.createAnswer();
-        await record.pc.setLocalDescription(answer);
-        sendSignal({
-          type: 'answer',
-          from: localUserId,
-          to: payload.from,
-          sdp: answer,
-        });
-        await flushPendingCandidates(record);
-        syncParticipants();
+        try {
+          await record.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+          attachLocalTracks(record.pc);
+          const answer = await record.pc.createAnswer();
+          await record.pc.setLocalDescription(answer);
+          sendSignal({
+            type: 'answer',
+            from: localUserId,
+            to: payload.from,
+            sdp: answer,
+          });
+          await flushPendingCandidates(record);
+          syncParticipants();
+        } catch {
+          /* ignore glare / stale SDP */
+        }
         return;
       }
 
       if (payload.type === 'answer' && payload.sdp) {
         const record = peersRef.current.get(payload.from);
         if (!record) return;
-        await record.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-        await flushPendingCandidates(record);
-        syncParticipants();
+        try {
+          await record.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+          await flushPendingCandidates(record);
+          syncParticipants();
+        } catch {
+          /* ignore stale SDP */
+        }
         return;
       }
 
@@ -254,6 +319,7 @@ export function useMeetupWebRTC({
       createPeerConnection,
       flushPendingCandidates,
       localUserId,
+      lookupPresenceMeta,
       sendSignal,
       syncParticipants,
     ],
@@ -261,27 +327,45 @@ export function useMeetupWebRTC({
 
   const connectToPeer = useCallback(
     (meta: MeetupPresenceMeta) => {
-      if (!localStreamRef.current) return;
       if (!meta.odUserId || meta.odUserId === localUserId) return;
-      if (peersRef.current.has(meta.odUserId)) return;
+
+      const existing = peersRef.current.get(meta.odUserId);
+      if (existing) {
+        existing.meta = { ...existing.meta, ...meta };
+        syncParticipants();
+        return;
+      }
+
       if (localUserId < meta.odUserId) {
         void createOffer(meta);
       }
     },
-    [createOffer, localUserId],
+    [createOffer, localUserId, syncParticipants],
   );
 
   const syncPresencePeers = useCallback(
     (channel: RealtimeChannel) => {
       const state = channel.presenceState<MeetupPresenceMeta>();
-      for (const presences of Object.values(state)) {
+      for (const [key, presences] of Object.entries(state)) {
         for (const raw of presences) {
-          const meta = parsePresenceMeta(raw);
+          const meta = parsePresenceMeta(raw, key);
           if (meta) connectToPeer(meta);
         }
       }
     },
     [connectToPeer],
+  );
+
+  const removePeer = useCallback(
+    (meta: MeetupPresenceMeta | null) => {
+      if (!meta?.odUserId) return;
+      const record = peersRef.current.get(meta.odUserId);
+      if (!record) return;
+      record.pc.close();
+      peersRef.current.delete(meta.odUserId);
+      syncParticipants();
+    },
+    [syncParticipants],
   );
 
   useEffect(() => {
@@ -311,10 +395,15 @@ export function useMeetupWebRTC({
       .on('presence', { event: 'sync' }, () => {
         syncPresencePeers(channel);
       })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         for (const raw of newPresences) {
-          const meta = parsePresenceMeta(raw);
+          const meta = parsePresenceMeta(raw, key);
           if (meta) connectToPeer(meta);
+        }
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        for (const raw of leftPresences) {
+          removePeer(parsePresenceMeta(raw, key));
         }
       })
       .subscribe(async (subscribeStatus) => {
@@ -352,34 +441,32 @@ export function useMeetupWebRTC({
     localDisplayName,
     localUserId,
     meetupId,
+    removePeer,
     syncPresencePeers,
   ]);
 
   useEffect(() => {
-    if (!localStream) return;
-
     const channel = channelRef.current;
     if (channel) {
       syncPresencePeers(channel);
     }
 
     for (const [peerId, record] of peersRef.current) {
+      const hadOutgoingTracks = record.pc.getSenders().some((sender) => sender.track);
       const addedTracks = attachLocalTracks(record.pc);
-      if (!addedTracks || record.pc.signalingState !== 'stable') continue;
-      if (localUserId >= peerId) continue;
 
-      void (async () => {
-        const offer = await record.pc.createOffer();
-        await record.pc.setLocalDescription(offer);
-        sendSignal({
-          type: 'offer',
-          from: localUserId,
-          to: peerId,
-          sdp: offer,
-        });
-      })();
+      if (!addedTracks || record.pc.signalingState !== 'stable') continue;
+
+      if (!hadOutgoingTracks) {
+        void renegotiatePeer(peerId, record);
+        continue;
+      }
+
+      if (localUserId < peerId) {
+        void renegotiatePeer(peerId, record);
+      }
     }
-  }, [attachLocalTracks, localStream, localUserId, sendSignal, syncPresencePeers]);
+  }, [attachLocalTracks, localStream, localUserId, renegotiatePeer, syncPresencePeers]);
 
   return { participants, status };
-}
+};

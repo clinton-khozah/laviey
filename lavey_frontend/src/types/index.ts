@@ -64,6 +64,8 @@ export type {
   MeetingChatMessage,
   MeetingJoinResult,
   ActiveMeetingSession,
+  MeetingTranscriptEntry,
+  MeetingTranscriptResult,
 } from './domain/meeting.types';
 export type { SendGiftRequest, SendGiftResponse } from './domain/gift.types';
 export type { UserProfile, UserProfileStats, ProfileInterestItem } from './domain/userProfile.types';

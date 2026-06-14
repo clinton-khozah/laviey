@@ -22,6 +22,7 @@ export { useMeetingChat } from './rooms/useMeetingChat';
 export { useLocalMedia } from './rooms/useLocalMedia';
 export { useMeetingLanguage } from './rooms/useMeetingLanguage';
 export { useMeetingCaptions } from './rooms/useMeetingCaptions';
+export { useMeetingLiveTranscript } from './rooms/useMeetingLiveTranscript';
 export { useMeetingGift } from './gifts/useMeetingGift';
 export { useVibeRooms } from './rooms/useVibeRooms';
 export { useUserProfile } from './profile/useUserProfile';

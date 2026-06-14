@@ -112,4 +112,7 @@ export const API_ENDPOINTS = {
     terms: '/legal/terms',
     guidelines: '/legal/guidelines',
   },
+  meetings: {
+    liveTranscript: '/meetings/live-transcript',
+  },
 } as const;

@@ -1,15 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppOverlay } from '@/components/ui/AppOverlay';
 import { MeetingChatPanel } from '@/components/rooms/MeetingChatPanel';
 import { MeetingGiftRecipientSheet } from '@/components/rooms/MeetingGiftRecipientSheet';
+import { MeetingLiveTranscriptModal } from '@/components/rooms/MeetingLiveTranscriptModal';
 import { MeetingReactionOverlay } from '@/components/rooms/MeetingReactionOverlay';
+import { MeetingSelfVideo } from '@/components/rooms/MeetingSelfVideo';
 import { RemoteParticipantVideo } from '@/components/rooms/RemoteParticipantVideo';
 import { MeetingCaptions } from '@/components/rooms/MeetingCaptions';
 import { MeetingGiftBursts } from '@/components/rooms/MeetingGiftPanel/MeetingGiftBursts';
 import { GiftIcon, MeetingGiftPanel } from '@/components/rooms/MeetingGiftPanel';
 import { MEETING_REACTION_LABEL } from '@/constants/meeting/meetingReactions';
 import { meetingString } from '@/constants/meeting/meetingStrings';
-import { useMeetingCaptions, useMeetingChat, useMeetingGift, useMeetingLanguage, useMeetingReactions } from '@/hooks';
+import type { MeetingLanguageCode } from '@/constants/meeting/meetingLanguages';
+import {
+  useMeetingChat,
+  useMeetingGift,
+  useMeetingLanguage,
+  useMeetingLiveTranscript,
+  useMeetingReactions,
+} from '@/hooks';
 import { isDoubleDateMeetup } from '@/utils/meeting/isDoubleDateMeetup';
 import { hasMeetupCover, resolveMeetupCover } from '@/utils/meeting/meetupCover';
 import type { MeetingParticipant } from '@/types';
@@ -38,7 +47,41 @@ export function VideoMeetingRoom({
     stopMedia,
   } = localMedia;
 
-  const { line, displayText, captionsEnabled, toggleCaptions } = useMeetingCaptions(true, language);
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const meetingRef = useRef<HTMLDivElement>(null);
+
+  const {
+    entries: transcriptEntries,
+    latestEntry,
+    latestDisplayText,
+    isListening,
+    isProcessing,
+    error: transcriptError,
+    clearEntries,
+    formatTime,
+  } = useMeetingLiveTranscript({
+    enabled: captionsEnabled,
+    targetLanguage: language,
+    localStream: localMedia.localStream,
+    participants,
+  });
+
+  const toggleCaptions = useCallback(() => {
+    setCaptionsEnabled((value) => !value);
+  }, []);
+
+  const openTranscript = useCallback(() => {
+    setTranscriptOpen(true);
+    setCaptionsEnabled(true);
+  }, []);
+
+  const showTranslationNote = Boolean(
+    latestEntry &&
+      latestEntry.detectedLanguage !== 'unknown' &&
+      latestEntry.detectedLanguage !== language,
+  );
+
   const { bursts: reactionBursts, sendReaction } = useMeetingReactions({
     meetupId: date.id,
     localUserId,
@@ -137,14 +180,37 @@ export function VideoMeetingRoom({
 
   return (
     <AppOverlay>
-      <div className="video-meeting">
+      <div className="video-meeting" ref={meetingRef}>
+        <MeetingReactionOverlay bursts={reactionBursts} />
+
         <MeetingCaptions
-          line={line}
-          displayText={displayText}
+          displayText={latestDisplayText}
+          showTranslationNote={showTranslationNote}
+          sourceLanguage={
+            latestEntry?.detectedLanguage && latestEntry.detectedLanguage !== 'unknown'
+              ? (latestEntry.detectedLanguage as MeetingLanguageCode)
+              : undefined
+          }
           language={language}
           captionsEnabled={captionsEnabled}
+          transcriptOpen={transcriptOpen}
           onToggleCaptions={toggleCaptions}
+          onOpenTranscript={openTranscript}
           onLanguageChange={setLanguage}
+          t={t}
+        />
+
+        <MeetingLiveTranscriptModal
+          open={transcriptOpen}
+          entries={transcriptEntries}
+          targetLanguage={language}
+          isListening={isListening}
+          isProcessing={isProcessing}
+          error={transcriptError}
+          onClose={() => setTranscriptOpen(false)}
+          onLanguageChange={setLanguage}
+          onClear={clearEntries}
+          formatTime={formatTime}
           t={t}
         />
 
@@ -181,8 +247,6 @@ export function VideoMeetingRoom({
               : undefined
           }
         >
-          <MeetingReactionOverlay bursts={reactionBursts} />
-
           {participants.length === 1 && !isDouble && (
             <div className="video-meeting__love-badge" aria-hidden>
               <span className="video-meeting__love-icon">
@@ -199,7 +263,7 @@ export function VideoMeetingRoom({
               <article className="video-meeting__tile video-meeting__tile--waiting">
                 <div className="video-meeting__tile-placeholder">
                   <span className="video-meeting__spinner" aria-hidden />
-                  <p>Waiting for someone to join…</p>
+                  <p className="video-meeting__tile-waiting-text">Waiting for someone to join…</p>
                 </div>
               </article>
             )}
@@ -229,35 +293,15 @@ export function VideoMeetingRoom({
           </div>
         </div>
 
-        <div className="video-meeting__self">
-          <div className="video-meeting__self-frame">
-            {mediaLoading && (
-              <div className="video-meeting__self-loading">
-                <span className="video-meeting__spinner" aria-hidden />
-              </div>
-            )}
-            {mediaError && !mediaLoading && (
-              <div className="video-meeting__self-error">
-                <p>{mediaError}</p>
-              </div>
-            )}
-            {!mediaError && (
-              <video
-                ref={videoRef}
-                className={`video-meeting__self-video ${!isVideoEnabled ? 'video-meeting__self-video--off' : ''}`}
-                autoPlay
-                playsInline
-                muted
-              />
-            )}
-            {!isVideoEnabled && !mediaLoading && !mediaError && (
-              <div className="video-meeting__self-off">
-                <span>{localDisplayName.charAt(0).toUpperCase()}</span>
-              </div>
-            )}
-          </div>
-          <span className="video-meeting__self-label">{t('you')}</span>
-        </div>
+        <MeetingSelfVideo
+          boundsRef={meetingRef}
+          videoRef={videoRef}
+          displayName={localDisplayName}
+          isVideoEnabled={isVideoEnabled}
+          mediaLoading={mediaLoading}
+          mediaError={mediaError}
+          youLabel={t('you')}
+        />
 
         <MeetingChatPanel
           open={chatOpen}

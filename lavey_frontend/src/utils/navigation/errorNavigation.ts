@@ -71,7 +71,11 @@ export function maybeNavigateToErrorPage(error: ApiError): void {
     error.code === 'ADMIN_DATA_UNAVAILABLE' ||
     error.code === 'ADMIN_UNAUTHORIZED' ||
     error.code === 'SESSION_EXPIRED' ||
-    error.code === 'UNAUTHORIZED'
+    error.code === 'UNAUTHORIZED' ||
+    error.code === 'MEETING_TRANSCRIPT_FAILED' ||
+    error.code === 'MEETING_TRANSCRIPT_FORMAT' ||
+    error.code === 'MEETING_TRANSCRIPT_EMPTY' ||
+    error.code === 'MEETING_TRANSLATE_FAILED'
   ) {
     return;
   }
