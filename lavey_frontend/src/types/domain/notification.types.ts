@@ -1,4 +1,12 @@
-export type NotificationKind = 'like' | 'crush' | 'post_like' | 'verified' | 'match' | 'system';
+export type NotificationKind =
+  | 'like'
+  | 'crush'
+  | 'post_like'
+  | 'verified'
+  | 'match'
+  | 'system'
+  | 'meetup_like'
+  | 'meetup_join';
 
 export interface NotificationEvent {
   id: string;
@@ -13,6 +21,7 @@ export interface NotificationEvent {
   read: boolean;
   actionable: boolean;
   postId?: string | null;
+  meetupId?: string | null;
   expiresAt?: string;
 }
 
@@ -32,6 +41,10 @@ export function notificationKindLabel(kind: NotificationKind): string {
       return 'Identity verified';
     case 'match':
       return 'New match';
+    case 'meetup_like':
+      return 'Liked your meetup';
+    case 'meetup_join':
+      return 'Joined your meetup';
     default:
       return 'Update';
   }

@@ -1,6 +1,8 @@
 import { VideoMeetingRoom } from '@/components/rooms/VideoMeetingRoom';
 import { useAuth, useLocalMedia, useMeetupWebRTC } from '@/hooks';
+import { meetupSocialService } from '@/services/rooms/meetupSocialService';
 import type { ActiveMeetingSession } from '@/types';
+import { useEffect } from 'react';
 
 interface ActiveMeetingContainerProps {
   session: ActiveMeetingSession;
@@ -20,6 +22,10 @@ export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContai
     isHost: Boolean(session.date.isHostedByYou),
     localStream: localMedia.localStream,
   });
+
+  useEffect(() => {
+    void meetupSocialService.reportLiveAttendance(session.date.id);
+  }, [session.date.id]);
 
   return (
     <VideoMeetingRoom

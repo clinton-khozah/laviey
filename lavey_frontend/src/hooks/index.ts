@@ -28,3 +28,4 @@ export { useVibeRooms } from './rooms/useVibeRooms';
 export { useUserProfile } from './profile/useUserProfile';
 export { useActiveAlgorithm } from './useActiveAlgorithm';
 export { useLiveUserLocation } from './geolocation/useLiveUserLocation';
+export { usePushNotifications } from './notifications/usePushNotifications';

@@ -76,6 +76,11 @@ export function NotificationThread({
   }, [onMarkRead]);
 
   const handleAction = (item: NotificationEvent) => {
+    if (item.kind === 'meetup_like' || item.kind === 'meetup_join') {
+      window.dispatchEvent(new CustomEvent('lavey:navigate', { detail: { nav: 'rooms' } }));
+      onBack();
+      return;
+    }
     if (!item.actorUserId) return;
     if (item.kind === 'match' || likedProfileIds.has(item.actorUserId)) {
       onChat(item.actorUserId);

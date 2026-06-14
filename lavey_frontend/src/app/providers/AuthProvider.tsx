@@ -14,6 +14,7 @@ import type { AuthSession, EmailSignInRequest, EmailSignUpRequest, OnboardingQui
 import { clearUserProfileCache } from '@/hooks/profile/useUserProfile';
 import { saveOnboardingQuizAnswers, loadOnboardingQuizAnswers } from '@/utils/onboarding/onboardingQuizStorage';
 import { clearPendingOnboardingQuiz } from '@/utils/onboarding/pendingOnboardingQuiz';
+import { usePushNotifications } from '@/hooks/notifications/usePushNotifications';
 
 export interface AuthContextValue {
   user: AuthSession['user'] | null;
@@ -65,6 +66,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
+
+  usePushNotifications(Boolean(session?.user?.id));
 
   useEffect(() => {
     if (resendCooldownSec <= 0) return;

@@ -75,7 +75,8 @@ export function maybeNavigateToErrorPage(error: ApiError): void {
     error.code === 'MEETING_TRANSCRIPT_FAILED' ||
     error.code === 'MEETING_TRANSCRIPT_FORMAT' ||
     error.code === 'MEETING_TRANSCRIPT_EMPTY' ||
-    error.code === 'MEETING_TRANSLATE_FAILED'
+    error.code === 'MEETING_TRANSLATE_FAILED' ||
+    error.code === 'PUSH_NOT_CONFIGURED'
   ) {
     return;
   }

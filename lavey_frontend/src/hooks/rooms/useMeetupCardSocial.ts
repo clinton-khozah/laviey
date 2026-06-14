@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { hasSupabaseRealtime } from '@/config/env';
 import { getSupabaseRealtimeClient } from '@/lib/supabaseClient';
+import { meetupSocialService } from '@/services/rooms/meetupSocialService';
 
 interface SocialBroadcast {
   type: 'like';
@@ -98,7 +99,16 @@ export function useMeetupCardSocial({
       fromName: localDisplayName,
       active,
     });
-  }, [applySocial, broadcast, localDisplayName, localUserId]);
+
+    void meetupSocialService.setLike(meetupId, active).then((result) => {
+      if (!result) return;
+      const syncedIds = toggleUserId(socialRef.current.likeUserIds, localUserId, result.userLiked);
+      socialRef.current = { likeUserIds: syncedIds };
+      setLikeCount(result.likeCount);
+      setUserLiked(result.userLiked);
+      writeStored(meetupId, { likeUserIds: syncedIds });
+    });
+  }, [applySocial, broadcast, localDisplayName, localUserId, meetupId]);
 
   const mergeBroadcast = useCallback(
     (payload: SocialBroadcast) => {

@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
     respondToInvite: (id: string) => `/dates/invites/${id}`,
     joinByCode: '/dates/join-by-code',
     join: (id: string) => `/rooms/vibe-check/${id}/join`,
+    like: (id: string) => `/rooms/vibe-check/${id}/like`,
   },
   users: {
     me: '/users/me',
@@ -67,6 +68,8 @@ export const API_ENDPOINTS = {
     contactsImport: '/users/me/contacts/import',
     dataExport: '/users/me/data-export',
     deleteAccount: '/users/me',
+    pushVapidPublicKey: '/users/me/push/vapid-public-key',
+    pushSubscribe: '/users/me/push/subscribe',
   },
   content: {
     posts: '/users/me/posts',
@@ -114,5 +117,6 @@ export const API_ENDPOINTS = {
   },
   meetings: {
     liveTranscript: '/meetings/live-transcript',
+    attend: (meetupId: string) => `/meetings/${meetupId}/attend`,
   },
 } as const;
