@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type MouseEvent } from 'react';
 import { ProfileInitialAvatar } from '@/components/ui/ProfileInitialAvatar';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { PageScroller } from '@/components/layout/PageScroller';
@@ -6,7 +6,11 @@ import { AppOverlay } from '@/components/ui/AppOverlay';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { FeedState } from '@/components/ui/FeedState';
 import type { NotificationEvent } from '@/types';
-import { isActionableNotification, notificationKindLabel } from '@/types/domain/notification.types';
+import {
+  isActionableNotification,
+  notificationHasProfile,
+  notificationKindLabel,
+} from '@/types/domain/notification.types';
 import { hasFeedDisplayMedia } from '@/utils/profile/feedMedia';
 import './NotificationThread.css';
 
@@ -20,6 +24,7 @@ interface NotificationThreadProps {
   onChat: (profileId: string) => void;
   onMarkRead: () => void;
   onRetry: () => void;
+  onProfileClick?: (item: NotificationEvent) => void;
 }
 
 function HeartIcon() {
@@ -55,7 +60,7 @@ function NotificationAvatar({ item }: { item: NotificationEvent }) {
       name={item.actorName}
       src={avatarSrc}
       className="notification-thread__avatar"
-      size="md"
+      size="lg"
     />
   );
 }
@@ -70,12 +75,14 @@ export function NotificationThread({
   onChat,
   onMarkRead,
   onRetry,
+  onProfileClick,
 }: NotificationThreadProps) {
   useEffect(() => {
     onMarkRead();
   }, [onMarkRead]);
 
-  const handleAction = (item: NotificationEvent) => {
+  const handleAction = (item: NotificationEvent, event: MouseEvent) => {
+    event.stopPropagation();
     if (item.kind === 'meetup_like' || item.kind === 'meetup_join') {
       window.dispatchEvent(new CustomEvent('lavey:navigate', { detail: { nav: 'rooms' } }));
       onBack();
@@ -87,6 +94,11 @@ export function NotificationThread({
       return;
     }
     onLikeBack(item.actorUserId);
+  };
+
+  const handleCardClick = (item: NotificationEvent) => {
+    if (!notificationHasProfile(item) || !onProfileClick) return;
+    onProfileClick(item);
   };
 
   return (
@@ -128,23 +140,15 @@ export function NotificationThread({
             {notifications.map((item) => {
               const matched = item.actorUserId ? likedProfileIds.has(item.actorUserId) : false;
               const actionable = isActionableNotification(item);
+              const profileOpenable = notificationHasProfile(item) && Boolean(onProfileClick);
               const showChat = item.kind === 'match' || matched;
               const headline =
                 item.title ??
                 (item.kind === 'verified'
                   ? "You're verified!"
                   : item.text);
-              return (
-                <li
-                  key={item.id}
-                  className={[
-                    'notification-thread__card',
-                    `notification-thread__card--${item.kind}`,
-                    item.read ? '' : 'notification-thread__card--unread',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
+              const CardBody = (
+                <>
                   <NotificationAvatar item={item} />
                   <div className="notification-thread__content">
                     <p className="notification-thread__card-title">{headline}</p>
@@ -157,13 +161,39 @@ export function NotificationThread({
                       {notificationKindLabel(item.kind)} · {item.sentAt}
                     </span>
                   </div>
+                </>
+              );
+
+              return (
+                <li
+                  key={item.id}
+                  className={[
+                    'notification-thread__card',
+                    `notification-thread__card--${item.kind}`,
+                    item.read ? '' : 'notification-thread__card--unread',
+                    profileOpenable ? 'notification-thread__card--clickable' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  {profileOpenable ? (
+                    <button
+                      type="button"
+                      className="notification-thread__main"
+                      onClick={() => handleCardClick(item)}
+                    >
+                      {CardBody}
+                    </button>
+                  ) : (
+                    <div className="notification-thread__main">{CardBody}</div>
+                  )}
                   {actionable ? (
                     <button
                       type="button"
                       className={`notification-thread__action ${
                         showChat ? 'notification-thread__action--chat' : ''
                       }`}
-                      onClick={() => handleAction(item)}
+                      onClick={(event) => handleAction(item, event)}
                     >
                       {showChat ? (
                         'Chat'

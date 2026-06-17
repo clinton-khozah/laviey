@@ -143,23 +143,25 @@ export function ChatThread({
               ) : null}
             </span>
             <div className="chat-thread__profile-text">
-              <span className="chat-thread__name">{conversation.participantName}</span>
-              {conversation.isTyping ? (
-                <span className="chat-thread__status chat-thread__status--typing">
-                  <span className="chat-thread__typing-dots" aria-hidden>
-                    <span />
-                    <span />
-                    <span />
+              <div className="chat-thread__name-row">
+                <span className="chat-thread__name">{conversation.participantName}</span>
+                {conversation.isTyping ? (
+                  <span className="chat-thread__status chat-thread__status--typing">
+                    <span className="chat-thread__typing-dots" aria-hidden>
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                    writing…
                   </span>
-                  writing to you…
-                </span>
-              ) : (
-                <span
-                  className={`chat-thread__status ${conversation.isOnline ? 'chat-thread__status--online' : ''}`}
-                >
-                  {getChatHeaderStatus(conversation)}
-                </span>
-              )}
+                ) : (
+                  <span
+                    className={`chat-thread__status ${conversation.isOnline ? 'chat-thread__status--online' : ''}`}
+                  >
+                    {getChatHeaderStatus(conversation)}
+                  </span>
+                )}
+              </div>
             </div>
           </button>
           <div className="chat-thread__actions">

@@ -46,7 +46,8 @@ export function JoinDateModal({
           </>
         )}
         <p className="join-date-modal__hint">
-          Private meetups need the room code from your host (shared after they invite you).
+          Private meetups need the room code from your host. Next, you&apos;ll be asked to allow camera and
+          microphone so everyone can see and hear you.
         </p>
         <form onSubmit={handleSubmit}>
           <label className="join-date-modal__label" htmlFor="join-date-code">

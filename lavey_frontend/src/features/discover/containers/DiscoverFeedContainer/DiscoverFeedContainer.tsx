@@ -20,6 +20,7 @@ export interface DiscoverFeedContainerProps {
   onDismissMatchToast: () => void;
   onMatchGreeting: (text: string) => void;
   onNearEndOfFeed?: () => void;
+  infiniteLoop?: boolean;
 }
 
 export function DiscoverFeedContainer({
@@ -38,6 +39,7 @@ export function DiscoverFeedContainer({
   onDismissMatchToast,
   onMatchGreeting,
   onNearEndOfFeed,
+  infiniteLoop = false,
 }: DiscoverFeedContainerProps) {
   if (isLoading && profiles.length === 0) {
     return <PageTransitionSplash />;
@@ -63,6 +65,7 @@ export function DiscoverFeedContainer({
         onPostLike={onPostLike}
         onProfileClick={onProfileClick}
         isLocked={Boolean(matchToast)}
+        infiniteLoop={infiniteLoop}
         onNearEndOfFeed={onNearEndOfFeed}
       />
       <MatchToast

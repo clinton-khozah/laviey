@@ -56,6 +56,8 @@ export function DiscoverPage() {
   const [likesOpen, setLikesOpen] = useState(false);
   const [platinumOpen, setPlatinumOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersUpdatedPulse, setFiltersUpdatedPulse] = useState(false);
+  const filtersPulseTimerRef = useRef<number | null>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [findProfile, setFindProfile] = useState<Profile | null>(null);
   const { location, requestLocation } = useLiveUserLocation();
@@ -63,6 +65,25 @@ export function DiscoverPage() {
   const lastSyncAtRef = useRef<number>(0);
   const { profiles: receivedLikers, count: likeCount } = useProfilesWhoLikedYou();
   const isPremium = hasPremiumAccess(userProfile?.isPremium);
+
+  const pulseFilterIcon = () => {
+    setFiltersUpdatedPulse(true);
+    if (filtersPulseTimerRef.current !== null) {
+      window.clearTimeout(filtersPulseTimerRef.current);
+    }
+    filtersPulseTimerRef.current = window.setTimeout(() => {
+      setFiltersUpdatedPulse(false);
+      filtersPulseTimerRef.current = null;
+    }, 2200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (filtersPulseTimerRef.current !== null) {
+        window.clearTimeout(filtersPulseTimerRef.current);
+      }
+    };
+  }, []);
 
   const forYouPool = feedPool.length > 0 ? feedPool : profiles;
 
@@ -218,6 +239,7 @@ export function DiscoverPage() {
           onLikesClick={() => setLikesOpen(true)}
           onDiscoveryFiltersClick={() => setFiltersOpen(true)}
           hasActiveDiscoveryFilters={hasActiveFilters}
+          filtersUpdatedPulse={filtersUpdatedPulse}
           isPremium={isPremium}
           onUpgrade={() => setPlatinumOpen(true)}
           onFindClick={() => setFindOpen(true)}
@@ -227,14 +249,21 @@ export function DiscoverPage() {
         open={filtersOpen}
         filters={filters}
         onClose={() => setFiltersOpen(false)}
-        onApply={setFilters}
-        onReset={resetFilters}
+        onApply={(next) => {
+          setFilters(next);
+          pulseFilterIcon();
+        }}
+        onReset={() => {
+          resetFilters();
+          pulseFilterIcon();
+        }}
       />
       <DiscoverFeedContainer
         profiles={forYouDisplayProfiles}
         isLoading={isLoading}
         error={error}
         onNearEndOfFeed={onNearEndOfFeed}
+        infiniteLoop={filter === 'for-you'}
         likedIds={mergedLikedIds}
         likedPostIds={likedPostIds}
         iCrushSentIds={iCrushSentIds}

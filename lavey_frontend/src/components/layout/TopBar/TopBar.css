@@ -115,6 +115,38 @@
   box-shadow: 0 0 6px rgba(255, 77, 109, 0.6);
 }
 
+.top-bar__filter--updated {
+  animation: top-bar-filter-updated 0.55s ease 2;
+  border-color: rgba(255, 138, 92, 0.55);
+  box-shadow: 0 0 0 2px rgba(255, 138, 92, 0.2);
+}
+
+.top-bar__filter-dot--pulse {
+  animation: top-bar-filter-dot-pulse 0.55s ease 3;
+}
+
+@keyframes top-bar-filter-updated {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes top-bar-filter-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 6px rgba(255, 77, 109, 0.6);
+  }
+  50% {
+    transform: scale(1.35);
+    box-shadow: 0 0 10px rgba(255, 138, 92, 0.95);
+  }
+}
+
 .top-bar__tabs {
   position: relative;
   display: flex;

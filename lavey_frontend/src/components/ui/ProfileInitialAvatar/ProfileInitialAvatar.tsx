@@ -15,7 +15,13 @@ export function ProfileInitialAvatar({
   size = 'md',
 }: ProfileInitialAvatarProps) {
   if (src) {
-    return <img src={src} alt="" className={className} />;
+    return (
+      <img
+        src={src}
+        alt=""
+        className={`profile-initial-avatar profile-initial-avatar--${size} ${className}`.trim()}
+      />
+    );
   }
 
   return (

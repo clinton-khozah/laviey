@@ -1,4 +1,5 @@
 export {
+  MatchAvatarsStrip,
   MessageMatchStrip,
   OnlineMatchesStrip,
   RecentMatchesStrip,

@@ -1,0 +1,125 @@
+.meetup-media-lobby {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 16px) 20px calc(var(--safe-bottom) + 16px);
+  background: var(--bg-deep);
+}
+
+.meetup-media-lobby__back {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 12px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+.meetup-media-lobby__back svg {
+  width: 22px;
+  height: 22px;
+}
+
+.meetup-media-lobby__card {
+  width: 100%;
+  max-width: 360px;
+  padding: 28px 22px 22px;
+  border-radius: 20px;
+  text-align: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+}
+
+.meetup-media-lobby__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--accent-flame-end);
+  background: rgba(255, 77, 109, 0.12);
+  border: 1px solid rgba(255, 77, 109, 0.28);
+}
+
+.meetup-media-lobby__icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.meetup-media-lobby__title {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.meetup-media-lobby__meetup {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.meetup-media-lobby__hint {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.meetup-media-lobby__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.meetup-media-lobby__spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--accent-flame-end);
+  animation: meetup-media-lobby-spin 0.8s linear infinite;
+}
+
+@keyframes meetup-media-lobby-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.meetup-media-lobby__retry {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: var(--gradient-flame);
+  box-shadow: var(--shadow-glow);
+}
+
+.meetup-media-lobby__leave {
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

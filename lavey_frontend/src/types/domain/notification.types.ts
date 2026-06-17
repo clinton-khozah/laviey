@@ -30,6 +30,10 @@ export function isActionableNotification(event: NotificationEvent): boolean {
   return event.actionable && Boolean(event.actorUserId);
 }
 
+export function notificationHasProfile(event: NotificationEvent): boolean {
+  return Boolean(event.actorUserId) && event.kind !== 'verified' && event.kind !== 'system';
+}
+
 export function notificationKindLabel(kind: NotificationKind): string {
   switch (kind) {
     case 'crush':

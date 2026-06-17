@@ -10,6 +10,7 @@ export function TopBar({
   onLikesClick,
   onDiscoveryFiltersClick,
   hasActiveDiscoveryFilters = false,
+  filtersUpdatedPulse = false,
   isPremium = false,
   onUpgrade,
   onFindClick,
@@ -45,7 +46,7 @@ export function TopBar({
   const discoveryFilterButton = onDiscoveryFiltersClick ? (
     <button
       type="button"
-      className="top-bar__filter"
+      className={`top-bar__filter ${filtersUpdatedPulse ? 'top-bar__filter--updated' : ''}`}
       onClick={onDiscoveryFiltersClick}
       aria-label="Discovery filters"
     >
@@ -55,7 +56,12 @@ export function TopBar({
         <circle cx="6" cy="12" r="2" fill="currentColor" stroke="none" />
         <circle cx="16" cy="18" r="2" fill="currentColor" stroke="none" />
       </svg>
-      {hasActiveDiscoveryFilters && <span className="top-bar__filter-dot" aria-hidden />}
+      {(hasActiveDiscoveryFilters || filtersUpdatedPulse) && (
+        <span
+          className={`top-bar__filter-dot ${filtersUpdatedPulse ? 'top-bar__filter-dot--pulse' : ''}`}
+          aria-hidden
+        />
+      )}
     </button>
   ) : null;
 

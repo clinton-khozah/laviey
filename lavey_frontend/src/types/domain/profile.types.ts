@@ -1,4 +1,5 @@
 import type { DiscoverGender } from './discoverFilter.types';
+import type { OnboardingInterestedIn, OnboardingOrientation } from './onboardingQuiz.types';
 
 export type MediaType = 'video' | 'image';
 
@@ -43,6 +44,9 @@ export interface Profile {
   /** Distance in km — used for discovery filters */
   distanceKm?: number;
   gender?: ProfileGender;
+  orientation?: OnboardingOrientation;
+  /** Who they want to meet (from onboarding). */
+  interestedIn?: OnboardingInterestedIn | OnboardingInterestedIn[];
   /** They sent you a flame; you have not matched yet */
   likedYou?: boolean;
 }

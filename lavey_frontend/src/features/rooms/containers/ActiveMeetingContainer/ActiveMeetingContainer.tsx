@@ -1,3 +1,4 @@
+import { MeetupMediaLobby } from '@/components/rooms/MeetupMediaLobby';
 import { VideoMeetingRoom } from '@/components/rooms/VideoMeetingRoom';
 import { useAuth, useLocalMedia, useMeetupWebRTC } from '@/hooks';
 import { meetupSocialService } from '@/services/rooms/meetupSocialService';
@@ -14,6 +15,8 @@ export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContai
   const localMedia = useLocalMedia(true);
 
   const localUserId = user?.id ?? `guest-${session.date.id}`;
+  const mediaReady = Boolean(localMedia.localStream);
+
   const { participants, status } = useMeetupWebRTC({
     meetupId: session.date.id,
     localUserId,
@@ -21,11 +24,30 @@ export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContai
     localAvatarUrl: user?.avatarUrl ?? '',
     isHost: Boolean(session.date.isHostedByYou),
     localStream: localMedia.localStream,
+    enabled: mediaReady,
   });
 
   useEffect(() => {
+    if (!mediaReady) return;
     void meetupSocialService.reportLiveAttendance(session.date.id);
-  }, [session.date.id]);
+  }, [mediaReady, session.date.id]);
+
+  const handleLeave = () => {
+    localMedia.stopMedia();
+    onLeave();
+  };
+
+  if (!mediaReady) {
+    return (
+      <MeetupMediaLobby
+        session={session}
+        isLoading={localMedia.isLoading}
+        error={localMedia.error}
+        onRetry={localMedia.retry}
+        onLeave={handleLeave}
+      />
+    );
+  }
 
   return (
     <VideoMeetingRoom
@@ -34,7 +56,7 @@ export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContai
       localMedia={localMedia}
       connectionStatus={status}
       localUserId={localUserId}
-      onLeave={onLeave}
+      onLeave={handleLeave}
     />
   );
 }

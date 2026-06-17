@@ -270,6 +270,11 @@ export function useDiscoverFeed(
       return;
     }
 
+    if (filterRef.current === 'for-you' && !expandedRef.current && canExpandRef.current) {
+      void loadFeed({ replace: false, expanded: true });
+      return;
+    }
+
     if (!canExpandRef.current) return;
 
     const activeFilter = filterRef.current;
@@ -287,6 +292,13 @@ export function useDiscoverFeed(
       void loadFeed({ replace: false, expanded: true });
     }
   }, [loadFeed]);
+
+  useEffect(() => {
+    if (filter !== 'for-you') return;
+    if (isLoading || isLoadingMore || isFetchingRef.current) return;
+    if (profiles.length >= 12 || !nextCursor) return;
+    void loadFeed({ cursor: nextCursor, replace: false });
+  }, [filter, profiles.length, nextCursor, isLoading, isLoadingMore, loadFeed]);
 
   return {
     profiles,

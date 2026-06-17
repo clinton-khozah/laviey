@@ -68,8 +68,16 @@
   background: rgba(0, 0, 0, 0.04);
 }
 
-.conversation-item__name {
+.conversation-item__name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   max-width: 100%;
+  min-width: 0;
+}
+
+.conversation-item__name {
+  min-width: 0;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.25;
@@ -78,6 +86,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.conversation-item__online-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #22c55e;
+  line-height: 1;
 }
 
 .conversation-item__pin {

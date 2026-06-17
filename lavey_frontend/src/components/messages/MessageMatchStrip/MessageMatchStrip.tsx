@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Conversation } from '@/types';
 import './MessageMatchStrip.css';
 
-export type MessageMatchStripVariant = 'online' | 'recent';
+export type MessageMatchStripVariant = 'online' | 'recent' | 'matches';
 
 interface MessageMatchStripProps {
   conversations: Conversation[];
@@ -10,6 +10,16 @@ interface MessageMatchStripProps {
   onSelect: (id: string) => void;
   onAvatarClick: (conversation: Conversation) => void;
   ariaLabel: string;
+  title?: string;
+}
+
+function dedupeConversations(conversations: Conversation[]): Conversation[] {
+  const seen = new Set<string>();
+  return conversations.filter((conversation) => {
+    if (seen.has(conversation.id)) return false;
+    seen.add(conversation.id);
+    return true;
+  });
 }
 
 function firstName(name: string): string {
@@ -23,9 +33,11 @@ export function MessageMatchStrip({
   onSelect,
   onAvatarClick,
   ariaLabel,
+  title,
 }: MessageMatchStripProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [fitsScreen, setFitsScreen] = useState(false);
+  const items = useMemo(() => dedupeConversations(conversations), [conversations]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -39,24 +51,26 @@ export function MessageMatchStrip({
     const observer = new ResizeObserver(checkFit);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [conversations.length]);
+  }, [items.length]);
 
-  if (conversations.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <section
       className={`msg-match-strip msg-match-strip--${variant}`}
       aria-label={ariaLabel}
     >
+      {title ? <h2 className="msg-match-strip__title">{title}</h2> : null}
       <div
         ref={scrollRef}
         className={`msg-match-strip__scroll${fitsScreen ? ' msg-match-strip__scroll--centered' : ''}`}
         role="list"
       >
-          {conversations.map((conversation) => {
+          {items.map((conversation) => {
             const hasUnread = conversation.unreadCount > 0;
             const isOnline = conversation.isOnline;
             const isTyping = conversation.isTyping;
+            const showOnlineRing = isOnline;
 
             return (
               <div key={conversation.id} className="msg-match-strip__item" role="listitem">
@@ -69,9 +83,11 @@ export function MessageMatchStrip({
                   <span
                     className={[
                       'msg-match-strip__ring',
-                      variant === 'online' ? 'msg-match-strip__ring--online' : '',
-                      variant === 'recent' && hasUnread ? 'msg-match-strip__ring--unread' : '',
-                      variant === 'recent' && conversation.isPinned
+                      showOnlineRing ? 'msg-match-strip__ring--online' : '',
+                      !showOnlineRing && variant === 'recent' && hasUnread
+                        ? 'msg-match-strip__ring--unread'
+                        : '',
+                      !showOnlineRing && variant === 'recent' && conversation.isPinned
                         ? 'msg-match-strip__ring--pinned'
                         : '',
                     ]
@@ -86,19 +102,13 @@ export function MessageMatchStrip({
                     />
                   </span>
 
-                  {variant === 'online' && isOnline && (
-                    <span className="msg-match-strip__badge msg-match-strip__badge--online">
-                      Online
-                    </span>
-                  )}
-
-                  {variant === 'recent' && isTyping && (
+                  {(variant === 'recent' || variant === 'matches') && isTyping && (
                     <span className="msg-match-strip__badge msg-match-strip__badge--typing">
                       …
                     </span>
                   )}
 
-                  {variant === 'recent' && !isTyping && hasUnread && (
+                  {(variant === 'recent' || variant === 'matches') && !isTyping && hasUnread && (
                     <span className="msg-match-strip__badge msg-match-strip__badge--unread">
                       {conversation.unreadCount}
                     </span>
@@ -113,10 +123,13 @@ export function MessageMatchStrip({
 
                 <button
                   type="button"
-                  className="msg-match-strip__name"
+                  className="msg-match-strip__name-row"
                   onClick={() => onAvatarClick(conversation)}
                 >
-                  {firstName(conversation.participantName)}
+                  <span className="msg-match-strip__name">
+                    {firstName(conversation.participantName)}
+                  </span>
+                  {isOnline ? <span className="msg-match-strip__online">Online</span> : null}
                 </button>
               </div>
             );
@@ -126,16 +139,43 @@ export function MessageMatchStrip({
   );
 }
 
+interface MatchAvatarsStripProps {
+  conversations: Conversation[];
+  onSelect: (id: string) => void;
+  onAvatarClick: (conversation: Conversation) => void;
+  title?: string;
+}
+
+export function MatchAvatarsStrip({
+  conversations,
+  onSelect,
+  onAvatarClick,
+  title,
+}: MatchAvatarsStripProps) {
+  return (
+    <MessageMatchStrip
+      ariaLabel="Matches"
+      variant="matches"
+      title={title}
+      conversations={conversations}
+      onSelect={onSelect}
+      onAvatarClick={onAvatarClick}
+    />
+  );
+}
+
 interface OnlineMatchesStripProps {
   conversations: Conversation[];
   onSelect: (id: string) => void;
   onAvatarClick: (conversation: Conversation) => void;
+  title?: string;
 }
 
 export function OnlineMatchesStrip({
   conversations,
   onSelect,
   onAvatarClick,
+  title = 'Online',
 }: OnlineMatchesStripProps) {
   const online = conversations.filter((c) => c.isOnline);
 
@@ -143,6 +183,7 @@ export function OnlineMatchesStrip({
     <MessageMatchStrip
       ariaLabel="Online matches"
       variant="online"
+      title={title}
       conversations={online}
       onSelect={onSelect}
       onAvatarClick={onAvatarClick}

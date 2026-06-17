@@ -10,6 +10,7 @@ interface UseLocalMediaResult {
   toggleVideo: () => void;
   toggleAudio: () => void;
   stopMedia: () => void;
+  retry: () => void;
 }
 
 export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
@@ -20,6 +21,7 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
   const [isLoading, setIsLoading] = useState(enabled);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [attempt, setAttempt] = useState(0);
 
   const stopMedia = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -30,10 +32,17 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
     }
   }, []);
 
+  const retry = useCallback(() => {
+    stopMedia();
+    setError(null);
+    setAttempt((value) => value + 1);
+  }, [stopMedia]);
+
   useEffect(() => {
     if (!enabled) {
       stopMedia();
       setIsLoading(false);
+      setError(null);
       return;
     }
 
@@ -51,8 +60,15 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
-          audio: true,
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          },
         });
 
         if (cancelled) {
@@ -62,6 +78,9 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
 
         streamRef.current = stream;
         setLocalStream(stream);
+        setIsVideoEnabled(stream.getVideoTracks().some((track) => track.enabled));
+        setIsAudioEnabled(stream.getAudioTracks().some((track) => track.enabled));
+
         const video = videoRef.current;
         if (video) {
           video.srcObject = stream;
@@ -73,8 +92,10 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
         const name = err instanceof DOMException ? err.name : '';
         if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
           setError('Allow camera and microphone access to join the meetup.');
-        } else if (name === 'NotFoundError') {
-          setError('No camera was found on this device.');
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          setError('No camera or microphone was found on this device.');
+        } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+          setError('Your camera or microphone is in use by another app.');
         } else {
           setError(err instanceof Error ? err.message : 'Could not start camera');
         }
@@ -88,7 +109,7 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
       cancelled = true;
       stopMedia();
     };
-  }, [enabled, stopMedia]);
+  }, [enabled, attempt, stopMedia]);
 
   const toggleVideo = useCallback(() => {
     const tracks = streamRef.current?.getVideoTracks() ?? [];
@@ -126,5 +147,6 @@ export function useLocalMedia(enabled: boolean): UseLocalMediaResult {
     toggleVideo,
     toggleAudio,
     stopMedia,
+    retry,
   };
 }

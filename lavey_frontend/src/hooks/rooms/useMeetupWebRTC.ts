@@ -33,6 +33,8 @@ interface UseMeetupWebRTCOptions {
   localAvatarUrl: string;
   isHost: boolean;
   localStream: MediaStream | null;
+  /** Wait until camera/mic are ready before opening peer connections */
+  enabled: boolean;
 }
 
 interface PeerRecord {
@@ -89,10 +91,36 @@ function attachRemoteTrack(record: PeerRecord, track: MediaStreamTrack) {
   }
 }
 
-function ensureReceiveTransceivers(pc: RTCPeerConnection) {
-  if (pc.getTransceivers().length > 0) return;
-  pc.addTransceiver('audio', { direction: 'recvonly' });
-  pc.addTransceiver('video', { direction: 'recvonly' });
+function attachLocalTracksToPeer(pc: RTCPeerConnection, stream: MediaStream): boolean {
+  let attached = false;
+
+  for (const track of stream.getTracks()) {
+    const existingSender = pc.getSenders().find((sender) => sender.track?.kind === track.kind);
+    if (existingSender) {
+      if (existingSender.track?.id !== track.id) {
+        void existingSender.replaceTrack(track);
+      }
+      attached = true;
+      continue;
+    }
+
+    const transceiver = pc.getTransceivers().find((item) => {
+      const kind = item.sender.track?.kind ?? item.receiver.track?.kind;
+      return kind === track.kind && !item.sender.track;
+    });
+
+    if (transceiver) {
+      transceiver.direction = 'sendrecv';
+      void transceiver.sender.replaceTrack(track);
+      attached = true;
+      continue;
+    }
+
+    pc.addTrack(track, stream);
+    attached = true;
+  }
+
+  return attached;
 }
 
 export function useMeetupWebRTC({
@@ -102,6 +130,7 @@ export function useMeetupWebRTC({
   localAvatarUrl,
   isHost,
   localStream,
+  enabled,
 }: UseMeetupWebRTCOptions) {
   const [participants, setParticipants] = useState<MeetingParticipant[]>([]);
   const [status, setStatus] = useState<MeetupConnectionStatus>(
@@ -144,20 +173,8 @@ export function useMeetupWebRTC({
 
   const attachLocalTracks = useCallback((pc: RTCPeerConnection) => {
     const stream = localStreamRef.current;
-    if (stream) {
-      let attached = false;
-      for (const track of stream.getTracks()) {
-        const senders = pc.getSenders();
-        if (!senders.some((sender) => sender.track?.kind === track.kind)) {
-          pc.addTrack(track, stream);
-          attached = true;
-        }
-      }
-      return attached;
-    }
-
-    ensureReceiveTransceivers(pc);
-    return false;
+    if (!stream) return false;
+    return attachLocalTracksToPeer(pc, stream);
   }, []);
 
   const flushPendingCandidates = useCallback(async (record: PeerRecord) => {
@@ -327,6 +344,7 @@ export function useMeetupWebRTC({
 
   const connectToPeer = useCallback(
     (meta: MeetupPresenceMeta) => {
+      if (!enabled || !localStreamRef.current) return;
       if (!meta.odUserId || meta.odUserId === localUserId) return;
 
       const existing = peersRef.current.get(meta.odUserId);
@@ -340,7 +358,7 @@ export function useMeetupWebRTC({
         void createOffer(meta);
       }
     },
-    [createOffer, localUserId, syncParticipants],
+    [createOffer, enabled, localUserId, syncParticipants],
   );
 
   const syncPresencePeers = useCallback(
@@ -369,8 +387,12 @@ export function useMeetupWebRTC({
   );
 
   useEffect(() => {
-    if (!hasSupabaseRealtime() || !meetupId || !localUserId) {
-      setStatus('unsupported');
+    if (!enabled || !hasSupabaseRealtime() || !meetupId || !localUserId) {
+      if (!hasSupabaseRealtime()) {
+        setStatus('unsupported');
+      } else if (!enabled) {
+        setStatus('connecting');
+      }
       return;
     }
 
@@ -435,6 +457,7 @@ export function useMeetupWebRTC({
     };
   }, [
     connectToPeer,
+    enabled,
     handleSignal,
     isHost,
     localAvatarUrl,
@@ -446,6 +469,8 @@ export function useMeetupWebRTC({
   ]);
 
   useEffect(() => {
+    if (!enabled || !localStream) return;
+
     const channel = channelRef.current;
     if (channel) {
       syncPresencePeers(channel);
@@ -457,16 +482,11 @@ export function useMeetupWebRTC({
 
       if (!addedTracks || record.pc.signalingState !== 'stable') continue;
 
-      if (!hadOutgoingTracks) {
-        void renegotiatePeer(peerId, record);
-        continue;
-      }
-
-      if (localUserId < peerId) {
+      if (!hadOutgoingTracks || localUserId < peerId) {
         void renegotiatePeer(peerId, record);
       }
     }
-  }, [attachLocalTracks, localStream, localUserId, renegotiatePeer, syncPresencePeers]);
+  }, [attachLocalTracks, enabled, localStream, localUserId, renegotiatePeer, syncPresencePeers]);
 
   return { participants, status };
 };

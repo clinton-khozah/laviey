@@ -7,7 +7,7 @@ import type { ChatConversationAction } from '@/components/messages/ChatSendOptio
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage';
 import { MessagesHeader, type MessageFilter } from '@/components/messages/MessagesHeader';
-import { OnlineMatchesStrip, RecentMatchesStrip } from '@/components/messages/MessageMatchStrip';
+import { MatchAvatarsStrip, OnlineMatchesStrip } from '@/components/messages/MessageMatchStrip';
 import { PageScroller } from '@/components/layout/PageScroller';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
@@ -72,7 +72,7 @@ export function MessagesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [mutedConversationIds, setMutedConversationIds] = useState<Set<string>>(() => new Set());
   const [actionToast, setActionToast] = useState<{ text: string; success?: boolean } | null>(null);
-  const [iCrushResponding, setICrushResponding] = useState(false);
+  const [notificationProfileId, setNotificationProfileId] = useState<string | null>(null);
 
   const showActionToast = useCallback((message: string, success = false) => {
     setActionToast({ text: message, success });
@@ -129,6 +129,10 @@ export function MessagesPage() {
     profileConversation?.participantProfileId ?? null,
   );
 
+  const { profile: notificationProfile, isLoading: notificationProfileLoading } = useMatchProfile(
+    notificationProfileId,
+  );
+
   const { filters: discoverFilters } = useDiscoverFilters();
 
   const {
@@ -161,9 +165,28 @@ export function MessagesPage() {
     [conversations],
   );
 
-  const recentStrip = useMemo(
-    () => sortedConversations.slice(0, 12),
-    [sortedConversations],
+  const matchStripConversations = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: Conversation[] = [];
+
+    for (const conversation of matchConversations) {
+      if (!conversation.isOnline || seen.has(conversation.id)) continue;
+      seen.add(conversation.id);
+      ordered.push(conversation);
+    }
+
+    for (const conversation of sortedConversations) {
+      if (!isMatchConversation(conversation) || seen.has(conversation.id)) continue;
+      seen.add(conversation.id);
+      ordered.push(conversation);
+    }
+
+    return ordered;
+  }, [matchConversations, sortedConversations]);
+
+  const onlineStripConversations = useMemo(
+    () => matchConversations.filter((conversation) => conversation.isOnline),
+    [matchConversations],
   );
 
   const filtered = useMemo(() => {
@@ -174,6 +197,18 @@ export function MessagesPage() {
 
     return list;
   }, [sortedConversations, filter]);
+
+  const listConversations = useMemo(() => {
+    if (filter === 'online') return [];
+    if (filter === 'all') {
+      return sortedConversations.filter((conversation) => !isMatchConversation(conversation));
+    }
+    return filtered;
+  }, [filter, filtered, sortedConversations]);
+
+  const showMatchStrip = filter === 'all' && matchStripConversations.length > 0;
+  const showOnlineStrip = filter === 'online' && onlineStripConversations.length > 0;
+  const hasStripContent = showMatchStrip || showOnlineStrip;
 
   const handleMarkNotificationsRead = useCallback(() => {
     void markNotificationsRead().then(() => {
@@ -485,6 +520,9 @@ export function MessagesPage() {
           onChat={(profileId) => openChatWithProfile(profileId)}
           onMarkRead={handleMarkNotificationsRead}
           onRetry={() => void refetchNotifications()}
+          onProfileClick={(item) => {
+            if (item.actorUserId) setNotificationProfileId(item.actorUserId);
+          }}
         />
       ) : isICrushActive && activeConversation ? (
         <ICrushThread
@@ -543,22 +581,27 @@ export function MessagesPage() {
 
             {!isLoading && !error && (
               <>
-                {filter === 'all' && matchConversations.length > 0 && (
+                {showMatchStrip ? (
                   <div className="messages-page__strips">
-                    <OnlineMatchesStrip
-                      conversations={sortedConversations.filter(isMatchConversation)}
-                      onSelect={setActiveId}
-                      onAvatarClick={openProfile}
-                    />
-                    <RecentMatchesStrip
-                      conversations={recentStrip.filter(isMatchConversation)}
+                    <MatchAvatarsStrip
+                      conversations={matchStripConversations}
                       onSelect={setActiveId}
                       onAvatarClick={openProfile}
                     />
                   </div>
-                )}
+                ) : null}
 
-                {filtered.length === 0 ? (
+                {showOnlineStrip ? (
+                  <div className="messages-page__strips">
+                    <OnlineMatchesStrip
+                      conversations={onlineStripConversations}
+                      onSelect={setActiveId}
+                      onAvatarClick={openProfile}
+                    />
+                  </div>
+                ) : null}
+
+                {listConversations.length === 0 && !hasStripContent ? (
                   <div
                     className={`messages-page__empty messages-page__empty--${filter === 'all' ? 'none' : filter}`}
                   >
@@ -595,14 +638,12 @@ export function MessagesPage() {
                       </button>
                     )}
                   </div>
-                ) : (
+                ) : listConversations.length > 0 ? (
                   <div className="messages-page__list">
-                    {filter !== 'all' && (
-                      <h2 className="messages-page__list-title">
-                        {filter === 'unread' ? 'Unread' : 'Online'}
-                      </h2>
-                    )}
-                    {filtered.map((c) => (
+                    {filter === 'unread' ? (
+                      <h2 className="messages-page__list-title">Unread</h2>
+                    ) : null}
+                    {listConversations.map((c) => (
                       <ConversationListItem
                         key={c.id}
                         conversation={c}
@@ -618,12 +659,27 @@ export function MessagesPage() {
                       />
                     ))}
                   </div>
-                )}
+                ) : null}
               </>
             )}
           </PageScroller>
         </div>
       )}
+
+      <MatchProfileModal
+        open={notificationProfileId !== null}
+        mode="discover"
+        profile={notificationProfile}
+        liked={notificationProfile ? likedIds.has(notificationProfile.id) : false}
+        likedYou={notificationProfile?.likedYou ?? false}
+        isLoading={notificationProfileLoading}
+        isSubmittingFlame={isFlameSubmitting}
+        onClose={() => setNotificationProfileId(null)}
+        onFlame={() => {
+          if (!notificationProfile || likedIds.has(notificationProfile.id)) return;
+          void sendFlame(notificationProfile.id);
+        }}
+      />
 
       <MatchProfileModal
         open={profileConversation !== null}

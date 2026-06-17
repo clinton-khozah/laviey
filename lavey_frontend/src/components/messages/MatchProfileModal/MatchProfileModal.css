@@ -189,6 +189,18 @@
   scrollbar-width: none;
 }
 
+.match-profile-modal__distance {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.match-profile-modal__chip--identity {
+  color: var(--text-primary);
+  border-color: rgba(124, 58, 237, 0.28);
+  background: rgba(124, 58, 237, 0.1);
+}
+
 .match-profile-modal__body::-webkit-scrollbar {
   display: none;
 }

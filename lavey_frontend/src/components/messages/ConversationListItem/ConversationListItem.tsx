@@ -38,7 +38,6 @@ function buildSubtitle(conversation: Conversation): string {
   }
 
   if (conversation.isTyping) return 'Typing…';
-  if (conversation.isOnline) return 'Active now';
 
   const preview = formatPreview(conversation.lastMessage);
   const time = conversation.lastMessageAt?.trim();
@@ -147,8 +146,11 @@ export function ConversationListItem({
           onMoreClick();
         }}
       >
-        <span className="conversation-item__name">
-          {conversation.participantName}
+        <span className="conversation-item__name-row">
+          <span className="conversation-item__name">{conversation.participantName}</span>
+          {!isNotifications && !isICrush && conversation.isOnline && !conversation.isTyping && (
+            <span className="conversation-item__online-label">Online</span>
+          )}
           {isICrush && (
             <span className="conversation-item__icrush-tag" aria-label="crushy">
               💋

@@ -15,6 +15,7 @@ import {
 import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
 import { buildFindFeedFilters } from '@/utils/discover/findFeedFilters';
 import { applyVibeMatchToProfiles } from '@/utils/discover/vibeMatchScore';
+import { normalizeProfile, normalizeProfiles } from '@/utils/profile/normalizeProfile';
 import { sleep } from '@/utils/sleep';
 
 interface DiscoverFeedApiPayload {
@@ -151,7 +152,7 @@ export const profileService = {
     );
 
     if (Array.isArray(response.data as unknown)) {
-      const profiles = response.data as unknown as Profile[];
+      const profiles = normalizeProfiles(response.data as unknown as Profile[]);
       return {
         profiles,
         nextCursor: null,
@@ -167,7 +168,7 @@ export const profileService = {
 
     const payload = response.data;
     return {
-      profiles: payload.profiles ?? [],
+      profiles: normalizeProfiles(payload.profiles ?? []),
       nextCursor: payload.nextCursor ?? null,
       algorithm: payload.algorithm ?? null,
       distanceTierKm: payload.distanceTierKm ?? null,
@@ -191,7 +192,7 @@ export const profileService = {
       API_ENDPOINTS.profiles.byId(id),
     );
 
-    return response.data;
+    return normalizeProfile(response.data);
   },
 
   async recordProfileView(profileId: string): Promise<void> {
@@ -214,7 +215,7 @@ export const profileService = {
       API_ENDPOINTS.dates.hostProfile(meetupId),
     );
 
-    return response.data;
+    return normalizeProfile(response.data);
   },
 
   /** Profiles that sent you a flame and are waiting for you to like back. */

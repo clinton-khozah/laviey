@@ -9,6 +9,8 @@ export interface TopBarProps {
   onLikesClick?: () => void;
   onDiscoveryFiltersClick?: () => void;
   hasActiveDiscoveryFilters?: boolean;
+  /** Brief highlight after filters are applied or reset */
+  filtersUpdatedPulse?: boolean;
   isPremium?: boolean;
   onUpgrade?: () => void;
   onFindClick?: () => void;
