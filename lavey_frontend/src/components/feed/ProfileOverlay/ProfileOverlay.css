@@ -1,10 +1,45 @@
 .profile-overlay {
   position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.profile-overlay__location {
+  position: absolute;
+  top: calc(var(--top-bar-height) + var(--safe-top) + 14px);
+  left: 14px;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 28px);
+}
+
+.profile-overlay__location-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #ffffff;
+  opacity: 0.92;
+}
+
+.profile-overlay__location-text {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+.profile-overlay__bottom {
+  position: absolute;
   left: 12px;
   right: 68px;
   bottom: calc(var(--nav-height) + var(--safe-bottom) + 24px);
-  z-index: 8;
-  pointer-events: none;
 }
 
 .profile-overlay__identity {
@@ -43,34 +78,20 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .profile-overlay__distance {
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .profile-overlay__vibe {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-weight: 600;
-  color: var(--accent-mint);
-}
-
-.profile-overlay__vibe-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent-mint);
-  box-shadow: 0 0 6px var(--accent-mint);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.85); }
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
 }
 
 .profile-overlay__bio {

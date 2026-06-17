@@ -2,6 +2,7 @@ export type NotificationKind =
   | 'like'
   | 'crush'
   | 'post_like'
+  | 'profile_view'
   | 'verified'
   | 'match'
   | 'system'
@@ -35,6 +36,8 @@ export function notificationKindLabel(kind: NotificationKind): string {
       return 'Crushed on you';
     case 'post_like':
       return 'Liked your post';
+    case 'profile_view':
+      return 'Viewed your profile';
     case 'like':
       return 'Liked you';
     case 'verified':

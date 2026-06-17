@@ -7,6 +7,7 @@ export interface UserLocationSnapshot {
   longitude: number;
   country: string;
   province: string;
+  city: string;
   suburb: string;
 }
 
@@ -74,6 +75,7 @@ export function useLiveUserLocation(): UseLiveUserLocationResult {
               longitude: roundCoord(longitude),
               country: place.country || prev.country,
               province: place.province || prev.province,
+              city: place.city || prev.city,
               suburb: place.suburb || prev.suburb,
             };
           });
@@ -100,6 +102,7 @@ export function useLiveUserLocation(): UseLiveUserLocationResult {
         longitude: roundCoord(longitude),
         country: prev?.country ?? '',
         province: prev?.province ?? '',
+        city: prev?.city ?? '',
         suburb: prev?.suburb ?? '',
       }));
       resolvePlace(latitude, longitude);

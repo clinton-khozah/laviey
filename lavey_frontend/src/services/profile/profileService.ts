@@ -13,6 +13,7 @@ import {
   sortProfilesByDistance,
 } from '@/utils/discover/discoverDistanceTiers';
 import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
+import { buildFindFeedFilters } from '@/utils/discover/findFeedFilters';
 import { applyVibeMatchToProfiles } from '@/utils/discover/vibeMatchScore';
 import { sleep } from '@/utils/sleep';
 
@@ -29,6 +30,8 @@ interface DiscoverFeedApiPayload {
   nextDistanceTierKm?: number | null;
   expandedDistance?: boolean;
   canExpandDistance?: boolean;
+  isRecycling?: boolean;
+  myLikedProfileIds?: string[];
 }
 
 export interface DiscoverFeedRequest {
@@ -39,6 +42,8 @@ export interface DiscoverFeedRequest {
   maxDistanceKm?: number;
   ageMin?: number;
   ageMax?: number;
+  verifiedOnly?: boolean;
+  limit?: number;
 }
 
 export interface DiscoverFeedResponse {
@@ -49,6 +54,8 @@ export interface DiscoverFeedResponse {
   nextDistanceTierKm: number | null;
   expandedDistance: boolean;
   canExpandDistance: boolean;
+  isRecycling: boolean;
+  myLikedProfileIds: string[];
 }
 
 function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedResponse {
@@ -68,6 +75,7 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
     ageMin: request.ageMin ?? 18,
     ageMax: request.ageMax ?? 35,
     genders: [],
+    verifiedOnly: request.verifiedOnly === true,
   };
 
   let profiles = [...MOCK_PROFILES];
@@ -107,6 +115,8 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
     nextDistanceTierKm,
     expandedDistance,
     canExpandDistance,
+    isRecycling: false,
+    myLikedProfileIds: [],
   };
 }
 
@@ -129,12 +139,13 @@ export const profileService = {
         params: {
           filter,
           cursor: request.cursor,
-          limit: 18,
+          limit: request.limit ?? 18,
           distanceTierKm: request.distanceTierKm,
           expandDistance: request.expandDistance ? 'true' : undefined,
           maxDistanceKm: request.maxDistanceKm,
           ageMin: request.ageMin,
           ageMax: request.ageMax,
+          verifiedOnly: request.verifiedOnly ? 'true' : undefined,
         },
       },
     );
@@ -149,6 +160,8 @@ export const profileService = {
         nextDistanceTierKm: null,
         expandedDistance: false,
         canExpandDistance: false,
+        isRecycling: false,
+        myLikedProfileIds: [],
       };
     }
 
@@ -161,6 +174,8 @@ export const profileService = {
       nextDistanceTierKm: payload.nextDistanceTierKm ?? null,
       expandedDistance: payload.expandedDistance ?? false,
       canExpandDistance: payload.canExpandDistance ?? false,
+      isRecycling: payload.isRecycling ?? false,
+      myLikedProfileIds: payload.myLikedProfileIds ?? [],
     };
   },
 
@@ -177,6 +192,14 @@ export const profileService = {
     );
 
     return response.data;
+  },
+
+  async recordProfileView(profileId: string): Promise<void> {
+    if (!usesBackendApi()) return;
+
+    await httpClient.post(API_ENDPOINTS.profiles.recordView(profileId), {
+      skipErrorPage: true,
+    });
   },
 
   async getMeetupHostProfile(meetupId: string): Promise<Profile> {
@@ -210,5 +233,48 @@ export const profileService = {
     });
 
     return profiles.filter((profile) => profile.likedYou);
+  },
+
+  /** Suggested people from Messages — any distance, ranked by For You algorithm. */
+  async getMessagesDiscoverSuggestions(): Promise<Profile[]> {
+    const request: DiscoverFeedRequest = {
+      filter: 'for-you',
+      expandDistance: true,
+      maxDistanceKm: 500,
+      ageMin: 18,
+      ageMax: 99,
+      limit: 40,
+    };
+
+    if (!usesBackendApi()) {
+      await sleep(350);
+      return buildMockDiscoverFeed(request).profiles;
+    }
+
+    const { profiles } = await this.getDiscoverFeed(request);
+    return profiles;
+  },
+
+  /** Find from Messages — gender + widened age only, no distance cap. */
+  async getMessagesFindSuggestions(baseFilters: DiscoverFilters): Promise<Profile[]> {
+    const filters = buildFindFeedFilters(baseFilters);
+    const request: DiscoverFeedRequest = {
+      filter: 'for-you',
+      expandDistance: true,
+      maxDistanceKm: 500,
+      ageMin: filters.ageMin,
+      ageMax: filters.ageMax,
+      verifiedOnly: filters.verifiedOnly,
+      limit: 40,
+    };
+
+    if (!usesBackendApi()) {
+      await sleep(350);
+      const { profiles } = buildMockDiscoverFeed(request);
+      return applyDiscoverDemographicFilters(profiles, filters);
+    }
+
+    const { profiles } = await this.getDiscoverFeed(request);
+    return applyDiscoverDemographicFilters(profiles, filters);
   },
 };

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConversationListItem } from '@/components/messages/ConversationListItem';
 import { ChatThread } from '@/components/messages/ChatThread';
+import { ICrushThread } from '@/components/messages/ICrushThread';
 import { NotificationThread } from '@/components/messages/NotificationThread';
 import type { ChatConversationAction } from '@/components/messages/ChatSendOptionsMenu';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
+import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage';
 import { MessagesHeader, type MessageFilter } from '@/components/messages/MessagesHeader';
 import { OnlineMatchesStrip, RecentMatchesStrip } from '@/components/messages/MessageMatchStrip';
 import { PageScroller } from '@/components/layout/PageScroller';
@@ -13,11 +15,12 @@ import { ConversationOptionsSheet } from '@/components/messages/ConversationOpti
 import { DeleteChatSheet } from '@/components/messages/DeleteChatSheet';
 import { APP_IMAGES } from '@/constants/images';
 import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
-import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox } from '@/hooks';
-import { messageService } from '@/services';
+import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox, useMessagesDiscoverSuggestions, useMessagesFindSuggestions, useDiscoverFilters } from '@/hooks';
+import { messageService, matchService } from '@/services';
 import { privacyService } from '@/services/privacy/privacyService';
-import type { Conversation, DeleteConversationScope } from '@/types';
+import type { Conversation, DeleteConversationScope, Profile } from '@/types';
 import { isMatchConversation, sortConversations } from '@/utils/messages/sortConversations';
+import { isICrushConversation } from '@/utils/messages/iCrushConversation';
 import { openChatWithProfile } from '@/utils/navigation/appNav';
 import './MessagesPage.css';
 
@@ -46,8 +49,21 @@ export function MessagesPage() {
     deleteConversation,
     toggleConversationStar,
   } = useConversations();
-  const { likedIds, sendFlame } = useMatchActions();
+  const {
+    likedIds,
+    likedPostIds,
+    iCrushSentIds,
+    matchToast,
+    sendFlame,
+    sendICrush,
+    likePost,
+    dismissMatchToast,
+    isSubmitting: isFlameSubmitting,
+  } = useMatchActions();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [discoverOpen, setDiscoverOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [discoverProfile, setDiscoverProfile] = useState<Profile | null>(null);
   // Used to auto-send a greeting from `MatchProfileModal` after we switch into the chat.
   const [pendingAutoMessage, setPendingAutoMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<MessageFilter>('all');
@@ -56,6 +72,7 @@ export function MessagesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
   const [mutedConversationIds, setMutedConversationIds] = useState<Set<string>>(() => new Set());
   const [actionToast, setActionToast] = useState<{ text: string; success?: boolean } | null>(null);
+  const [iCrushResponding, setICrushResponding] = useState(false);
 
   const showActionToast = useCallback((message: string, success = false) => {
     setActionToast({ text: message, success });
@@ -71,7 +88,11 @@ export function MessagesPage() {
     notifyTyping,
     reactToMessage,
     deleteMessage,
-  } = useChatThread(activeId === NOTIFICATIONS_CONVERSATION_ID ? null : activeId);
+  } = useChatThread(
+    !activeId || activeId === NOTIFICATIONS_CONVERSATION_ID || activeId.startsWith('icrush-')
+      ? null
+      : activeId,
+  );
 
   const {
     notifications,
@@ -86,10 +107,17 @@ export function MessagesPage() {
     [conversations, activeId],
   );
 
+  const isICrushActive = Boolean(activeConversation && isICrushConversation(activeConversation));
+
   const matchConversations = useMemo(
     () => conversations.filter(isMatchConversation),
     [conversations],
   );
+
+  useEffect(() => {
+    if (!isICrushActive || !activeConversation?.id) return;
+    void messageService.getMessages(activeConversation.id).then(() => refetch(true));
+  }, [isICrushActive, activeConversation?.id, refetch]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -100,6 +128,22 @@ export function MessagesPage() {
   const { profile, isLoading: profileLoading } = useMatchProfile(
     profileConversation?.participantProfileId ?? null,
   );
+
+  const { filters: discoverFilters } = useDiscoverFilters();
+
+  const {
+    profiles: discoverProfiles,
+    isLoading: discoverLoading,
+    error: discoverError,
+    refetch: refetchDiscover,
+  } = useMessagesDiscoverSuggestions(discoverOpen && !findOpen);
+
+  const {
+    profiles: findProfiles,
+    isLoading: findLoading,
+    error: findError,
+    refetch: refetchFind,
+  } = useMessagesFindSuggestions(findOpen, discoverFilters);
 
   const unreadTotal = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
@@ -152,6 +196,62 @@ export function MessagesPage() {
   };
 
   const closeProfile = () => setProfileConversation(null);
+
+  const handleDiscoverFlame = useCallback(
+    (profileId: string) => {
+      void sendFlame(profileId).then(() => void refetch(true));
+    },
+    [sendFlame, refetch],
+  );
+
+  const handleDiscoverPostLike = useCallback(
+    (profile: Profile) => {
+      const postId = profile.posts[0]?.id;
+      if (!postId || likedPostIds.has(postId)) return;
+      void likePost(postId, profile.id);
+    },
+    [likePost, likedPostIds],
+  );
+
+  const handleDiscoverICrush = useCallback(
+    (profileId: string) => {
+      void sendICrush(profileId).then(() => void refetch(true));
+    },
+    [sendICrush, refetch],
+  );
+
+  const handleDiscoverMatchGreeting = useCallback(
+    (text: string) => {
+      if (!matchToast?.profileId) return;
+      window.sessionStorage.setItem('lavey:pendingGreetingProfileId', matchToast.profileId);
+      window.sessionStorage.setItem('lavey:pendingGreetingText', text);
+      dismissMatchToast();
+      setDiscoverOpen(false);
+      setFindOpen(false);
+    },
+    [matchToast, dismissMatchToast],
+  );
+
+  const handleFindMatchGreeting = useCallback(
+    (text: string) => {
+      if (!matchToast?.profileId) return;
+      window.sessionStorage.setItem('lavey:pendingGreetingProfileId', matchToast.profileId);
+      window.sessionStorage.setItem('lavey:pendingGreetingText', text);
+      dismissMatchToast();
+      setFindOpen(false);
+      setDiscoverOpen(false);
+    },
+    [matchToast, dismissMatchToast],
+  );
+
+  const handleDiscoverProfileFlame = useCallback(() => {
+    if (!discoverProfile) return;
+    void sendFlame(discoverProfile.id).then(() => {
+      void refetchDiscover();
+      void refetch(true);
+      showActionToast('Like sent', true);
+    });
+  }, [discoverProfile, sendFlame, refetchDiscover, refetch, showActionToast]);
 
   const handleMessageFromProfile = () => {
     if (!profileConversation) return;
@@ -246,6 +346,7 @@ export function MessagesPage() {
 
   const handleConversationAction = (action: ChatConversationAction) => {
     if (!activeConversation) return;
+    if (isICrushConversation(activeConversation)) return;
 
     switch (action) {
       case 'view-profile':
@@ -299,9 +400,81 @@ export function MessagesPage() {
     }
   };
 
+  const handleAcceptICrush = useCallback(() => {
+    const inviteId = activeConversation?.iCrushInviteId;
+    if (!inviteId) return;
+
+    setICrushResponding(true);
+    void matchService
+      .acceptICrush(inviteId)
+      .then((result) => {
+        setActiveId(result.conversationId);
+        showActionToast(`You matched with ${result.profileName}!`, true);
+        return refetch(true);
+      })
+      .catch(() => showActionToast('Could not accept crushy'))
+      .finally(() => setICrushResponding(false));
+  }, [activeConversation?.iCrushInviteId, refetch, showActionToast]);
+
+  const handleRejectICrush = useCallback(() => {
+    const inviteId = activeConversation?.iCrushInviteId;
+    if (!inviteId) return;
+
+    setICrushResponding(true);
+    void matchService
+      .rejectICrush(inviteId)
+      .then(() => {
+        setActiveId(null);
+        showActionToast('Passed on crushy', true);
+        return refetch(true);
+      })
+      .catch(() => showActionToast('Could not update crushy'))
+      .finally(() => setICrushResponding(false));
+  }, [activeConversation?.iCrushInviteId, refetch, showActionToast]);
+
   return (
     <>
-      {activeConversation?.conversationKind === 'notifications' ? (
+      {findOpen ? (
+        <MessagesDiscoverPage
+          profiles={findProfiles}
+          likedIds={likedIds}
+          likedPostIds={likedPostIds}
+          iCrushSentIds={iCrushSentIds}
+          matchToast={matchToast}
+          isLoading={findLoading}
+          error={findError}
+          onBack={() => setFindOpen(false)}
+          onFlame={handleDiscoverFlame}
+          onICrush={handleDiscoverICrush}
+          onPostLike={handleDiscoverPostLike}
+          onProfileClick={(p) => setDiscoverProfile(p)}
+          onDismissMatchToast={dismissMatchToast}
+          onMatchGreeting={handleFindMatchGreeting}
+          onRetry={() => void refetchFind()}
+        />
+      ) : discoverOpen ? (
+        <MessagesDiscoverPage
+          profiles={discoverProfiles}
+          likedIds={likedIds}
+          likedPostIds={likedPostIds}
+          iCrushSentIds={iCrushSentIds}
+          matchToast={matchToast}
+          isLoading={discoverLoading}
+          error={discoverError}
+          onBack={() => {
+            setDiscoverOpen(false);
+            setFindOpen(false);
+          }}
+          onFindClick={() => setFindOpen(true)}
+          onFlame={handleDiscoverFlame}
+          onICrush={handleDiscoverICrush}
+          onPostLike={handleDiscoverPostLike}
+          onProfileClick={(p) => setDiscoverProfile(p)}
+          onDismissMatchToast={dismissMatchToast}
+          onMatchGreeting={handleDiscoverMatchGreeting}
+          onRetry={() => void refetchDiscover()}
+        />
+      ) : activeConversation?.conversationKind === 'notifications' ? (
         <NotificationThread
           notifications={notifications}
           isLoading={notificationsLoading}
@@ -312,6 +485,15 @@ export function MessagesPage() {
           onChat={(profileId) => openChatWithProfile(profileId)}
           onMarkRead={handleMarkNotificationsRead}
           onRetry={() => void refetchNotifications()}
+        />
+      ) : isICrushActive && activeConversation ? (
+        <ICrushThread
+          conversation={activeConversation}
+          isResponding={iCrushResponding}
+          onBack={() => setActiveId(null)}
+          onProfileClick={() => openProfile(activeConversation)}
+          onAccept={handleAcceptICrush}
+          onReject={handleRejectICrush}
         />
       ) : activeConversation ? (
         <ChatThread
@@ -348,6 +530,10 @@ export function MessagesPage() {
               filter={filter}
               filterCounts={filterCounts}
               onFilterChange={setFilter}
+              onComposeClick={() => {
+                setFindOpen(false);
+                setDiscoverOpen(true);
+              }}
             />
           </div>
 
@@ -425,7 +611,9 @@ export function MessagesPage() {
                           c.conversationKind === 'notifications' ? setActiveId(c.id) : openProfile(c)
                         }
                         onMoreClick={
-                          c.conversationKind === 'notifications' ? undefined : () => openOptionsSheet(c)
+                          c.conversationKind === 'notifications' || isICrushConversation(c)
+                            ? undefined
+                            : () => openOptionsSheet(c)
                         }
                       />
                     ))}
@@ -446,6 +634,18 @@ export function MessagesPage() {
         onClose={closeProfile}
         onMessage={handleMessageFromProfile}
         onSendMessage={handleSendMessageFromProfile}
+      />
+
+      <MatchProfileModal
+        open={discoverProfile !== null}
+        mode="discover"
+        profile={discoverProfile}
+        liked={discoverProfile ? likedIds.has(discoverProfile.id) : false}
+        likedYou={discoverProfile?.likedYou ?? false}
+        isLoading={false}
+        isSubmittingFlame={isFlameSubmitting}
+        onClose={() => setDiscoverProfile(null)}
+        onFlame={handleDiscoverProfileFlame}
       />
 
       <ConversationOptionsSheet

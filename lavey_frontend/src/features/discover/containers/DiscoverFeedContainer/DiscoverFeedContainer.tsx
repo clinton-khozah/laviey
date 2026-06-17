@@ -10,8 +10,10 @@ export interface DiscoverFeedContainerProps {
   error: string | null;
   likedIds: Set<string>;
   likedPostIds: Set<string>;
+  iCrushSentIds: Set<string>;
   matchToast: MatchToastProfile | null;
   onFlame: (profileId: string) => void;
+  onICrush: (profileId: string) => void;
   onPostLike: (profile: Profile) => void;
   onRetry: () => void;
   onProfileClick: (profile: Profile) => void;
@@ -26,8 +28,10 @@ export function DiscoverFeedContainer({
   error,
   likedIds,
   likedPostIds,
+  iCrushSentIds,
   matchToast,
   onFlame,
+  onICrush,
   onPostLike,
   onRetry,
   onProfileClick,
@@ -53,7 +57,9 @@ export function DiscoverFeedContainer({
         profiles={profiles}
         likedIds={likedIds}
         likedPostIds={likedPostIds}
+        iCrushSentIds={iCrushSentIds}
         onFlame={onFlame}
+        onICrush={onICrush}
         onPostLike={onPostLike}
         onProfileClick={onProfileClick}
         isLocked={Boolean(matchToast)}

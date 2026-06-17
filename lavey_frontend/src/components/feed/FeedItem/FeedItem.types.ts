@@ -4,9 +4,10 @@ export interface FeedItemProps {
   profile: Profile;
   liked: boolean;
   likedPost: boolean;
+  iCrushSent: boolean;
   onLike: () => void;
   onPostLike: () => void;
-  onCollab: () => void;
+  onICrush: () => void;
   onProfileClick: () => void;
   showSwipeHint?: boolean;
 }

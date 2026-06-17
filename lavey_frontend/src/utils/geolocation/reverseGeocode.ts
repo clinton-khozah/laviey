@@ -1,6 +1,7 @@
 export interface ReverseGeocodeResult {
   country: string;
   province: string;
+  city: string;
   suburb: string;
 }
 
@@ -9,6 +10,8 @@ interface NominatimAddress {
   state?: string;
   province?: string;
   region?: string;
+  municipality?: string;
+  county?: string;
   city?: string;
   town?: string;
   village?: string;
@@ -48,13 +51,17 @@ export async function reverseGeocode(
   const data = (await response.json()) as NominatimResponse;
   const address = data.address ?? {};
 
+  const city =
+    address.city ??
+    address.town ??
+    address.village ??
+    address.municipality ??
+    '';
+
   const suburb =
     address.suburb ??
     address.neighbourhood ??
     address.city_district ??
-    address.village ??
-    address.town ??
-    address.city ??
     '';
 
   const province = address.state ?? address.province ?? address.region ?? '';
@@ -63,6 +70,7 @@ export async function reverseGeocode(
   return {
     country: country.trim(),
     province: province.trim(),
+    city: city.trim(),
     suburb: suburb.trim(),
   };
 }

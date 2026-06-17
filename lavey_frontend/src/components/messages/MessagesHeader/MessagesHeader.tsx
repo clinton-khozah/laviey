@@ -8,6 +8,7 @@ interface MessagesHeaderProps {
   filter: MessageFilter;
   filterCounts: { all: number; unread: number; online: number };
   onFilterChange: (filter: MessageFilter) => void;
+  onComposeClick?: () => void;
 }
 
 const FILTERS: { id: MessageFilter; label: string }[] = [
@@ -22,6 +23,7 @@ export function MessagesHeader({
   filter,
   filterCounts,
   onFilterChange,
+  onComposeClick,
 }: MessagesHeaderProps) {
   return (
     <header className="messages-header">
@@ -39,7 +41,12 @@ export function MessagesHeader({
             )}
           </div>
         </div>
-        <button type="button" className="messages-header__compose" aria-label="New message">
+        <button
+          type="button"
+          className="messages-header__compose"
+          aria-label="Discover people"
+          onClick={onComposeClick}
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M12 5v14M5 12h14" />
           </svg>

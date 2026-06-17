@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { profileService } from '@/services';
 import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
-import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
+import { applyDiscoverDemographicFilters, applyForYouFeedFilters } from '@/utils/discover/applyDiscoverFilters';
 import { isProfileVerified } from '@/utils/profile/verificationStorage';
 import {
   defaultNearbyDistanceTier,
@@ -10,6 +10,9 @@ import {
 
 interface UseDiscoverFeedResult {
   profiles: Profile[];
+  feedPool: Profile[];
+  isFeedRecycling: boolean;
+  myLikedProfileIds: string[];
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
@@ -42,6 +45,9 @@ export function useDiscoverFeed(
   filters: DiscoverFilters,
 ): UseDiscoverFeedResult {
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [feedPool, setFeedPool] = useState<Profile[]>([]);
+  const [isFeedRecycling, setIsFeedRecycling] = useState(false);
+  const [myLikedProfileIds, setMyLikedProfileIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,15 +134,31 @@ export function useDiscoverFeed(
           maxDistanceKm: activeFilters.maxDistanceKm,
           ageMin: activeFilters.ageMin,
           ageMax: activeFilters.ageMax,
+          verifiedOnly: activeFilters.verifiedOnly,
         });
 
         const demographic = enrichVerifiedStatus(
-          applyDiscoverDemographicFilters(response.profiles, activeFilters),
+          response.isRecycling
+            ? response.profiles
+            : activeFilter === 'for-you'
+              ? applyForYouFeedFilters(response.profiles, activeFilters)
+              : applyDiscoverDemographicFilters(response.profiles, activeFilters),
         );
 
         setProfiles((prev) =>
           options.replace ? demographic : mergeProfiles(prev, demographic),
         );
+        setFeedPool((prev) => {
+          if (activeFilter === 'for-you') {
+            if (demographic.length === 0 && prev.length > 0) return prev;
+            return mergeProfiles(prev, demographic);
+          }
+          return options.replace ? demographic : mergeProfiles(prev, demographic);
+        });
+        setIsFeedRecycling(response.isRecycling);
+        setMyLikedProfileIds((prev) => [
+          ...new Set([...prev, ...response.myLikedProfileIds]),
+        ]);
         setNextCursor(response.nextCursor);
         setDistanceTierKm(response.distanceTierKm);
         setExpandedDistance(response.expandedDistance);
@@ -173,6 +195,9 @@ export function useDiscoverFeed(
         setError(message);
         if (options.replace) {
           setProfiles([]);
+          setFeedPool([]);
+          setIsFeedRecycling(false);
+          setMyLikedProfileIds([]);
           setNextCursor(null);
         }
       } finally {
@@ -194,9 +219,25 @@ export function useDiscoverFeed(
     setExpandedDistance(false);
     setNextCursor(null);
     setCanExpandDistance(false);
+    setIsFeedRecycling(false);
+    setMyLikedProfileIds([]);
     distanceTierRef.current = tier;
     expandedRef.current = false;
+    setFeedPool([]);
     await loadFeed({ replace: true, distanceTier: tier, expanded: false });
+  }, [loadFeed]);
+
+  const refetch = useCallback(async () => {
+    const activeFilter = filterRef.current;
+    const tier =
+      activeFilter === 'nearby'
+        ? defaultNearbyDistanceTier(filtersRef.current.maxDistanceKm)
+        : distanceTierRef.current;
+    await loadFeed({
+      replace: true,
+      distanceTier: tier,
+      expanded: expandedRef.current,
+    });
   }, [loadFeed]);
 
   const setFilter = useCallback(
@@ -219,11 +260,7 @@ export function useDiscoverFeed(
 
   useEffect(() => {
     void resetAndLoad();
-  }, [filters.ageMin, filters.ageMax, filters.maxDistanceKm, genderFilterKey, resetAndLoad]);
-
-  const refetch = useCallback(async () => {
-    await resetAndLoad();
-  }, [resetAndLoad]);
+  }, [filters.ageMin, filters.ageMax, filters.maxDistanceKm, filters.verifiedOnly, genderFilterKey, resetAndLoad]);
 
   const onNearEndOfFeed = useCallback(() => {
     if (isFetchingRef.current) return;
@@ -253,6 +290,9 @@ export function useDiscoverFeed(
 
   return {
     profiles,
+    feedPool,
+    isFeedRecycling,
+    myLikedProfileIds,
     isLoading,
     isLoadingMore,
     error,

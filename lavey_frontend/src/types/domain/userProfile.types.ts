@@ -7,7 +7,8 @@ export interface ProfileInterestItem {
 }
 
 export interface UserProfileStats {
-  flamesSent: number;
+  /** Distinct people who liked or crushy'd you. */
+  crushesReceived: number;
   matches: number;
   vibeScore: number;
   profileViews: number;

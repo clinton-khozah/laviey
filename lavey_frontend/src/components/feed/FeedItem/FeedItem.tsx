@@ -4,6 +4,7 @@ import { ActionRail } from "@/components/feed/ActionRail";
 import { FeedProfilePlaceholder } from "@/components/feed/FeedProfilePlaceholder";
 import { ProfileOverlay } from "@/components/feed/ProfileOverlay";
 import { useDoubleTap, useInView } from "@/hooks";
+import { profileService } from "@/services/profile/profileService";
 import { hasCustomProfileAvatar } from "@/utils/discover/discoverProfileReady";
 import { hasFeedDisplayMedia } from "@/utils/profile/feedMedia";
 import type { FeedItemProps } from "./FeedItem.types";
@@ -15,9 +16,10 @@ export function FeedItem({
   profile,
   liked,
   likedPost: _likedPost,
+  iCrushSent,
   onLike,
   onPostLike: _onPostLike,
-  onCollab,
+  onICrush,
   onProfileClick,
   showSwipeHint = false,
 }: FeedItemProps) {
@@ -41,6 +43,7 @@ export function FeedItem({
       : DEFAULT_CLIP_SECONDS;
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const viewRecordedRef = useRef(false);
   const { ref, inView } = useInView(0.72);
   const [progress, setProgress] = useState(0);
   const [heartBurst, setHeartBurst] = useState(false);
@@ -65,6 +68,16 @@ export function FeedItem({
       setProgress(0);
     }
   }, [inView, videoSrc]);
+
+  useEffect(() => {
+    if (!inView) {
+      viewRecordedRef.current = false;
+      return;
+    }
+    if (viewRecordedRef.current) return;
+    viewRecordedRef.current = true;
+    void profileService.recordProfileView(profile.id).catch(() => {});
+  }, [inView, profile.id]);
 
   const handleTimeUpdate = () => {
     const video = videoRef.current;
@@ -139,8 +152,9 @@ export function FeedItem({
       <ActionRail
         profile={profile}
         liked={liked}
+        iCrushSent={iCrushSent}
         onLike={onLike}
-        onCollab={onCollab}
+        onICrush={onICrush}
         onProfileClick={onProfileClick}
       />
 

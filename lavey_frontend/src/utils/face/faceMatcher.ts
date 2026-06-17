@@ -1,8 +1,8 @@
-import * as faceapi from '@vladmandic/face-api';
-import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-backend-webgl';
+import * as faceapi from "@vladmandic/face-api";
+import * as tf from "@tensorflow/tfjs";
+import "@tensorflow/tfjs-backend-webgl";
 
-const MODEL_PATH = '/models/face-api';
+const MODEL_PATH = "/models/face-api";
 export const FACE_MATCH_THRESHOLD = 0.55;
 
 let modelsLoaded = false;
@@ -13,13 +13,13 @@ export class FaceMatchError extends Error {
 
   constructor(code: string, message: string) {
     super(message);
-    this.name = 'FaceMatchError';
+    this.name = "FaceMatchError";
     this.code = code;
   }
 }
 
 async function ensureBackend(): Promise<void> {
-  await tf.setBackend('webgl');
+  await tf.setBackend("webgl");
   await tf.ready();
 }
 
@@ -45,11 +45,16 @@ export async function loadFaceModels(): Promise<void> {
   }
 }
 
-export function loadImageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
+export function loadImageFromDataUrl(
+  dataUrl: string,
+): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not load that image.'));
+    img.onerror = () =>
+      reject(
+        new FaceMatchError("IMAGE_LOAD_FAILED", "Could not load that image."),
+      );
     img.src = dataUrl;
   });
 }
@@ -57,38 +62,52 @@ export function loadImageFromDataUrl(dataUrl: string): Promise<HTMLImageElement>
 export function loadImageFromUrl(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () =>
-      reject(new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not load that image for face check.'));
+      reject(
+        new FaceMatchError(
+          "IMAGE_LOAD_FAILED",
+          "Could not load that image for face check.",
+        ),
+      );
     img.src = url;
   });
 }
 
 function loadImageSource(src: string): Promise<HTMLImageElement> {
-  return src.startsWith('data:') ? loadImageFromDataUrl(src) : loadImageFromUrl(src);
+  return src.startsWith("data:")
+    ? loadImageFromDataUrl(src)
+    : loadImageFromUrl(src);
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') resolve(reader.result);
-      else reject(new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not read that image.'));
+      if (typeof reader.result === "string") resolve(reader.result);
+      else
+        reject(
+          new FaceMatchError("IMAGE_LOAD_FAILED", "Could not read that image."),
+        );
     };
-    reader.onerror = () => reject(new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not read that image.'));
+    reader.onerror = () =>
+      reject(
+        new FaceMatchError("IMAGE_LOAD_FAILED", "Could not read that image."),
+      );
     reader.readAsDataURL(file);
   });
 }
 
 function imageToDataUrl(img: HTMLImageElement): string {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = img.naturalWidth || img.width;
   canvas.height = img.naturalHeight || img.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not analyze image.');
+  const ctx = canvas.getContext("2d");
+  if (!ctx)
+    throw new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image.");
   ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL('image/jpeg', 0.92);
+  return canvas.toDataURL("image/jpeg", 0.92);
 }
 
 export interface FaceValidationOptions {
@@ -113,17 +132,17 @@ async function validateClearFaceOnImage(
 
   if (detections.length === 0) {
     throw new FaceMatchError(
-      'NO_FACE',
+      "NO_FACE",
       relaxed
-        ? 'We could not see a clear face. Use a well-lit photo where your face is easy to see.'
-        : 'No clear face found. Use a well-lit photo where your face fills most of the frame.',
+        ? "We could not see a clear face. Use a well-lit photo where your face is easy to see."
+        : "No clear face found. Use a well-lit photo where your face fills most of the frame.",
     );
   }
 
   if (detections.length > 1) {
     throw new FaceMatchError(
-      'MULTIPLE_FACES',
-      'Only one person should be in the photo.',
+      "MULTIPLE_FACES",
+      "Only one person should be in the photo.",
     );
   }
 
@@ -135,15 +154,15 @@ async function validateClearFaceOnImage(
 
   if (faceSize / minDim < minFaceRatio) {
     throw new FaceMatchError(
-      'FACE_TOO_SMALL',
-      'Your face is too small in this photo. Move closer or use a tighter crop.',
+      "FACE_TOO_SMALL",
+      "Your face is too small in this photo. Move closer or use a tighter crop.",
     );
   }
 
   if (detection.score < minDetectionScore) {
     throw new FaceMatchError(
-      'FACE_UNCLEAR',
-      'Your face is not clear enough. Avoid blur, heavy filters, hats, or sunglasses.',
+      "FACE_UNCLEAR",
+      "Your face is not clear enough. Avoid blur, heavy filters, hats, or sunglasses.",
     );
   }
 }
@@ -152,8 +171,8 @@ export async function validateClearFaceImage(
   file: File,
   options?: FaceValidationOptions,
 ): Promise<void> {
-  if (!file.type.startsWith('image/')) {
-    throw new FaceMatchError('INVALID_IMAGE', 'Please choose a photo file.');
+  if (!file.type.startsWith("image/")) {
+    throw new FaceMatchError("INVALID_IMAGE", "Please choose a photo file.");
   }
   await loadFaceModels();
   const dataUrl = await readFileAsDataUrl(file);
@@ -161,11 +180,16 @@ export async function validateClearFaceImage(
   await validateClearFaceOnImage(img, options);
 }
 
-async function detectAllFaceDescriptors(img: HTMLImageElement): Promise<Float32Array[]> {
+async function detectAllFaceDescriptors(
+  img: HTMLImageElement,
+): Promise<Float32Array[]> {
   const detections = await faceapi
     .detectAllFaces(
       img,
-      new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.48 }),
+      new faceapi.TinyFaceDetectorOptions({
+        inputSize: 512,
+        scoreThreshold: 0.48,
+      }),
     )
     .withFaceLandmarks()
     .withFaceDescriptors();
@@ -180,8 +204,8 @@ export async function validateUserInPostPhoto(
 ): Promise<void> {
   if (!referenceUrl.trim()) {
     throw new FaceMatchError(
-      'NO_REFERENCE',
-      'Add a clear profile photo first so we can verify you are in the picture.',
+      "NO_REFERENCE",
+      "Add a clear profile photo first so we can verify you are in the picture.",
     );
   }
 
@@ -194,55 +218,66 @@ export async function validateUserInPostPhoto(
 
   if (postDescriptors.length === 0) {
     throw new FaceMatchError(
-      'NO_FACE',
-      'We could not detect anyone in this photo. Use a clear picture where your face is visible.',
+      "NO_FACE",
+      "We could not detect anyone in this photo. Use a clear picture where your face is visible.",
     );
   }
 
   const userPresent = postDescriptors.some(
     (descriptor) =>
-      faceapi.euclideanDistance(referenceDescriptor, descriptor) <= FACE_MATCH_THRESHOLD,
+      faceapi.euclideanDistance(referenceDescriptor, descriptor) <=
+      FACE_MATCH_THRESHOLD,
   );
 
   if (userPresent) return;
 
   if (postDescriptors.length === 1) {
     throw new FaceMatchError(
-      'NOT_YOU',
-      'This photo does not look like you. Only post pictures where you are in the shot.',
+      "NOT_YOU",
+      "This photo does not look like you. Only post pictures where you are in the shot.",
     );
   }
 
   throw new FaceMatchError(
-    'USER_NOT_IN_PHOTO',
-    'You must be in this photo. You cannot post someone else without being in the picture too.',
+    "USER_NOT_IN_PHOTO",
+    "You must be in this photo. You cannot post someone else without being in the picture too.",
   );
 }
 
-async function detectSingleFaceDescriptor(img: HTMLImageElement): Promise<Float32Array> {
+async function detectSingleFaceDescriptor(
+  img: HTMLImageElement,
+): Promise<Float32Array> {
   const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 }))
+    .detectAllFaces(
+      img,
+      new faceapi.TinyFaceDetectorOptions({
+        inputSize: 416,
+        scoreThreshold: 0.45,
+      }),
+    )
     .withFaceLandmarks()
     .withFaceDescriptors();
 
   if (detections.length === 0) {
     throw new FaceMatchError(
-      'NO_FACE',
-      'No face detected. Use a clear photo with your face centered and good lighting.',
+      "NO_FACE",
+      "No face detected. Use a clear photo with your face centered and good lighting.",
     );
   }
 
   if (detections.length > 1) {
     throw new FaceMatchError(
-      'MULTIPLE_FACES',
-      'More than one face was found. Use a photo with only your face visible.',
+      "MULTIPLE_FACES",
+      "More than one face was found. Use a photo with only your face visible.",
     );
   }
 
   return detections[0]!.descriptor;
 }
 
-export async function extractFaceDescriptor(dataUrl: string): Promise<Float32Array> {
+export async function extractFaceDescriptor(
+  dataUrl: string,
+): Promise<Float32Array> {
   await loadFaceModels();
   const img = await loadImageFromDataUrl(dataUrl);
   return detectSingleFaceDescriptor(img);
@@ -252,18 +287,23 @@ function loadThumb(dataUrl: string): Promise<Uint8ClampedArray> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = 48;
       canvas.height = 48;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
-        reject(new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not analyze image.'));
+        reject(
+          new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image."),
+        );
         return;
       }
       ctx.drawImage(img, 0, 0, 48, 48);
       resolve(ctx.getImageData(0, 0, 48, 48).data);
     };
-    img.onerror = () => reject(new FaceMatchError('IMAGE_LOAD_FAILED', 'Could not analyze image.'));
+    img.onerror = () =>
+      reject(
+        new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image."),
+      );
     img.src = dataUrl;
   });
 }
@@ -275,12 +315,15 @@ export async function validateNotDuplicatePhotos(
 ): Promise<void> {
   if (referenceDataUrl === liveDataUrl) {
     throw new FaceMatchError(
-      'SAME_IMAGE',
-      'The live photo matches your uploaded file exactly. Use your camera for the selfie step, not the same gallery image.',
+      "SAME_IMAGE",
+      "The live photo matches your uploaded file exactly. Use your camera for the selfie step, not the same gallery image.",
     );
   }
 
-  const [refImg, liveImg] = await Promise.all([loadThumb(referenceDataUrl), loadThumb(liveDataUrl)]);
+  const [refImg, liveImg] = await Promise.all([
+    loadThumb(referenceDataUrl),
+    loadThumb(liveDataUrl),
+  ]);
 
   let samePixels = 0;
   const total = refImg.length / 4;
@@ -295,8 +338,8 @@ export async function validateNotDuplicatePhotos(
   const similarity = samePixels / total;
   if (similarity > 0.92) {
     throw new FaceMatchError(
-      'SAME_IMAGE',
-      'This looks like the same photo twice — possibly a picture held up to the camera. Take a fresh live selfie.',
+      "SAME_IMAGE",
+      "This looks like the same photo twice — possibly a picture held up to the camera. Take a fresh live selfie.",
     );
   }
 }
@@ -319,12 +362,15 @@ export async function compareFacePhotos(
     extractFaceDescriptor(liveDataUrl),
   ]);
 
-  const distance = faceapi.euclideanDistance(referenceDescriptor, liveDescriptor);
+  const distance = faceapi.euclideanDistance(
+    referenceDescriptor,
+    liveDescriptor,
+  );
 
   if (distance < 0.06) {
     throw new FaceMatchError(
-      'SUSPICIOUS_MATCH',
-      'These images look identical. Use a live camera selfie — not the same photo or a picture on another screen.',
+      "SUSPICIOUS_MATCH",
+      "These images look identical. Use a live camera selfie — not the same photo or a picture on another screen.",
     );
   }
 
@@ -359,12 +405,15 @@ export async function compareFaceReferenceToLive(
     detectSingleFaceDescriptor(liveImg),
   ]);
 
-  const distance = faceapi.euclideanDistance(referenceDescriptor, liveDescriptor);
+  const distance = faceapi.euclideanDistance(
+    referenceDescriptor,
+    liveDescriptor,
+  );
 
   if (distance < 0.06) {
     throw new FaceMatchError(
-      'SUSPICIOUS_MATCH',
-      'These images look identical. Use a live camera selfie — not the same photo or a picture on another screen.',
+      "SUSPICIOUS_MATCH",
+      "These images look identical. Use a live camera selfie — not the same photo or a picture on another screen.",
     );
   }
 
@@ -385,5 +434,5 @@ export async function compareFaceReferenceToLive(
 export function faceMatchUserMessage(error: unknown): string {
   if (error instanceof FaceMatchError) return error.message;
   if (error instanceof Error && error.message) return error.message;
-  return 'Face comparison failed. Please try again.';
+  return "Face comparison failed. Please try again.";
 }

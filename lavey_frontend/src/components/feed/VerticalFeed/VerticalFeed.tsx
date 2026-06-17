@@ -8,9 +8,10 @@ export function VerticalFeed({
   profiles,
   likedIds,
   likedPostIds,
+  iCrushSentIds,
   onFlame,
   onPostLike,
-  onCollab,
+  onICrush,
   onProfileClick,
   isLocked = false,
   onNearEndOfFeed,
@@ -83,9 +84,10 @@ export function VerticalFeed({
           profile={profile}
           liked={likedIds.has(profile.id)}
           likedPost={likedPostIds.has(profile.posts[0]?.id ?? '')}
+          iCrushSent={iCrushSentIds.has(profile.id)}
           onLike={() => onFlame(profile.id)}
           onPostLike={() => onPostLike(profile)}
-          onCollab={() => onCollab?.(profile.id)}
+          onICrush={() => onICrush?.(profile.id)}
           onProfileClick={() => onProfileClick(profile)}
           showSwipeHint={index === 0 && showSwipeHint}
         />

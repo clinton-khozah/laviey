@@ -5,12 +5,13 @@ import {
   sortProfilesByDistance,
 } from './discoverDistanceTiers';
 
-/** Age + gender only — distance tiers are handled by the discover feed loader / API. */
+/** Age + gender + optional verified — distance tiers are handled by the discover feed loader / API. */
 export function applyDiscoverDemographicFilters(
   profiles: Profile[],
   filters: DiscoverFilters,
 ): Profile[] {
   return profiles.filter((profile) => {
+    if (filters.verifiedOnly && !profile.verified) return false;
     if (profile.age < filters.ageMin || profile.age > filters.ageMax) return false;
     if (
       filters.genders.length > 0 &&
@@ -21,6 +22,27 @@ export function applyDiscoverDemographicFilters(
     }
     return true;
   });
+}
+
+/** Age + gender for For You — relaxes filters when they would hide every profile. */
+export function applyForYouFeedFilters(
+  profiles: Profile[],
+  filters: DiscoverFilters,
+): Profile[] {
+  const filtered = applyDiscoverDemographicFilters(profiles, filters);
+  if (filtered.length > 0 || profiles.length === 0) return filtered;
+
+  if (filters.verifiedOnly) return filtered;
+
+  if (filters.genders.length > 0) {
+    const withoutGender = applyDiscoverDemographicFilters(profiles, {
+      ...filters,
+      genders: [],
+    });
+    if (withoutGender.length > 0) return withoutGender;
+  }
+
+  return profiles;
 }
 
 /** Client-side distance pass for mock API and legacy callers. */

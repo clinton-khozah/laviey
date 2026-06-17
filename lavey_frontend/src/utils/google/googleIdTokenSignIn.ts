@@ -1,7 +1,7 @@
-import { env } from '@/config/env';
-import './googleGsi.types';
+import { env } from "@/config/env";
+import "./googleGsi.types";
 
-const GSI_SCRIPT = 'https://accounts.google.com/gsi/client';
+const GSI_SCRIPT = "https://accounts.google.com/gsi/client";
 
 let gsiScriptPromise: Promise<void> | null = null;
 
@@ -12,12 +12,13 @@ function loadGsiScript(): Promise<void> {
 
   if (!gsiScriptPromise) {
     gsiScriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
+      const script = document.createElement("script");
       script.src = GSI_SCRIPT;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Google sign-in failed to load.'));
+      script.onerror = () =>
+        reject(new Error("Google sign-in failed to load."));
       document.head.appendChild(script);
     });
   }
@@ -32,16 +33,16 @@ function loadGsiScript(): Promise<void> {
 export async function requestGoogleIdToken(): Promise<string> {
   const clientId = env.googleClientId.trim();
   if (!clientId) {
-    throw new Error('VITE_GOOGLE_CLIENT_ID is not set.');
+    throw new Error("VITE_GOOGLE_CLIENT_ID is not set.");
   }
 
   await loadGsiScript();
 
   return new Promise((resolve, reject) => {
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '0';
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-9999px";
+    container.style.top = "0";
     document.body.appendChild(container);
 
     const cleanup = () => {
@@ -57,23 +58,25 @@ export async function requestGoogleIdToken(): Promise<string> {
           resolve(response.credential);
           return;
         }
-        reject(new Error('Google did not return a sign-in token.'));
+        reject(new Error("Google did not return a sign-in token."));
       },
     });
 
     window.google!.accounts.id.renderButton(container, {
-      type: 'standard',
-      theme: 'outline',
-      size: 'large',
+      type: "standard",
+      theme: "outline",
+      size: "large",
     });
 
     window.setTimeout(() => {
-      const button = container.querySelector('[role="button"]') as HTMLElement | null;
+      const button = container.querySelector(
+        '[role="button"]',
+      ) as HTMLElement | null;
       if (!button) {
         cleanup();
         reject(
           new Error(
-            'Could not open Google sign-in. Add http://localhost:3000 to Authorized JavaScript origins in Google Cloud Console.',
+            "Could not open Google sign-in. Add http://localhost:3000 to Authorized JavaScript origins in Google Cloud Console.",
           ),
         );
         return;

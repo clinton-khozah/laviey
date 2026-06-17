@@ -12,10 +12,35 @@ export function TopBar({
   hasActiveDiscoveryFilters = false,
   isPremium = false,
   onUpgrade,
+  onFindClick,
 }: TopBarProps) {
   const remaining = quota?.remaining ?? '—';
   const max = quota?.max ?? '—';
   const showUpgrade = !isPremium && onUpgrade;
+
+  const flameQuota = (
+    <div
+      className="top-bar__flames"
+      title={quota ? `${remaining} crushes left today` : 'Loading quota'}
+      aria-busy={isQuotaLoading}
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="top-bar__flame-icon">
+        <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.39 13.5.67z" />
+      </svg>
+      <span className="top-bar__flame-count">{isPremium ? '∞' : `${remaining}/${max}`}</span>
+    </div>
+  );
+
+  const findButton = onFindClick ? (
+    <button type="button" className="top-bar__find" onClick={onFindClick} aria-label="Find people">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <circle cx="11" cy="11" r="7" />
+        <path d="M20 20l-4-4" />
+      </svg>
+    </button>
+  ) : (
+    flameQuota
+  );
 
   const discoveryFilterButton = onDiscoveryFiltersClick ? (
     <button
@@ -100,31 +125,7 @@ export function TopBar({
           </button>
         )}
 
-        {isPremium ? (
-          <div
-            className="top-bar__flames"
-            title={quota ? `${remaining} crushes left today` : 'Loading quota'}
-            aria-busy={isQuotaLoading}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="top-bar__flame-icon">
-              <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.39 13.5.67z" />
-            </svg>
-            <span className="top-bar__flame-count">∞</span>
-          </div>
-        ) : (
-          <div
-            className="top-bar__flames"
-            title={quota ? `${remaining} crushes left today` : 'Loading quota'}
-            aria-busy={isQuotaLoading}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="top-bar__flame-icon">
-              <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.39 13.5.67z" />
-            </svg>
-            <span className="top-bar__flame-count">
-              {remaining}/{max}
-            </span>
-          </div>
-        )}
+        {findButton}
       </div>
     </header>
   );

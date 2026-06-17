@@ -1,5 +1,6 @@
 import type { Conversation } from '@/types';
 import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
+import { isICrushConversation } from '@/utils/messages/iCrushConversation';
 
 function isNotificationsRow(conversation: Conversation): boolean {
   return (
@@ -27,5 +28,5 @@ export function sortConversations(list: Conversation[]): Conversation[] {
 }
 
 export function isMatchConversation(conversation: Conversation): boolean {
-  return !isNotificationsRow(conversation);
+  return !isNotificationsRow(conversation) && !isICrushConversation(conversation);
 }

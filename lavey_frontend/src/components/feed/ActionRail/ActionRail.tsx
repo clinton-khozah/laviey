@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ProfileInitialAvatar } from '@/components/ui/ProfileInitialAvatar';
+import { FeedProfileAvatar } from '@/components/feed/FeedProfileAvatar';
+import { CrushyConfirmSheet } from '@/components/feed/CrushyConfirmSheet';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { CrushyKissIcon } from '@/components/feed/ActionRail/CrushyKissIcon';
 import { getLikeButtonLabel } from '@/utils/likeButtonLabel';
 import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
 import type { ActionRailProps } from './ActionRail.types';
@@ -9,15 +12,28 @@ import './ActionRail.css';
 export function ActionRail({
   profile,
   liked,
+  iCrushSent,
   onLike,
-  onCollab,
+  onICrush,
   onProfileClick,
 }: ActionRailProps) {
+  const [crushyConfirmOpen, setCrushyConfirmOpen] = useState(false);
   const isMutual = liked && profile.likedYou;
   const likeLabel = getLikeButtonLabel(liked, profile.likedYou);
   const avatarSrc = hasCustomProfileAvatar(profile.avatar) ? profile.avatar : undefined;
 
+  const handleCrushyClick = () => {
+    if (iCrushSent) return;
+    setCrushyConfirmOpen(true);
+  };
+
+  const handleCrushyConfirm = () => {
+    setCrushyConfirmOpen(false);
+    onICrush();
+  };
+
   return (
+    <>
     <aside className="action-rail" aria-label="Profile actions">
       <button
         type="button"
@@ -25,7 +41,7 @@ export function ActionRail({
         onClick={onProfileClick}
         aria-label={`View ${profile.name}'s profile`}
       >
-        <ProfileInitialAvatar
+        <FeedProfileAvatar
           name={profile.name}
           src={avatarSrc}
           className="action-rail__avatar"
@@ -67,17 +83,20 @@ export function ActionRail({
 
       <motion.button
         type="button"
-        className="action-rail__btn"
-        onClick={onCollab}
-        whileTap={{ scale: 0.9 }}
-        aria-label="Start collab duet"
+        className={`action-rail__btn action-rail__btn--crushy ${iCrushSent ? 'action-rail__btn--crushy-active' : ''} ${crushyConfirmOpen ? 'action-rail__btn--crushy-pending' : ''}`}
+        onClick={handleCrushyClick}
+        whileTap={iCrushSent ? undefined : { scale: 0.9 }}
+        aria-label={iCrushSent ? 'Crushy sent' : 'Send crushy'}
+        aria-pressed={iCrushSent}
+        disabled={iCrushSent}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M17 3v10M21 8l-4-4-4 4M7 21V11M3 16l4 4 4-4" />
-          <rect x="3" y="3" width="8" height="8" rx="1" />
-          <rect x="13" y="13" width="8" height="8" rx="1" />
-        </svg>
-        <span className="action-rail__label">Collab</span>
+        <CrushyKissIcon
+          active={iCrushSent}
+          pending={crushyConfirmOpen && !iCrushSent}
+        />
+        <span className={`action-rail__label ${iCrushSent ? 'action-rail__label--crushy-sent' : ''}`}>
+          {iCrushSent ? 'Sent' : 'crushy'}
+        </span>
       </motion.button>
 
       <button type="button" className="action-rail__btn action-rail__btn--more" aria-label="More options">
@@ -88,5 +107,13 @@ export function ActionRail({
         </svg>
       </button>
     </aside>
+
+    <CrushyConfirmSheet
+      open={crushyConfirmOpen}
+      profileName={profile.name}
+      onClose={() => setCrushyConfirmOpen(false)}
+      onConfirm={handleCrushyConfirm}
+    />
+    </>
   );
 }

@@ -1,4 +1,6 @@
 import { useRef } from 'react';
+import { FeedProfileAvatar } from '@/components/feed/FeedProfileAvatar';
+import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
 import type { Conversation } from '@/types';
 import './ConversationListItem.css';
 
@@ -25,6 +27,16 @@ function buildSubtitle(conversation: Conversation): string {
     return preview || 'Likes & crushes';
   }
 
+  if (
+    conversation.conversationKind === 'i_crush_incoming' ||
+    conversation.conversationKind === 'i_crush_outgoing'
+  ) {
+    const preview = formatPreview(conversation.lastMessage);
+    const time = conversation.lastMessageAt?.trim();
+    if (preview && time) return `${preview} · ${time}`;
+    return preview || 'crushy';
+  }
+
   if (conversation.isTyping) return 'Typing…';
   if (conversation.isOnline) return 'Active now';
 
@@ -46,9 +58,15 @@ export function ConversationListItem({
   onMoreClick,
 }: ConversationListItemProps) {
   const isNotifications = conversation.conversationKind === 'notifications';
+  const isICrush =
+    conversation.conversationKind === 'i_crush_incoming' ||
+    conversation.conversationKind === 'i_crush_outgoing';
   const hasUnread = conversation.unreadCount > 0;
   const longPressTimer = useRef<number | null>(null);
   const longPressTriggered = useRef(false);
+  const avatarSrc = hasCustomProfileAvatar(conversation.participantAvatar)
+    ? conversation.participantAvatar
+    : undefined;
 
   const clearLongPress = () => {
     if (longPressTimer.current !== null) {
@@ -81,8 +99,9 @@ export function ConversationListItem({
         'conversation-item',
         hasUnread ? 'conversation-item--unread' : '',
         conversation.isOnline ? 'conversation-item--online' : '',
-        conversation.isPinned || isNotifications ? 'conversation-item--starred' : '',
+        conversation.isPinned || isNotifications || isICrush ? 'conversation-item--starred' : '',
         isNotifications ? 'conversation-item--notifications' : '',
+        isICrush ? 'conversation-item--icrush' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -102,7 +121,12 @@ export function ConversationListItem({
             </svg>
           </span>
         ) : (
-          <img src={conversation.participantAvatar} alt="" className="conversation-item__avatar" />
+          <FeedProfileAvatar
+            name={conversation.participantName}
+            src={avatarSrc}
+            size="list"
+            className="conversation-item__avatar"
+          />
         )}
         {!isNotifications && conversation.isOnline && (
           <span className="conversation-item__online" title="Active now" />
@@ -125,6 +149,11 @@ export function ConversationListItem({
       >
         <span className="conversation-item__name">
           {conversation.participantName}
+          {isICrush && (
+            <span className="conversation-item__icrush-tag" aria-label="crushy">
+              💋
+            </span>
+          )}
           {(conversation.isPinned || isNotifications) && (
             <span className="conversation-item__pin" aria-label="Pinned">
               ★

@@ -1,4 +1,4 @@
-export type ConversationKind = 'match' | 'notifications';
+export type ConversationKind = 'match' | 'notifications' | 'i_crush_incoming' | 'i_crush_outgoing';
 
 export interface Conversation {
   id: string;
@@ -19,6 +19,8 @@ export interface Conversation {
   vibeScore: number;
   isPinned?: boolean;
   conversationKind?: ConversationKind;
+  /** Present when conversationKind is i_crush_* */
+  iCrushInviteId?: string;
 }
 
 export interface ChatMessage {

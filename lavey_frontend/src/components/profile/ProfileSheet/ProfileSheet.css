@@ -485,31 +485,51 @@
 }
 
 .profile-sheet__toggle {
+  flex-shrink: 0;
   width: 48px;
+  min-width: 48px;
   height: 28px;
   border-radius: 99px;
-  background: var(--surface-muted);
+  background: rgba(120, 120, 130, 0.32);
+  border: 1px solid var(--border-subtle);
   position: relative;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .profile-sheet__toggle--on {
-  background: var(--accent-mint);
+  background: #22c55e;
+  border-color: transparent;
 }
 
 .profile-sheet__toggle::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 2px;
+  left: 2px;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: white;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
   transition: transform 0.2s;
 }
 
 .profile-sheet__toggle--on::after {
   transform: translateX(20px);
+}
+
+[data-theme='light'] .profile-sheet__toggle {
+  background: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+[data-theme='light'] .profile-sheet__toggle--on {
+  background: #22c55e;
+  border-color: transparent;
+}
+
+[data-theme='light'] .profile-sheet__toggle::after {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
 .profile-sheet__platinum-card {

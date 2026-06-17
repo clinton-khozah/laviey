@@ -1,0 +1,188 @@
+.messages-discover-page {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  background: var(--bg-deep);
+  isolation: isolate;
+}
+
+.messages-discover-page__chrome {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 12;
+  pointer-events: none;
+  padding: calc(var(--safe-top) + 8px) 14px 10px;
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 8, 12, 0.82) 0%,
+    rgba(8, 8, 12, 0.45) 55%,
+    transparent 100%
+  );
+}
+
+.messages-discover-page__chrome > * {
+  pointer-events: auto;
+}
+
+.messages-discover-page__chrome--minimal {
+  background: none;
+  padding-bottom: 0;
+}
+
+.messages-discover-page__header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.messages-discover-page__back {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.messages-discover-page__back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.messages-discover-page__title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.messages-discover-page__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.messages-discover-page__subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.messages-discover-page__preference {
+  display: inline-flex;
+  margin: 8px 0 10px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 77, 109, 0.14);
+  border: 1px solid rgba(255, 77, 109, 0.32);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.messages-discover-page__stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.messages-discover-page__stat strong {
+  font-weight: 800;
+  color: #fff;
+}
+
+.messages-discover-page__find {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.messages-discover-page__find svg {
+  width: 18px;
+  height: 18px;
+}
+
+.messages-discover-page__find:active {
+  transform: scale(0.96);
+}
+
+.messages-discover-page__stat-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.messages-discover-page__feed {
+  position: absolute;
+  inset: 0;
+}
+
+.messages-discover-page__feed .feed-state {
+  margin-top: calc(var(--safe-top) + 120px);
+}
+
+[data-theme='light'] .messages-discover-page__chrome {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.55) 55%,
+    transparent 100%
+  );
+}
+
+[data-theme='light'] .messages-discover-page__title {
+  color: var(--text-primary);
+  text-shadow: none;
+}
+
+[data-theme='light'] .messages-discover-page__subtitle {
+  color: var(--text-secondary);
+}
+
+[data-theme='light'] .messages-discover-page__preference {
+  color: var(--text-primary);
+  background: rgba(255, 77, 109, 0.1);
+  border-color: rgba(255, 77, 109, 0.25);
+}
+
+[data-theme='light'] .messages-discover-page__stats {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .messages-discover-page__stat strong {
+  color: var(--text-primary);
+}

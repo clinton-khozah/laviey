@@ -50,6 +50,13 @@
   touch-action: pan-y;
 }
 
+.match-profile-modal__gallery--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(165deg, #ffb07a 0%, #ff8f52 38%, #ff7340 100%);
+}
+
 .match-profile-modal__photos {
   display: flex;
   height: 100%;

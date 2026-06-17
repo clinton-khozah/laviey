@@ -37,7 +37,12 @@ export function useNotificationInbox(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     const poll = window.setInterval(() => void refetch(true), 12_000);
-    return () => window.clearInterval(poll);
+    const onChanged = () => void refetch(true);
+    window.addEventListener('lavey:notifications-changed', onChanged);
+    return () => {
+      window.clearInterval(poll);
+      window.removeEventListener('lavey:notifications-changed', onChanged);
+    };
   }, [enabled, refetch]);
 
   return { notifications, isLoading, error, refetch, markRead };

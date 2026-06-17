@@ -5,6 +5,10 @@ import { httpClient } from '@/services/api/httpClient';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
 import type { ApiResponse, Conversation, NotificationEvent } from '@/types';
 import { sleep } from '@/utils/sleep';
+import {
+  markMockProfileViewsRead,
+  readMockProfileViewNotifications,
+} from '@/utils/notifications/profileViewNotifications';
 
 function buildMockNotifications(): NotificationEvent[] {
   const likes = MOCK_PROFILES.filter((profile) => profile.likedYou).map((profile, index) => ({
@@ -68,7 +72,7 @@ export const notificationService = {
   async listNotifications(): Promise<NotificationEvent[]> {
     if (!usesBackendApi()) {
       await sleep(200);
-      return buildMockNotifications();
+      return [...readMockProfileViewNotifications(), ...buildMockNotifications()];
     }
 
     const res = await httpClient.get<ApiResponse<NotificationEvent[]>>(
@@ -80,7 +84,10 @@ export const notificationService = {
   async getSummary(): Promise<Conversation> {
     if (!usesBackendApi()) {
       await sleep(150);
-      return buildSummaryFromEvents(buildMockNotifications());
+      return buildSummaryFromEvents([
+        ...readMockProfileViewNotifications(),
+        ...buildMockNotifications(),
+      ]);
     }
 
     const res = await httpClient.get<ApiResponse<Conversation>>(
@@ -92,6 +99,7 @@ export const notificationService = {
   async markRead(): Promise<void> {
     if (!usesBackendApi()) {
       await sleep(100);
+      markMockProfileViewsRead();
       return;
     }
 

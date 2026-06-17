@@ -1,13 +1,16 @@
-import { env, usesBackendAuth } from '@/config/env';
-import { apiConfig } from '@/config/api.config';
-import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { getGoogleSignInBlockedMessage } from '@/utils/google/googleEnvironment';
-import { resetOAuthCallbackState } from '@/utils/auth/oauthCallbackState';
-import { isLocalApiBaseUrl, stashOAuthRedirectContext } from '@/utils/auth/oauthRedirectStorage';
-import { requestGoogleIdToken } from '@/utils/google/googleIdTokenSignIn';
-import { STORAGE_KEYS } from '@/constants/storageKeys';
-import { defaultAvatar } from '@/constants/defaultAvatar';
-import { httpClient } from '@/services/api/httpClient';
+import { env, usesBackendAuth } from "@/config/env";
+import { apiConfig } from "@/config/api.config";
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { getGoogleSignInBlockedMessage } from "@/utils/google/googleEnvironment";
+import { resetOAuthCallbackState } from "@/utils/auth/oauthCallbackState";
+import {
+  isLocalApiBaseUrl,
+  stashOAuthRedirectContext,
+} from "@/utils/auth/oauthRedirectStorage";
+import { requestGoogleIdToken } from "@/utils/google/googleIdTokenSignIn";
+import { STORAGE_KEYS } from "@/constants/storageKeys";
+import { defaultAvatar } from "@/constants/defaultAvatar";
+import { httpClient } from "@/services/api/httpClient";
 import type {
   ApiResponse,
   AuthSession,
@@ -15,10 +18,10 @@ import type {
   EmailSignInRequest,
   EmailSignUpRequest,
   EmailSignUpResult,
-} from '@/types';
-import { ApiError } from '@/services/api/apiError';
-import { getApiConfigurationError } from '@/utils/api/apiConfiguration';
-import { sleep } from '@/utils/sleep';
+} from "@/types";
+import { ApiError } from "@/services/api/apiError";
+import { getApiConfigurationError } from "@/utils/api/apiConfiguration";
+import { sleep } from "@/utils/sleep";
 
 function persistSession(session: AuthSession): void {
   localStorage.setItem(STORAGE_KEYS.authToken, session.token);
@@ -36,7 +39,7 @@ function readStoredSession(): AuthSession | null {
   if (!token || !rawUser) return null;
 
   try {
-    const user = JSON.parse(rawUser) as AuthSession['user'];
+    const user = JSON.parse(rawUser) as AuthSession["user"];
     return { token, user };
   } catch {
     clearSession();
@@ -48,11 +51,11 @@ function mockGoogleSession(): AuthSession {
   return {
     token: `mock-google-token-${Date.now()}`,
     user: {
-      id: 'google-user-1',
-      email: 'you@gmail.com',
-      displayName: 'You',
+      id: "google-user-1",
+      email: "you@gmail.com",
+      displayName: "You",
       avatarUrl: defaultAvatar,
-      provider: 'google',
+      provider: "google",
     },
   };
 }
@@ -63,9 +66,9 @@ function mockEmailSession(email: string, displayName?: string): AuthSession {
     user: {
       id: `email-${email}`,
       email,
-      displayName: displayName ?? email.split('@')[0],
+      displayName: displayName ?? email.split("@")[0],
       avatarUrl: defaultAvatar,
-      provider: 'email',
+      provider: "email",
     },
   };
 }
@@ -89,7 +92,7 @@ export const authService = {
     }
 
     try {
-      const response = await httpClient.get<ApiResponse<AuthSession['user']>>(
+      const response = await httpClient.get<ApiResponse<AuthSession["user"]>>(
         API_ENDPOINTS.auth.me,
       );
       return { token: stored.token, user: response.data };
@@ -119,20 +122,25 @@ export const authService = {
 
     // Local dev: ID token POST — avoids Supabase PKCE redirect to the live site.
     const useLocalIdTokenFlow =
-      import.meta.env.DEV && env.googleClientId && isLocalApiBaseUrl(apiConfig.baseUrl);
+      import.meta.env.DEV &&
+      env.googleClientId &&
+      isLocalApiBaseUrl(apiConfig.baseUrl);
 
     if (import.meta.env.DEV) {
       console.info(
-        `[auth] Google sign-in: ${useLocalIdTokenFlow ? 'local ID token → POST /auth/google' : 'redirect → GET /auth/google'}`,
+        `[auth] Google sign-in: ${useLocalIdTokenFlow ? "local ID token → POST /auth/google" : "redirect → GET /auth/google"}`,
         { api: apiConfig.baseUrl, hasClientId: Boolean(env.googleClientId) },
       );
     }
 
     if (useLocalIdTokenFlow) {
       const idToken = await requestGoogleIdToken();
-      const res = await httpClient.post<ApiResponse<AuthSession>>(API_ENDPOINTS.auth.google, {
-        body: { idToken },
-      });
+      const res = await httpClient.post<ApiResponse<AuthSession>>(
+        API_ENDPOINTS.auth.google,
+        {
+          body: { idToken },
+        },
+      );
       persistSession(res.data);
       return res.data;
     }
@@ -151,7 +159,7 @@ export const authService = {
   async completeGoogleOAuthCallback(token: string): Promise<AuthSession> {
     localStorage.setItem(STORAGE_KEYS.authToken, token);
 
-    const response = await httpClient.get<ApiResponse<AuthSession['user']>>(
+    const response = await httpClient.get<ApiResponse<AuthSession["user"]>>(
       API_ENDPOINTS.auth.me,
     );
 
@@ -176,7 +184,9 @@ export const authService = {
     return response.data;
   },
 
-  async signUpWithEmail(payload: EmailSignUpRequest): Promise<EmailSignUpResult> {
+  async signUpWithEmail(
+    payload: EmailSignUpRequest,
+  ): Promise<EmailSignUpResult> {
     if (!usesBackendAuth()) {
       await sleep(550);
       const session = mockEmailSession(payload.email, payload.displayName);
@@ -195,7 +205,11 @@ export const authService = {
     }
 
     if (!data.token || !data.user) {
-      throw new ApiError(500, 'INVALID_AUTH_RESPONSE', 'Account created but session was missing.');
+      throw new ApiError(
+        500,
+        "INVALID_AUTH_RESPONSE",
+        "Account created but session was missing.",
+      );
     }
 
     const session: AuthSession = { token: data.token, user: data.user };

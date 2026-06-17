@@ -10,6 +10,16 @@ export function profileDistanceKm(profile: Profile): number {
   return profile.distanceKm ?? parseProfileDistanceKm(profile.distance);
 }
 
+/** Hide distance labels beyond this range on For You / Discovery UI. */
+export const MAX_PROFILE_DISTANCE_DISPLAY_KM = 50;
+
+export function getDisplayableProfileDistance(profile: Profile): string | null {
+  const label = profile.distance?.trim();
+  if (!label || /^unknown distance$/i.test(label)) return null;
+  if (profileDistanceKm(profile) > MAX_PROFILE_DISTANCE_DISPLAY_KM) return null;
+  return label;
+}
+
 export function buildNearbyDistanceTiers(maxDistanceKm: number): DiscoverNearbyDistanceTierKm[] {
   return DISCOVER_NEARBY_DISTANCE_TIERS_KM.filter((tier) => tier <= maxDistanceKm);
 }

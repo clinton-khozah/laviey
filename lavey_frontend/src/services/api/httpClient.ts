@@ -1,11 +1,13 @@
-import { apiConfig } from '@/config/api.config';
-import { STORAGE_KEYS } from '@/constants/storageKeys';
-import { maybeNavigateToErrorPage } from '@/utils/navigation/errorNavigation';
-import { sanitizeAuthErrorMessage } from '@/utils/errors/userFacingErrorMessage';
-import type { ApiErrorBody } from '@/types';
-import { ApiError } from './apiError';
+import { apiConfig } from "@/config/api.config";
+import { STORAGE_KEYS } from "@/constants/storageKeys";
+import { emitSessionExpired } from "@/utils/auth/authSessionEvents";
+import { toApiNetworkError } from "@/utils/api/networkError";
+import { maybeNavigateToErrorPage } from "@/utils/navigation/errorNavigation";
+import { sanitizeAuthErrorMessage } from "@/utils/errors/userFacingErrorMessage";
+import type { ApiErrorBody } from "@/types";
+import { ApiError } from "./apiError";
 
-type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface RequestConfig {
   params?: Record<string, string | number | boolean | undefined>;
@@ -21,8 +23,8 @@ interface PostFormOptions {
   skipErrorPage?: boolean;
 }
 
-function buildUrl(path: string, params?: RequestConfig['params']): string {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+function buildUrl(path: string, params?: RequestConfig["params"]): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`${apiConfig.baseUrl}${normalizedPath}`);
 
   if (params) {
@@ -38,7 +40,7 @@ function buildUrl(path: string, params?: RequestConfig['params']): string {
 
 async function parseErrorResponse(response: Response): Promise<ApiError> {
   let code = `HTTP_${response.status}`;
-  let message = response.statusText || 'Request failed';
+  let message = response.statusText || "Request failed";
   let details: unknown;
 
   try {
@@ -50,10 +52,10 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
     /* non-JSON error body */
   }
 
-  if (response.status === 401 || code === 'SESSION_EXPIRED') {
+  if (response.status === 401 || code === "SESSION_EXPIRED") {
     message = sanitizeAuthErrorMessage(message);
-    if (code === 'UNAUTHORIZED' && message.includes('expired')) {
-      code = 'SESSION_EXPIRED';
+    if (code === "UNAUTHORIZED" && message.includes("expired")) {
+      code = "SESSION_EXPIRED";
     }
   }
 
@@ -66,15 +68,17 @@ async function request<T>(
   config: RequestConfig = {},
 ): Promise<T> {
   const headers: HeadersInit = {
-    Accept: 'application/json',
+    Accept: "application/json",
     ...config.headers,
   };
 
   if (config.body !== undefined) {
-    (headers as Record<string, string>)['Content-Type'] = 'application/json';
+    (headers as Record<string, string>)["Content-Type"] = "application/json";
   }
 
-  const hasAuthHeader = Boolean((headers as Record<string, string>).Authorization);
+  const hasAuthHeader = Boolean(
+    (headers as Record<string, string>).Authorization,
+  );
   if (!hasAuthHeader) {
     const token = localStorage.getItem(STORAGE_KEYS.authToken);
     if (token) {
@@ -82,15 +86,39 @@ async function request<T>(
     }
   }
 
-  const response = await fetch(buildUrl(path, config.params), {
-    method,
-    headers,
-    body: config.body !== undefined ? JSON.stringify(config.body) : undefined,
-    signal: config.signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path, config.params), {
+      method,
+      headers,
+      body: config.body !== undefined ? JSON.stringify(config.body) : undefined,
+      signal: config.signal,
+    });
+  } catch (err) {
+    const networkError = toApiNetworkError(err);
+    if (networkError) throw networkError;
+    throw err;
+  }
 
   if (!response.ok) {
     const error = await parseErrorResponse(response);
+    const hadStoredToken = Boolean(localStorage.getItem(STORAGE_KEYS.authToken));
+    const isAuthAttempt =
+      path.includes("/auth/login") ||
+      path.includes("/auth/register") ||
+      path.includes("/auth/google") ||
+      path.includes("/auth/verify");
+
+    if (
+      hadStoredToken &&
+      !isAuthAttempt &&
+      (response.status === 401 ||
+        error.code === "SESSION_EXPIRED" ||
+        error.code === "UNAUTHORIZED")
+    ) {
+      emitSessionExpired();
+    }
+
     if (!config.skipErrorPage) {
       maybeNavigateToErrorPage(error);
     }
@@ -101,17 +129,21 @@ async function request<T>(
     return undefined as T;
   }
 
-  const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
     const preview = (await response.text()).trimStart().slice(0, 40);
-    if (preview.startsWith('<')) {
+    if (preview.startsWith("<")) {
       throw new ApiError(
         502,
-        'INVALID_API_RESPONSE',
-        'The app called your Netlify site instead of the API. Set VITE_API_BASE_URL to https://laveybackend-3.onrender.com/api on Netlify, then redeploy.',
+        "INVALID_API_RESPONSE",
+        "The app called your Netlify site instead of the API. Set VITE_API_BASE_URL to https://laveybackend-3.onrender.com/api on Netlify, then redeploy.",
       );
     }
-    throw new ApiError(502, 'INVALID_API_RESPONSE', 'API returned a non-JSON response.');
+    throw new ApiError(
+      502,
+      "INVALID_API_RESPONSE",
+      "API returned a non-JSON response.",
+    );
   }
 
   return response.json() as Promise<T>;
@@ -123,10 +155,12 @@ async function postForm<T>(
   options?: PostFormOptions,
 ): Promise<T> {
   const headers: HeadersInit = {
-    Accept: 'application/json',
+    Accept: "application/json",
   };
 
-  const hasAuthHeader = Boolean((headers as Record<string, string>).Authorization);
+  const hasAuthHeader = Boolean(
+    (headers as Record<string, string>).Authorization,
+  );
   if (!hasAuthHeader) {
     const token = localStorage.getItem(STORAGE_KEYS.authToken);
     if (token) {
@@ -134,15 +168,33 @@ async function postForm<T>(
     }
   }
 
-  const response = await fetch(buildUrl(path), {
-    method: 'POST',
-    headers,
-    body: formData,
-    signal: options?.signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildUrl(path), {
+      method: "POST",
+      headers,
+      body: formData,
+      signal: options?.signal,
+    });
+  } catch (err) {
+    const networkError = toApiNetworkError(err);
+    if (networkError) throw networkError;
+    throw err;
+  }
 
   if (!response.ok) {
     const error = await parseErrorResponse(response);
+    const hadStoredToken = Boolean(localStorage.getItem(STORAGE_KEYS.authToken));
+
+    if (
+      hadStoredToken &&
+      (response.status === 401 ||
+        error.code === "SESSION_EXPIRED" ||
+        error.code === "UNAUTHORIZED")
+    ) {
+      emitSessionExpired();
+    }
+
     if (!options?.skipErrorPage) {
       maybeNavigateToErrorPage(error);
     }
@@ -154,11 +206,16 @@ async function postForm<T>(
 
 /** Typed HTTP client for all service modules */
 export const httpClient = {
-  get: <T>(path: string, config?: RequestConfig) => request<T>('GET', path, config),
-  post: <T>(path: string, config?: RequestConfig) => request<T>('POST', path, config),
+  get: <T>(path: string, config?: RequestConfig) =>
+    request<T>("GET", path, config),
+  post: <T>(path: string, config?: RequestConfig) =>
+    request<T>("POST", path, config),
   postForm: <T>(path: string, formData: FormData, options?: PostFormOptions) =>
     postForm<T>(path, formData, options),
-  put: <T>(path: string, config?: RequestConfig) => request<T>('PUT', path, config),
-  patch: <T>(path: string, config?: RequestConfig) => request<T>('PATCH', path, config),
-  delete: <T>(path: string, config?: RequestConfig) => request<T>('DELETE', path, config),
+  put: <T>(path: string, config?: RequestConfig) =>
+    request<T>("PUT", path, config),
+  patch: <T>(path: string, config?: RequestConfig) =>
+    request<T>("PATCH", path, config),
+  delete: <T>(path: string, config?: RequestConfig) =>
+    request<T>("DELETE", path, config),
 };

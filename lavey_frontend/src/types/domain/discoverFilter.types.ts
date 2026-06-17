@@ -5,6 +5,8 @@ export interface DiscoverFilters {
   ageMin: number;
   ageMax: number;
   genders: DiscoverGender[];
+  /** When true, only show identity-verified profiles. */
+  verifiedOnly: boolean;
 }
 
 export const DEFAULT_DISCOVER_FILTERS: DiscoverFilters = {
@@ -12,4 +14,5 @@ export const DEFAULT_DISCOVER_FILTERS: DiscoverFilters = {
   ageMin: 18,
   ageMax: 35,
   genders: ['woman'],
+  verifiedOnly: false,
 };

@@ -11,4 +11,5 @@ export interface TopBarProps {
   hasActiveDiscoveryFilters?: boolean;
   isPremium?: boolean;
   onUpgrade?: () => void;
+  onFindClick?: () => void;
 }

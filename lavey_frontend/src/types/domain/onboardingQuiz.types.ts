@@ -57,6 +57,7 @@ export interface UserLocationSnapshot {
   longitude: number;
   country: string;
   province: string;
+  city: string;
   suburb: string;
 }
 

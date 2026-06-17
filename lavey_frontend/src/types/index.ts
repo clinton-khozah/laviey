@@ -17,6 +17,8 @@ export { DEFAULT_DISCOVER_FILTERS } from './domain/discoverFilter.types';
 export type {
   SendFlameRequest,
   SendFlameResponse,
+  SendICrushResponse,
+  RespondICrushResponse,
   LikePostResponse,
   PostLiker,
   ReceivedPostLike,

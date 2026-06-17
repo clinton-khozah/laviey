@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DiscoverFilterSheet } from '@/components/discover/DiscoverFilterSheet';
 import { DiscoverProfileSetupGate } from '@/components/discover/DiscoverProfileSetupGate';
 import { ReceivedLikesSheet } from '@/components/feed/ReceivedLikesSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { PlatinumUpgradeSheet } from '@/components/subscription/PlatinumUpgradeSheet';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
+import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage';
 import { DiscoverFeedContainer } from '@/features/discover/containers/DiscoverFeedContainer';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
@@ -16,6 +17,7 @@ import {
   useFlameQuota,
   useMatchActions,
   useLiveUserLocation,
+  useMessagesFindSuggestions,
   useProfilesWhoLikedYou,
   useUserProfile,
 } from '@/hooks';
@@ -24,6 +26,7 @@ import { subscribeAlgorithmChange } from '@/features/admin/algorithm/algorithmCo
 import type { Profile } from '@/types';
 import { hasPremiumAccess } from '@/config/features';
 import { navigateAppTo, openChatWithProfile } from '@/utils/navigation/appNav';
+import { resolveForYouFeedProfiles } from '@/utils/discover/forYouFeedProfiles';
 import './DiscoverPage.css';
 
 /**
@@ -31,7 +34,7 @@ import './DiscoverPage.css';
  */
 export function DiscoverPage() {
   const { filters, setFilters, resetFilters, hasActiveFilters } = useDiscoverFilters();
-  const { profiles, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed } =
+  const { profiles, feedPool, isFeedRecycling, myLikedProfileIds, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed } =
     useDiscoverFeed('for-you', filters);
   const { quota, isLoading: isQuotaLoading } = useFlameQuota();
   const {
@@ -47,19 +50,45 @@ export function DiscoverPage() {
     skip: skipDiscoverSetup,
     continueToFeed,
   } = useDiscoverSetupGate(userProfile);
-  const { likedIds, likedPostIds, matchToast, sendFlame, likePost, isSubmitting, dismissMatchToast } =
+  const { likedIds, likedPostIds, iCrushSentIds, matchToast, sendFlame, sendICrush, likePost, isSubmitting, dismissMatchToast } =
     useMatchActions();
   const [profileModal, setProfileModal] = useState<Profile | null>(null);
   const [likesOpen, setLikesOpen] = useState(false);
   const [platinumOpen, setPlatinumOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findProfile, setFindProfile] = useState<Profile | null>(null);
   const { location, requestLocation } = useLiveUserLocation();
   const lastSyncedLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const lastSyncAtRef = useRef<number>(0);
   const { profiles: receivedLikers, count: likeCount } = useProfilesWhoLikedYou();
   const isPremium = hasPremiumAccess(userProfile?.isPremium);
 
+  const forYouPool = feedPool.length > 0 ? feedPool : profiles;
+
+  const mergedLikedIds = useMemo(() => {
+    const merged = new Set([...likedIds, ...myLikedProfileIds]);
+    if (filter === 'for-you' && isFeedRecycling) {
+      for (const profile of forYouPool) merged.add(profile.id);
+    }
+    return merged;
+  }, [likedIds, myLikedProfileIds, filter, isFeedRecycling, forYouPool]);
+
+  const forYouDisplayProfiles = useMemo(() => {
+    if (filter !== 'for-you') return profiles;
+    const { profiles: resolved } = resolveForYouFeedProfiles(forYouPool, mergedLikedIds);
+    return resolved.length > 0 ? resolved : forYouPool;
+  }, [filter, forYouPool, profiles, mergedLikedIds]);
+
+  const {
+    profiles: findProfiles,
+    isLoading: findLoading,
+    error: findError,
+    refetch: refetchFind,
+  } = useMessagesFindSuggestions(findOpen, filters);
+
   const modalLiked = profileModal ? likedIds.has(profileModal.id) : false;
+  const findModalLiked = findProfile ? likedIds.has(findProfile.id) : false;
 
   const handleFlameFromModal = () => {
     if (!profileModal || modalLiked) return;
@@ -70,6 +99,10 @@ export function DiscoverPage() {
     const postId = profile.posts[0]?.id;
     if (!postId || likedPostIds.has(postId)) return;
     void likePost(postId, profile.id);
+  };
+
+  const handleICrush = (profileId: string) => {
+    void sendICrush(profileId);
   };
 
   const sendMatchGreeting = (profileId: string, text: string) => {
@@ -84,7 +117,19 @@ export function DiscoverPage() {
     window.sessionStorage.setItem('lavey:pendingGreetingProfileId', matchToast.profileId);
     window.sessionStorage.setItem('lavey:pendingGreetingText', text);
     dismissMatchToast();
+    setFindOpen(false);
     navigateAppTo('messages');
+  };
+
+  const handleFindPostLike = (profile: Profile) => {
+    const postId = profile.posts[0]?.id;
+    if (!postId || likedPostIds.has(postId)) return;
+    void likePost(postId, profile.id);
+  };
+
+  const handleFindFlameFromModal = () => {
+    if (!findProfile || findModalLiked) return;
+    void sendFlame(findProfile.id);
   };
 
   useEffect(() => subscribeAlgorithmChange(() => void refetch()), [refetch]);
@@ -163,7 +208,7 @@ export function DiscoverPage() {
 
       {showFeedBackground ? (
         <>
-      {showDiscoverChrome ? (
+      {showDiscoverChrome && !findOpen ? (
         <TopBar
           filter={filter}
           onFilterChange={setFilter}
@@ -175,6 +220,7 @@ export function DiscoverPage() {
           hasActiveDiscoveryFilters={hasActiveFilters}
           isPremium={isPremium}
           onUpgrade={() => setPlatinumOpen(true)}
+          onFindClick={() => setFindOpen(true)}
         />
       ) : null}
       <DiscoverFilterSheet
@@ -185,14 +231,16 @@ export function DiscoverPage() {
         onReset={resetFilters}
       />
       <DiscoverFeedContainer
-        profiles={profiles}
+        profiles={forYouDisplayProfiles}
         isLoading={isLoading}
         error={error}
         onNearEndOfFeed={onNearEndOfFeed}
-        likedIds={likedIds}
+        likedIds={mergedLikedIds}
         likedPostIds={likedPostIds}
+        iCrushSentIds={iCrushSentIds}
         matchToast={matchToast}
         onFlame={sendFlame}
+        onICrush={handleICrush}
         onPostLike={handlePostLike}
         onRetry={() => void refetch()}
         onProfileClick={setProfileModal}
@@ -233,6 +281,43 @@ export function DiscoverPage() {
         onSendMessage={
           profileModal && modalLiked && profileModal.likedYou
             ? (text) => sendMatchGreeting(profileModal.id, text)
+            : undefined
+        }
+      />
+
+      {findOpen ? (
+        <MessagesDiscoverPage
+          profiles={findProfiles}
+          likedIds={likedIds}
+          likedPostIds={likedPostIds}
+          iCrushSentIds={iCrushSentIds}
+          matchToast={matchToast}
+          isLoading={findLoading}
+          error={findError}
+          onBack={() => setFindOpen(false)}
+          onFlame={sendFlame}
+          onICrush={handleICrush}
+          onPostLike={handleFindPostLike}
+          onProfileClick={setFindProfile}
+          onDismissMatchToast={dismissMatchToast}
+          onMatchGreeting={handleMatchGreeting}
+          onRetry={() => void refetchFind()}
+        />
+      ) : null}
+
+      <MatchProfileModal
+        open={findProfile !== null}
+        mode="discover"
+        profile={findProfile}
+        liked={findModalLiked}
+        likedYou={findProfile?.likedYou ?? false}
+        isLoading={false}
+        isSubmittingFlame={isSubmitting}
+        onClose={() => setFindProfile(null)}
+        onFlame={handleFindFlameFromModal}
+        onSendMessage={
+          findProfile && findModalLiked && findProfile.likedYou
+            ? (text) => sendMatchGreeting(findProfile.id, text)
             : undefined
         }
       />

@@ -1,8 +1,6 @@
 /* Lavey Web Push service worker — shows notifications when the app is closed. */
 
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
   let payload = {
     title: 'Lavey',
     body: 'You have a new notification',
@@ -12,10 +10,12 @@ self.addEventListener('push', (event) => {
     data: { url: '/messages' },
   };
 
-  try {
-    payload = { ...payload, ...event.data.json() };
-  } catch {
-    payload.body = event.data.text() || payload.body;
+  if (event.data) {
+    try {
+      payload = { ...payload, ...event.data.json() };
+    } catch {
+      payload.body = event.data.text() || payload.body;
+    }
   }
 
   event.waitUntil(
@@ -26,19 +26,20 @@ self.addEventListener('push', (event) => {
       tag: payload.tag,
       data: payload.data,
       vibrate: [80, 40, 80],
+      renotify: true,
     }),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || '/messages';
+  const targetPath = event.notification.data?.url || '/messages';
+  const targetUrl = new URL(targetPath, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
         if ('focus' in client) {
-          client.navigate(targetUrl);
           return client.focus();
         }
       }

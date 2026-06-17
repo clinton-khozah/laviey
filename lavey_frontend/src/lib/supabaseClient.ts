@@ -1,13 +1,17 @@
-import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
-import { env } from '@/config/env';
-import { STORAGE_KEYS } from '@/constants/storageKeys';
+import {
+  createClient,
+  type RealtimeChannel,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
+import { env } from "@/config/env";
+import { STORAGE_KEYS } from "@/constants/storageKeys";
 
 let client: SupabaseClient | null = null;
 
 export function getSupabaseRealtimeClient(): SupabaseClient | null {
   if (!env.supabaseUrl || !env.supabasePublishableKey) return null;
 
-  const token = localStorage.getItem(STORAGE_KEYS.authToken) ?? '';
+  const token = localStorage.getItem(STORAGE_KEYS.authToken) ?? "";
 
   if (client) {
     client.realtime.setAuth(token);
@@ -47,12 +51,14 @@ export function subscribeChatUpdates(
 
   const attach = (table: string, filter?: string) => {
     const channel = supabase
-      .channel(`chat-${table}-${filter ?? 'all'}-${Math.random().toString(36).slice(2)}`)
+      .channel(
+        `chat-${table}-${filter ?? "all"}-${Math.random().toString(36).slice(2)}`,
+      )
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
+          event: "*",
+          schema: "public",
           table,
           ...(filter ? { filter } : {}),
         },
@@ -62,10 +68,16 @@ export function subscribeChatUpdates(
     channels.push(channel);
   };
 
-  attach('chat_conversations');
-  attach('chat_user_presence');
-  attach('chat_typing_signals', conversationId ? `conversation_id=eq.${conversationId}` : undefined);
-  attach('chat_messages', conversationId ? `conversation_id=eq.${conversationId}` : undefined);
+  attach("chat_conversations");
+  attach("chat_user_presence");
+  attach(
+    "chat_typing_signals",
+    conversationId ? `conversation_id=eq.${conversationId}` : undefined,
+  );
+  attach(
+    "chat_messages",
+    conversationId ? `conversation_id=eq.${conversationId}` : undefined,
+  );
 
   return () => {
     for (const channel of channels) {

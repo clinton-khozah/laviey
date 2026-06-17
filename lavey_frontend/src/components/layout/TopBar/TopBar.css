@@ -220,3 +220,25 @@
   font-weight: 700;
   color: var(--text-secondary);
 }
+
+.top-bar__find {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--text-primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+}
+
+.top-bar__find svg {
+  width: 16px;
+  height: 16px;
+}
+
+.top-bar__find:active {
+  transform: scale(0.96);
+}

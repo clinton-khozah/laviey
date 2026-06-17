@@ -1,34 +1,39 @@
-import { usesBackendApi } from '@/config/env';
-import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { httpClient } from '@/services/api/httpClient';
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES } from '@/services/mocks/message.mock';
+import { usesBackendApi } from "@/config/env";
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { httpClient } from "@/services/api/httpClient";
+import {
+  MOCK_CONVERSATIONS,
+  MOCK_MESSAGES,
+} from "@/services/mocks/message.mock";
 import type {
   ApiResponse,
   ChatMessage,
   Conversation,
   DeleteConversationScope,
   DeleteMessageScope,
-} from '@/types';
+} from "@/types";
 import {
   isConversationHidden,
   markConversationDeleted,
-} from '@/utils/messages/deletedChatsStorage';
+} from "@/utils/messages/deletedChatsStorage";
 import {
   applyMessageMeta,
   markMessageDeleted,
   setMessageReaction as persistMessageReaction,
-} from '@/utils/messages/messageMetaStorage';
+} from "@/utils/messages/messageMetaStorage";
 import {
   applyPinnedState,
   setConversationPinned as persistConversationPinned,
-} from '@/utils/messages/pinnedChatsStorage';
-import { sleep } from '@/utils/sleep';
+} from "@/utils/messages/pinnedChatsStorage";
+import { sleep } from "@/utils/sleep";
 
 function usesBackendMessages(): boolean {
   return usesBackendApi();
 }
 
-function filterVisibleConversations(conversations: Conversation[]): Conversation[] {
+function filterVisibleConversations(
+  conversations: Conversation[],
+): Conversation[] {
   return conversations.filter((c) => !isConversationHidden(c.id));
 }
 
@@ -47,12 +52,15 @@ export const messageService = {
 
   async findConversationByProfileId(profileId: string): Promise<string | null> {
     if (!usesBackendMessages()) {
-      return MOCK_CONVERSATIONS.find((c) => c.participantProfileId === profileId)?.id ?? null;
+      return (
+        MOCK_CONVERSATIONS.find((c) => c.participantProfileId === profileId)
+          ?.id ?? null
+      );
     }
 
-    const res = await httpClient.get<ApiResponse<{ conversationId: string | null }>>(
-      API_ENDPOINTS.messages.conversationByProfile(profileId),
-    );
+    const res = await httpClient.get<
+      ApiResponse<{ conversationId: string | null }>
+    >(API_ENDPOINTS.messages.conversationByProfile(profileId));
     return res.data.conversationId;
   },
 
@@ -70,15 +78,18 @@ export const messageService = {
     return res.data;
   },
 
-  async sendMessage(conversationId: string, text: string): Promise<ChatMessage> {
+  async sendMessage(
+    conversationId: string,
+    text: string,
+  ): Promise<ChatMessage> {
     if (!usesBackendMessages()) {
       await sleep(200);
       return {
         id: `m-${Date.now()}`,
         conversationId,
-        senderId: 'me',
+        senderId: "me",
         text,
-        sentAt: 'Just now',
+        sentAt: "Just now",
         read: true,
       };
     }
@@ -94,22 +105,24 @@ export const messageService = {
     if (!usesBackendMessages()) {
       await sleep(350);
       const url = URL.createObjectURL(file);
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const expiresAt = new Date(
+        Date.now() + 24 * 60 * 60 * 1000,
+      ).toISOString();
       return {
         id: `m-photo-${Date.now()}`,
         conversationId,
-        senderId: 'me',
-        text: '📷 Photo',
-        kind: 'image',
+        senderId: "me",
+        text: "📷 Photo",
+        kind: "image",
         imageUrl: url,
         expiresAt,
-        sentAt: 'Just now',
+        sentAt: "Just now",
         read: true,
       };
     }
 
     const form = new FormData();
-    form.append('photo', file, file.name || 'photo.webp');
+    form.append("photo", file, file.name || "photo.webp");
     const res = await httpClient.postForm<ApiResponse<ChatMessage>>(
       API_ENDPOINTS.messages.sendPhoto(conversationId),
       form,
@@ -134,7 +147,10 @@ export const messageService = {
     await httpClient.post(API_ENDPOINTS.messages.presence, {});
   },
 
-  async setConversationPinned(conversationId: string, pinned: boolean): Promise<void> {
+  async setConversationPinned(
+    conversationId: string,
+    pinned: boolean,
+  ): Promise<void> {
     if (!usesBackendMessages()) {
       await sleep(100);
       persistConversationPinned(conversationId, pinned);
@@ -156,7 +172,7 @@ export const messageService = {
       return;
     }
 
-    if (scope === 'for_you') {
+    if (scope === "for_you") {
       await httpClient.delete(API_ENDPOINTS.messages.delete(conversationId));
       return;
     }
@@ -177,9 +193,12 @@ export const messageService = {
       return;
     }
 
-    await httpClient.patch(API_ENDPOINTS.messages.message(conversationId, messageId), {
-      body: { reaction: emoji },
-    });
+    await httpClient.patch(
+      API_ENDPOINTS.messages.message(conversationId, messageId),
+      {
+        body: { reaction: emoji },
+      },
+    );
   },
 
   async deleteMessage(
@@ -193,8 +212,11 @@ export const messageService = {
       return;
     }
 
-    await httpClient.delete(API_ENDPOINTS.messages.message(conversationId, messageId), {
-      body: { scope },
-    });
+    await httpClient.delete(
+      API_ENDPOINTS.messages.message(conversationId, messageId),
+      {
+        body: { scope },
+      },
+    );
   },
 };

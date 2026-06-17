@@ -1,0 +1,94 @@
+.crushy-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  padding-top: 2px;
+}
+
+.crushy-confirm__hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.crushy-confirm__icon-wrap {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  flex-shrink: 0;
+  font-size: 22px;
+  line-height: 1;
+  background: radial-gradient(circle at 30% 30%, #ff9eb8 0%, #ff2d6a 55%, #b80047 100%);
+  box-shadow: 0 6px 16px rgba(255, 45, 106, 0.28);
+}
+
+.crushy-confirm__message {
+  margin: 0;
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.crushy-confirm__name {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.crushy-confirm__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.crushy-confirm__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.crushy-confirm__btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.crushy-confirm__btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.crushy-confirm__btn:disabled {
+  opacity: 0.65;
+}
+
+.crushy-confirm__btn--cancel {
+  color: var(--text-primary);
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+.crushy-confirm__btn--confirm {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff4d8a 0%, #ff2d6a 48%, #c4004f 100%);
+  border: 1px solid transparent;
+  box-shadow: 0 6px 18px rgba(255, 45, 106, 0.32);
+}
+
+[data-theme='light'] .crushy-confirm__btn--cancel {
+  background: #f4f4f8;
+}

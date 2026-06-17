@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { subscribeChatUpdates } from '@/lib/supabaseClient';
-import { messageService } from '@/services';
-import { notificationService } from '@/services/messages/notificationService';
-import type { Conversation, DeleteConversationScope } from '@/types';
-import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
+import { useCallback, useEffect, useState } from "react";
+import { subscribeChatUpdates } from "@/lib/supabaseClient";
+import { messageService } from "@/services";
+import { notificationService } from "@/services/messages/notificationService";
+import type { Conversation, DeleteConversationScope } from "@/types";
+import { NOTIFICATIONS_CONVERSATION_ID } from "@/constants/notifications";
 
-async function mergeConversations(matchRows: Conversation[]): Promise<Conversation[]> {
-  const withoutNotifications = matchRows.filter((row) => row.id !== NOTIFICATIONS_CONVERSATION_ID);
+async function mergeConversations(
+  matchRows: Conversation[],
+): Promise<Conversation[]> {
+  const withoutNotifications = matchRows.filter(
+    (row) => row.id !== NOTIFICATIONS_CONVERSATION_ID,
+  );
   try {
     const summary = await notificationService.getSummary();
     return [summary, ...withoutNotifications];
@@ -30,7 +34,9 @@ export function useConversations() {
       setConversations(await mergeConversations(matchRows));
     } catch (err) {
       if (!silent) {
-        setError(err instanceof Error ? err.message : 'Failed to load messages');
+        setError(
+          err instanceof Error ? err.message : "Failed to load messages",
+        );
       }
     } finally {
       if (!silent) setIsLoading(false);
@@ -46,14 +52,20 @@ export function useConversations() {
       void fetch(true);
     });
     const poll = window.setInterval(() => void fetch(true), 12_000);
-    const presence = window.setInterval(() => void messageService.touchPresence(), 30_000);
+    const presence = window.setInterval(() => {
+      void messageService.touchPresence().catch(() => {});
+    }, 30_000);
 
-    void messageService.touchPresence();
+    void messageService.touchPresence().catch(() => {});
+
+    const onNotificationsChanged = () => void fetch(true);
+    window.addEventListener('lavey:notifications-changed', onNotificationsChanged);
 
     return () => {
       unsubscribe();
       window.clearInterval(poll);
       window.clearInterval(presence);
+      window.removeEventListener('lavey:notifications-changed', onNotificationsChanged);
     };
   }, [fetch]);
 

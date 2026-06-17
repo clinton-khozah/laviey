@@ -1,0 +1,122 @@
+.push-prompt-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.push-prompt-sheet__hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 2px 2px 0;
+}
+
+.push-prompt-sheet__icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  border-radius: 11px;
+  background: rgba(255, 77, 109, 0.14);
+  border: 1px solid rgba(255, 77, 109, 0.28);
+}
+
+.push-prompt-sheet__copy {
+  min-width: 0;
+}
+
+.push-prompt-sheet__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.push-prompt-sheet__body {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.push-prompt-sheet__actions {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 8px;
+}
+
+.push-prompt-sheet__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.push-prompt-sheet__btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.push-prompt-sheet__btn:disabled {
+  opacity: 0.65;
+}
+
+.push-prompt-sheet__btn--ghost {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+}
+
+.push-prompt-sheet__btn--primary {
+  color: #fff;
+  background: var(--gradient-vibe);
+  border: none;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+}
+
+[data-theme='light'] .push-prompt-sheet__btn--ghost {
+  background: #f8f8fc;
+}
+
+/* Compact top sheet — same family as join / delete meetup popups */
+.profile-sheet--from-top:has(.push-prompt-sheet) {
+  top: calc(var(--safe-top) + 8px);
+  left: 16px;
+  right: 16px;
+  max-height: none;
+  border-radius: 16px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.22);
+}
+
+.profile-sheet--from-top:has(.push-prompt-sheet) .profile-sheet__header {
+  padding: 8px 12px 2px;
+}
+
+.profile-sheet--from-top:has(.push-prompt-sheet) .profile-sheet__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.profile-sheet--from-top:has(.push-prompt-sheet) .profile-sheet__close {
+  width: 26px;
+  height: 26px;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+.profile-sheet--from-top:has(.push-prompt-sheet) .profile-sheet__body {
+  padding: 2px 12px 12px;
+}

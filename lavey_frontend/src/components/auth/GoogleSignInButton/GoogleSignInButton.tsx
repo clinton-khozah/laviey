@@ -1,11 +1,14 @@
-import './GoogleSignInButton.css';
+import "./GoogleSignInButton.css";
 
 interface GoogleSignInButtonProps {
   onClick: () => void;
   disabled?: boolean;
 }
 
-export function GoogleSignInButton({ onClick, disabled }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({
+  onClick,
+  disabled,
+}: GoogleSignInButtonProps) {
   return (
     <button
       type="button"

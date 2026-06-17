@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type TouchEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppOverlay } from '@/components/ui/AppOverlay';
+import { FeedProfileAvatar } from '@/components/feed/FeedProfileAvatar';
 import { LogoLoader } from '@/components/ui/LogoLoader';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { useMatchGreetings } from '@/hooks/match/useMatchGreetings';
+import { profileService } from '@/services';
+import { notifyNotificationInboxChanged } from '@/utils/notifications/profileViewNotifications';
 import { getProfilePhotoUrls } from '@/utils/profilePhotos';
+import { getDisplayableProfileDistance } from '@/utils/discover/discoverDistanceTiers';
 import { MatchProfilePhotoViewer } from './MatchProfilePhotoViewer';
 import type { MatchProfileModalProps } from './MatchProfileModal.types';
 import './MatchProfileModal.css';
@@ -113,10 +117,7 @@ export function MatchProfileModal({
     open && showGreetings,
     greetingContext,
   );
-  const distanceLabel =
-    profile?.distance?.trim() && !/^unknown distance$/i.test(profile.distance.trim())
-      ? profile.distance.trim()
-      : null;
+  const distanceLabel = profile ? getDisplayableProfileDistance(profile) : null;
   const relationStatusLabel = isMutual
     ? 'Matched'
     : liked
@@ -136,6 +137,15 @@ export function MatchProfileModal({
     if (open) setPhotoIndex(0);
     if (!open) setFullscreenPhotoIndex(null);
   }, [open, profile?.id]);
+
+  useEffect(() => {
+    if (!open || !profile || !isDiscover) return;
+
+    void profileService
+      .recordProfileView(profile.id)
+      .then(() => notifyNotificationInboxChanged())
+      .catch(() => {});
+  }, [open, profile?.id, isDiscover]);
 
   const goPhoto = (direction: -1 | 1) => {
     if (photos.length <= 1) return;
@@ -188,61 +198,64 @@ export function MatchProfileModal({
               {canRender && (
                 <>
                   <div
-                    className="match-profile-modal__gallery"
-                    {...gallerySwipe}
+                    className={`match-profile-modal__gallery ${photos.length === 0 ? 'match-profile-modal__gallery--placeholder' : ''}`}
+                    {...(photos.length > 0 ? gallerySwipe : {})}
                   >
-                    <div
-                      className="match-profile-modal__photos"
-                      style={{ transform: `translateX(-${photoIndex * 100}%)` }}
-                    >
-                      {photos.map((src) => (
-                        <div key={src} className="match-profile-modal__photo-slot">
-                          <img src={src} alt="" className="match-profile-modal__photo" />
-                        </div>
-                      ))}
-                    </div>
-
-                    {photos.length > 0 ? (
-                      <button
-                        type="button"
-                        className="match-profile-modal__expand"
-                        onClick={() => setFullscreenPhotoIndex(photoIndex)}
-                        aria-label="View photo full screen"
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                          <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" />
-                        </svg>
-                      </button>
-                    ) : null}
-
-                    {photos.length > 1 && (
+                    {photos.length === 0 ? (
+                      <FeedProfileAvatar name={profile.name} size="hero" />
+                    ) : (
                       <>
-                        <div className="match-profile-modal__dots">
-                          {photos.map((_, i) => (
-                            <button
-                              key={i}
-                              type="button"
-                              className={`match-profile-modal__dot ${i === photoIndex ? 'match-profile-modal__dot--active' : ''}`}
-                              onClick={() => setPhotoIndex(i)}
-                              aria-label={`Photo ${i + 1} of ${photos.length}`}
-                            />
+                        <div
+                          className="match-profile-modal__photos"
+                          style={{ transform: `translateX(-${photoIndex * 100}%)` }}
+                        >
+                          {photos.map((src) => (
+                            <div key={src} className="match-profile-modal__photo-slot">
+                              <img src={src} alt="" className="match-profile-modal__photo" />
+                            </div>
                           ))}
                         </div>
+
                         <button
                           type="button"
-                          className="match-profile-modal__tap match-profile-modal__tap--prev"
-                          onClick={() => goPhoto(-1)}
-                          aria-label="Previous photo"
-                        />
-                        <button
-                          type="button"
-                          className="match-profile-modal__tap match-profile-modal__tap--next"
-                          onClick={() => goPhoto(1)}
-                          aria-label="Next photo"
-                        />
+                          className="match-profile-modal__expand"
+                          onClick={() => setFullscreenPhotoIndex(photoIndex)}
+                          aria-label="View photo full screen"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                            <path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3" />
+                          </svg>
+                        </button>
+
+                        {photos.length > 1 && (
+                          <>
+                            <div className="match-profile-modal__dots">
+                              {photos.map((_, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  className={`match-profile-modal__dot ${i === photoIndex ? 'match-profile-modal__dot--active' : ''}`}
+                                  onClick={() => setPhotoIndex(i)}
+                                  aria-label={`Photo ${i + 1} of ${photos.length}`}
+                                />
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="match-profile-modal__tap match-profile-modal__tap--prev"
+                              onClick={() => goPhoto(-1)}
+                              aria-label="Previous photo"
+                            />
+                            <button
+                              type="button"
+                              className="match-profile-modal__tap match-profile-modal__tap--next"
+                              onClick={() => goPhoto(1)}
+                              aria-label="Next photo"
+                            />
+                          </>
+                        )}
                       </>
                     )}
-
                   </div>
 
                   <div className="match-profile-modal__body">

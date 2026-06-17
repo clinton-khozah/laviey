@@ -8,7 +8,8 @@ import { MessagesPage } from '@/features/messages';
 import { ZoomPage } from '@/features/rooms';
 import { ProfilePage } from '@/features/profile';
 import { PostPage } from '@/features/post';
-import { useConversations } from '@/hooks';
+import { useConversations, usePushNotifications } from '@/hooks';
+import { PushNotificationPrompt } from '@/components/notifications/PushNotificationPrompt';
 import type { NavItemId } from '@/constants/navigation';
 
 type NavigateEventDetail = { nav: NavItemId };
@@ -24,6 +25,12 @@ export function MainApp() {
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { conversations } = useConversations();
+  const {
+    showPrompt,
+    isEnabling,
+    enableNotifications,
+    dismissPrompt,
+  } = usePushNotifications(true);
   const switchTimeoutRef = useRef<number | null>(null);
   const finishTimeoutRef = useRef<number | null>(null);
 
@@ -93,6 +100,12 @@ export function MainApp() {
         {page}
         {isTransitioning && <PageTransitionSplash />}
       </AppShell>
+      <PushNotificationPrompt
+        open={showPrompt}
+        isEnabling={isEnabling}
+        onEnable={() => void enableNotifications()}
+        onDismiss={dismissPrompt}
+      />
     </MatchActionsProvider>
   );
 }

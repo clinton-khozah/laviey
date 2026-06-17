@@ -1,21 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
-import { ProfileSheet } from '@/components/profile/ProfileSheet';
-import { usesBackendMeetups } from '@/config/env';
-import { matchService } from '@/services';
-import { contentService } from '@/services/content/contentService';
-import type { CreateDateInput, DateVisibility, OnlineDate, UpdateDateInput } from '@/types';
-import { resolveMeetupCover } from '@/utils/meeting/meetupCover';
-import { getMatchedConversations } from '@/utils/meeting/meetupAccess';
+import { useEffect, useRef, useState } from "react";
+import { ProfileSheet } from "@/components/profile/ProfileSheet";
+import { usesBackendMeetups } from "@/config/env";
+import { matchService } from "@/services";
+import { contentService } from "@/services/content/contentService";
+import type {
+  CreateDateInput,
+  DateVisibility,
+  OnlineDate,
+  UpdateDateInput,
+} from "@/types";
+import { resolveMeetupCover } from "@/utils/meeting/meetupCover";
+import { getMatchedConversations } from "@/utils/meeting/meetupAccess";
 import {
   defaultMeetupStartLocal,
   maxMeetupStartLocal,
   minMeetupStartLocal,
   parseDatetimeLocal,
   toDatetimeLocalValue,
-} from '@/utils/meeting/meetupSchedule';
-import { prepareImageForUpload } from '@/utils/media/prepareUploadMedia';
-import { nsfwImageUserMessage } from '@/utils/media/nsfwImageCheck';
-import './CreateDateSheet.css';
+} from "@/utils/meeting/meetupSchedule";
+import { prepareImageForUpload } from "@/utils/media/prepareUploadMedia";
+import { nsfwImageUserMessage } from "@/utils/media/nsfwImageCheck";
+import "./CreateDateSheet.css";
 
 interface CreateDateSheetProps {
   open: boolean;
@@ -35,14 +40,14 @@ interface InviteMatchOption {
 }
 
 const TIME_OPTIONS = [
-  { label: 'In 15 min', minutes: 15 },
-  { label: 'In 1 hour', minutes: 60 },
-  { label: 'Later today', minutes: 180 },
+  { label: "In 15 min", minutes: 15 },
+  { label: "In 1 hour", minutes: 60 },
+  { label: "Later today", minutes: 180 },
 ] as const;
 
 const DEFAULT_MEETUP_TOPICS = new Set([
-  'Open video meetup — join from the live list',
-  'Video meetup with your match',
+  "Open video meetup — join from the live list",
+  "Video meetup with your match",
 ]);
 
 function meetupCaptionFromDate(date: OnlineDate): string {
@@ -67,10 +72,12 @@ export function CreateDateSheet({
   onUpdate,
 }: CreateDateSheetProps) {
   const isEditing = Boolean(editingDate);
-  const [caption, setCaption] = useState('');
-  const [visibility, setVisibility] = useState<DateVisibility>('public');
-  const [inviteProfileId, setInviteProfileId] = useState('');
-  const [startAtLocal, setStartAtLocal] = useState(() => defaultMeetupStartLocal(15));
+  const [caption, setCaption] = useState("");
+  const [visibility, setVisibility] = useState<DateVisibility>("public");
+  const [inviteProfileId, setInviteProfileId] = useState("");
+  const [startAtLocal, setStartAtLocal] = useState(() =>
+    defaultMeetupStartLocal(15),
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const [matchOptions, setMatchOptions] = useState<InviteMatchOption[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
@@ -80,8 +87,8 @@ export function CreateDateSheet({
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = () => {
-    setCaption('');
-    setInviteProfileId('');
+    setCaption("");
+    setInviteProfileId("");
     setCoverPreview(null);
     setCoverFile(null);
     setFormError(null);
@@ -134,8 +141,10 @@ export function CreateDateSheet({
     );
   }, [open, editingDate]);
 
-  const isPrivate = visibility === 'private';
-  const selectedMatch = matchOptions.find((match) => match.userId === inviteProfileId);
+  const isPrivate = visibility === "private";
+  const selectedMatch = matchOptions.find(
+    (match) => match.userId === inviteProfileId,
+  );
 
   const handleCoverPick = async (file: File | null) => {
     if (!file) return;
@@ -158,23 +167,23 @@ export function CreateDateSheet({
 
     if (!isEditing && isPrivate) {
       if (!inviteProfileId) {
-        setFormError('Pick a match to invite — private meetups are 1-on-1');
+        setFormError("Pick a match to invite — private meetups are 1-on-1");
         return;
       }
     }
 
     const startsAtDate = parseDatetimeLocal(startAtLocal);
     if (!startsAtDate) {
-      setFormError('Pick a valid start date and time');
+      setFormError("Pick a valid start date and time");
       return;
     }
     if (startsAtDate.getTime() < Date.now() + 60_000) {
-      setFormError('Start time must be at least 1 minute from now');
+      setFormError("Start time must be at least 1 minute from now");
       return;
     }
     const maxStart = parseDatetimeLocal(maxMeetupStartLocal());
     if (maxStart && startsAtDate.getTime() > maxStart.getTime()) {
-      setFormError('Meetups can be scheduled up to 7 days ahead');
+      setFormError("Meetups can be scheduled up to 7 days ahead");
       return;
     }
 
@@ -184,7 +193,9 @@ export function CreateDateSheet({
       try {
         coverImageUrl = await contentService.uploadAvatar(coverFile);
       } catch (err) {
-        setFormError(err instanceof Error ? err.message : 'Could not upload cover photo');
+        setFormError(
+          err instanceof Error ? err.message : "Could not upload cover photo",
+        );
         setIsUploadingCover(false);
         return;
       }
@@ -195,7 +206,11 @@ export function CreateDateSheet({
       title: captionText.slice(0, 120),
       topic: captionText.slice(0, 240),
       startsAt: startsAtDate.toISOString(),
-      coverImageUrl: coverImageUrl ?? (editingDate ? resolveMeetupCover(editingDate.coverImage) || undefined : undefined),
+      coverImageUrl:
+        coverImageUrl ??
+        (editingDate
+          ? resolveMeetupCover(editingDate.coverImage) || undefined
+          : undefined),
     };
 
     if (isEditing && editingDate && onUpdate) {
@@ -203,7 +218,11 @@ export function CreateDateSheet({
         title: base.title,
         topic: base.topic,
         startsAt: base.startsAt,
-        coverImageUrl: coverImageUrl ?? (editingDate.coverImage ? resolveMeetupCover(editingDate.coverImage) : undefined),
+        coverImageUrl:
+          coverImageUrl ??
+          (editingDate.coverImage
+            ? resolveMeetupCover(editingDate.coverImage)
+            : undefined),
       });
       resetForm();
       onClose();
@@ -213,16 +232,16 @@ export function CreateDateSheet({
     if (isPrivate) {
       await onCreate({
         ...base,
-        visibility: 'private',
-        mode: 'invite',
+        visibility: "private",
+        mode: "invite",
         inviteToProfileId: inviteProfileId,
         inviteToName: selectedMatch?.name,
       });
     } else {
       await onCreate({
         ...base,
-        visibility: 'public',
-        mode: 'post',
+        visibility: "public",
+        mode: "post",
       });
     }
 
@@ -235,18 +254,23 @@ export function CreateDateSheet({
   return (
     <ProfileSheet
       open={open}
-      title={isEditing ? 'Edit meetup' : 'Schedule meetup'}
+      title={isEditing ? "Edit meetup" : "Schedule meetup"}
       onClose={onClose}
       fromTop
       hideHandle
     >
-      <form className="create-date-sheet" onSubmit={(e) => void handleSubmit(e)}>
+      <form
+        className="create-date-sheet"
+        onSubmit={(e) => void handleSubmit(e)}
+      >
         <div className="create-date-sheet__cover-block">
           <button
             type="button"
-            className={`create-date-sheet__cover-preview ${coverPreview ? 'create-date-sheet__cover-preview--filled' : ''}`}
+            className={`create-date-sheet__cover-preview ${coverPreview ? "create-date-sheet__cover-preview--filled" : ""}`}
             onClick={() => coverInputRef.current?.click()}
-            aria-label={coverPreview ? 'Change cover photo' : 'Upload cover photo'}
+            aria-label={
+              coverPreview ? "Change cover photo" : "Upload cover photo"
+            }
           >
             {coverPreview ? <img src={coverPreview} alt="" /> : null}
           </button>
@@ -273,26 +297,26 @@ export function CreateDateSheet({
         </label>
 
         {!isEditing ? (
-        <fieldset className="create-date-sheet__fieldset">
-          <legend>Visibility</legend>
-          <div className="create-date-sheet__visibility">
-            <span className="create-date-sheet__visibility-label">
-              {isPrivate ? 'Private' : 'Public'}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              className={`create-date-sheet__switch ${isPrivate ? 'create-date-sheet__switch--on' : ''}`}
-              aria-checked={isPrivate}
-              aria-label={isPrivate ? 'Private meetup' : 'Public meetup'}
-              onClick={() => {
-                const nextPrivate = !isPrivate;
-                setVisibility(nextPrivate ? 'private' : 'public');
-                if (!nextPrivate) setInviteProfileId('');
-              }}
-            />
-          </div>
-        </fieldset>
+          <fieldset className="create-date-sheet__fieldset">
+            <legend>Visibility</legend>
+            <div className="create-date-sheet__visibility">
+              <span className="create-date-sheet__visibility-label">
+                {isPrivate ? "Private" : "Public"}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                className={`create-date-sheet__switch ${isPrivate ? "create-date-sheet__switch--on" : ""}`}
+                aria-checked={isPrivate}
+                aria-label={isPrivate ? "Private meetup" : "Public meetup"}
+                onClick={() => {
+                  const nextPrivate = !isPrivate;
+                  setVisibility(nextPrivate ? "private" : "public");
+                  if (!nextPrivate) setInviteProfileId("");
+                }}
+              />
+            </div>
+          </fieldset>
         ) : null}
 
         {!isEditing && isPrivate && (
@@ -302,17 +326,26 @@ export function CreateDateSheet({
               <p className="create-date-sheet__empty">Loading your matches…</p>
             ) : matchOptions.length === 0 ? (
               <p className="create-date-sheet__empty">
-                Match with someone on For You first — you can only invite matches to private meetups.
+                Match with someone on For You first — you can only invite
+                matches to private meetups.
               </p>
             ) : (
-              <ul className="create-date-sheet__invite-list" role="listbox" aria-label="Choose a match">
+              <ul
+                className="create-date-sheet__invite-list"
+                role="listbox"
+                aria-label="Choose a match"
+              >
                 {matchOptions.map((match) => {
                   const selected = inviteProfileId === match.userId;
                   return (
-                    <li key={match.userId} role="option" aria-selected={selected}>
+                    <li
+                      key={match.userId}
+                      role="option"
+                      aria-selected={selected}
+                    >
                       <button
                         type="button"
-                        className={`create-date-sheet__invite ${selected ? 'create-date-sheet__invite--selected' : ''}`}
+                        className={`create-date-sheet__invite ${selected ? "create-date-sheet__invite--selected" : ""}`}
                         onClick={() => setInviteProfileId(match.userId)}
                       >
                         <span className="create-date-sheet__invite-avatar-wrap">
@@ -322,13 +355,26 @@ export function CreateDateSheet({
                             className="create-date-sheet__invite-avatar"
                           />
                           {match.isOnline && (
-                            <span className="create-date-sheet__invite-online" aria-label="Online" />
+                            <span
+                              className="create-date-sheet__invite-online"
+                              aria-label="Online"
+                            />
                           )}
                         </span>
-                        <span className="create-date-sheet__invite-name">{match.name}</span>
+                        <span className="create-date-sheet__invite-name">
+                          {match.name}
+                        </span>
                         {selected && (
-                          <span className="create-date-sheet__invite-check" aria-hidden>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <span
+                            className="create-date-sheet__invite-check"
+                            aria-hidden
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                            >
                               <path d="M5 13l4 4L19 7" />
                             </svg>
                           </span>
@@ -349,9 +395,13 @@ export function CreateDateSheet({
               <button
                 key={opt.minutes}
                 type="button"
-                className={`create-date-sheet__chip ${isChipActive(opt.minutes, startAtLocal) ? 'create-date-sheet__chip--active' : ''}`}
+                className={`create-date-sheet__chip ${isChipActive(opt.minutes, startAtLocal) ? "create-date-sheet__chip--active" : ""}`}
                 onClick={() =>
-                  setStartAtLocal(toDatetimeLocalValue(new Date(Date.now() + opt.minutes * 60_000)))
+                  setStartAtLocal(
+                    toDatetimeLocalValue(
+                      new Date(Date.now() + opt.minutes * 60_000),
+                    ),
+                  )
                 }
               >
                 {opt.label}
@@ -378,21 +428,25 @@ export function CreateDateSheet({
         <button
           type="submit"
           className="create-date-sheet__submit"
-          disabled={isBusy || (!isEditing && loadingMatches) || (!isEditing && isPrivate && matchOptions.length === 0)}
+          disabled={
+            isBusy ||
+            (!isEditing && loadingMatches) ||
+            (!isEditing && isPrivate && matchOptions.length === 0)
+          }
         >
           {isBusy
             ? isUploadingCover
-              ? 'Uploading cover…'
+              ? "Uploading cover…"
               : isEditing
-                ? 'Saving…'
-                : 'Creating…'
+                ? "Saving…"
+                : "Creating…"
             : isEditing
-              ? 'Save changes'
+              ? "Save changes"
               : isPrivate
-                ? 'Send invite'
-                : 'Post public meetup'}
+                ? "Send invite"
+                : "Post public meetup"}
         </button>
       </form>
     </ProfileSheet>
   );
-};
+}

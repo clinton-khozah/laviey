@@ -1,15 +1,15 @@
-import { useRef, useState } from 'react';
-import { ProfileSheet } from '@/components/profile/ProfileSheet';
-import { LogoLoader } from '@/components/ui/LogoLoader';
-import { contentService } from '@/services/content/contentService';
-import { prepareImageForUpload } from '@/utils/media/prepareUploadMedia';
-import { nsfwImageUserMessage } from '@/utils/media/nsfwImageCheck';
-import { setStoredProfileAvatar } from '@/utils/profile/profileAvatarStorage';
-import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
-import type { UserProfile } from '@/types';
-import './DiscoverSetupSheets.css';
+import { useRef, useState } from "react";
+import { ProfileSheet } from "@/components/profile/ProfileSheet";
+import { LogoLoader } from "@/components/ui/LogoLoader";
+import { contentService } from "@/services/content/contentService";
+import { prepareImageForUpload } from "@/utils/media/prepareUploadMedia";
+import { nsfwImageUserMessage } from "@/utils/media/nsfwImageCheck";
+import { setStoredProfileAvatar } from "@/utils/profile/profileAvatarStorage";
+import { hasCustomProfileAvatar } from "@/utils/discover/discoverProfileReady";
+import type { UserProfile } from "@/types";
+import "./DiscoverSetupSheets.css";
 
-type UploadStatus = 'idle' | 'uploading';
+type UploadStatus = "idle" | "uploading";
 
 interface DiscoverSetupProfileSheetProps {
   open: boolean;
@@ -27,7 +27,7 @@ export function DiscoverSetupProfileSheet({
   onAvatarUpdated,
 }: DiscoverSetupProfileSheetProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
 
@@ -37,15 +37,17 @@ export function DiscoverSetupProfileSheet({
     (hasCustomProfileAvatar(profile.avatarUrl) ? profile.avatarUrl : undefined);
 
   const hasPhoto = Boolean(uploadedAvatar);
-  const isBusy = uploadStatus !== 'idle';
+  const isBusy = uploadStatus !== "idle";
 
   const handleFile = (file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    if (!file.type.startsWith("image/")) return;
     void (async () => {
       setError(null);
-      setUploadStatus('uploading');
+      setUploadStatus("uploading");
       try {
-        const prepared = await prepareImageForUpload(file, undefined, { avatarUpload: true });
+        const prepared = await prepareImageForUpload(file, undefined, {
+          avatarUpload: true,
+        });
         const url = await contentService.uploadAvatar(prepared);
         setStoredProfileAvatar(profile.id, url);
         setLocalAvatar(url);
@@ -53,13 +55,19 @@ export function DiscoverSetupProfileSheet({
       } catch (err) {
         setError(nsfwImageUserMessage(err));
       } finally {
-        setUploadStatus('idle');
+        setUploadStatus("idle");
       }
     })();
   };
 
   return (
-    <ProfileSheet open={open} title="Your profile" onClose={onClose} edit hideHandle>
+    <ProfileSheet
+      open={open}
+      title="Your profile"
+      onClose={onClose}
+      edit
+      hideHandle
+    >
       <div className="discover-setup-sheet discover-setup-sheet--you">
         <p className="discover-setup-sheet__lead">
           Upload a clear, well-lit profile photo.
@@ -84,19 +92,30 @@ export function DiscoverSetupProfileSheet({
                 />
               ) : (
                 <span className="discover-setup-sheet__you-avatar discover-setup-sheet__you-avatar--icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    aria-hidden
+                  >
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </span>
               )}
               {isBusy ? (
-                <span className="discover-setup-sheet__avatar-loading" aria-hidden>
+                <span
+                  className="discover-setup-sheet__avatar-loading"
+                  aria-hidden
+                >
                   <LogoLoader size="sm" label="Uploading photo" />
                 </span>
               ) : null}
             </span>
-            {!isBusy ? <span className="discover-setup-sheet__you-edit">Edit</span> : null}
+            {!isBusy ? (
+              <span className="discover-setup-sheet__you-edit">Edit</span>
+            ) : null}
           </button>
 
           <input
@@ -108,7 +127,7 @@ export function DiscoverSetupProfileSheet({
             className="discover-setup-sheet__hidden-input"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              e.target.value = '';
+              e.target.value = "";
               if (file) handleFile(file);
             }}
           />
@@ -119,10 +138,12 @@ export function DiscoverSetupProfileSheet({
             disabled={isBusy}
             onClick={() => inputRef.current?.click()}
           >
-            {hasPhoto ? 'Change photo' : 'Upload photo'}
+            {hasPhoto ? "Change photo" : "Upload photo"}
           </button>
 
-          <h3 className="discover-setup-sheet__you-name">{profile.displayName}</h3>
+          <h3 className="discover-setup-sheet__you-name">
+            {profile.displayName}
+          </h3>
           {profile.bio ? (
             <p className="discover-setup-sheet__you-bio">{profile.bio}</p>
           ) : (

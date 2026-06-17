@@ -6,18 +6,25 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from 'react';
-import { usesBackendAuth } from '@/config/env';
-import { authService, onboardingService } from '@/services';
-import { ApiError } from '@/services/api/apiError';
-import type { AuthSession, EmailSignInRequest, EmailSignUpRequest, OnboardingQuizAnswers } from '@/types';
-import { clearUserProfileCache } from '@/hooks/profile/useUserProfile';
-import { saveOnboardingQuizAnswers, loadOnboardingQuizAnswers } from '@/utils/onboarding/onboardingQuizStorage';
-import { clearPendingOnboardingQuiz } from '@/utils/onboarding/pendingOnboardingQuiz';
-import { usePushNotifications } from '@/hooks/notifications/usePushNotifications';
+} from "react";
+import { usesBackendAuth } from "@/config/env";
+import { authService, onboardingService } from "@/services";
+import { ApiError } from "@/services/api/apiError";
+import type {
+  AuthSession,
+  EmailSignInRequest,
+  EmailSignUpRequest,
+  OnboardingQuizAnswers,
+} from "@/types";
+import { clearUserProfileCache } from "@/hooks/profile/useUserProfile";
+import {
+  saveOnboardingQuizAnswers,
+  loadOnboardingQuizAnswers,
+} from "@/utils/onboarding/onboardingQuizStorage";
+import { clearPendingOnboardingQuiz } from "@/utils/onboarding/pendingOnboardingQuiz";
 
 export interface AuthContextValue {
-  user: AuthSession['user'] | null;
+  user: AuthSession["user"] | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isSubmitting: boolean;
@@ -62,12 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [needsOnboardingQuiz, setNeedsOnboardingQuiz] = useState(false);
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<
+    string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
-  const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<string | null>(
+    null,
+  );
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
-
-  usePushNotifications(Boolean(session?.user?.id));
 
   useEffect(() => {
     if (resendCooldownSec <= 0) return;
@@ -81,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function bootstrap() {
-      const onOAuthCallback = window.location.pathname === '/auth/callback';
+      const onOAuthCallback = window.location.pathname === "/auth/callback";
 
       try {
         const restored = await authService.restoreSession();
@@ -120,14 +129,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.resendVerificationEmail(normalizedEmail);
       setResendCooldownSec(60);
-      setVerificationStatus('Verification code sent. Check your inbox.');
+      setVerificationStatus("Verification code sent. Check your inbox.");
     } catch (err) {
-      if (ApiError.isApiError(err) && err.code === 'EMAIL_RATE_LIMIT') {
-        setVerificationStatus('Enter the code from your latest email if you have one.');
+      if (ApiError.isApiError(err) && err.code === "EMAIL_RATE_LIMIT") {
+        setVerificationStatus(
+          "Enter the code from your latest email if you have one.",
+        );
         setError(err.message);
         return;
       }
-      setError(err instanceof Error ? err.message : 'Could not resend code.');
+      setError(err instanceof Error ? err.message : "Could not resend code.");
     } finally {
       setIsSubmitting(false);
     }
@@ -144,7 +155,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const runAuth = useCallback(
-    async (action: () => Promise<AuthSession>, onSuccess?: (session: AuthSession) => void) => {
+    async (
+      action: () => Promise<AuthSession>,
+      onSuccess?: (session: AuthSession) => void,
+    ) => {
       setError(null);
       setIsSubmitting(true);
       try {
@@ -152,7 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(next);
         onSuccess?.(next);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Sign in failed. Try again.';
+        const message =
+          err instanceof Error ? err.message : "Sign in failed. Try again.";
         setError(message);
       } finally {
         setIsSubmitting(false);
@@ -188,7 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const next = await authService.signInWithGoogle();
           await completeSession(next);
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Sign in failed. Try again.';
+          const message =
+            err instanceof Error ? err.message : "Sign in failed. Try again.";
           setError(message);
         } finally {
           setIsSubmitting(false);
@@ -202,13 +218,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const next = await authService.signInWithEmail(payload);
           await completeSession(next);
         } catch (err) {
-          if (ApiError.isApiError(err) && err.code === 'EMAIL_CONFIRMATION_REQUIRED') {
+          if (
+            ApiError.isApiError(err) &&
+            err.code === "EMAIL_CONFIRMATION_REQUIRED"
+          ) {
             setPendingVerificationEmail(payload.email.trim().toLowerCase());
             setError(null);
-            setVerificationStatus('Enter the verification code we sent to your email.');
+            setVerificationStatus(
+              "Enter the verification code we sent to your email.",
+            );
             return;
           }
-          setError(err instanceof Error ? err.message : 'Sign in failed. Try again.');
+          setError(
+            err instanceof Error ? err.message : "Sign in failed. Try again.",
+          );
         } finally {
           setIsSubmitting(false);
         }
@@ -219,21 +242,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsSubmitting(true);
         try {
           const result = await authService.signUpWithEmail(payload);
-          if ('needsEmailVerification' in result && result.needsEmailVerification) {
+          if (
+            "needsEmailVerification" in result &&
+            result.needsEmailVerification
+          ) {
             setPendingVerificationEmail(result.email);
             setResendCooldownSec(60);
-            setVerificationStatus('Verification code sent. Check your inbox.');
+            setVerificationStatus("Verification code sent. Check your inbox.");
             return;
           }
           await completeSession(result as AuthSession);
         } catch (err) {
-          if (ApiError.isApiError(err) && err.code === 'EMAIL_RATE_LIMIT') {
+          if (ApiError.isApiError(err) && err.code === "EMAIL_RATE_LIMIT") {
             setPendingVerificationEmail(payload.email.trim().toLowerCase());
-            setVerificationStatus('Enter the code from your latest email if you have one.');
+            setVerificationStatus(
+              "Enter the code from your latest email if you have one.",
+            );
             setError(err.message);
             return;
           }
-          setError(err instanceof Error ? err.message : 'Could not create account. Try again.');
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Could not create account. Try again.",
+          );
         } finally {
           setIsSubmitting(false);
         }
@@ -243,10 +275,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
         setIsSubmitting(true);
         try {
-          const next = await authService.verifyEmailWithCode(pendingVerificationEmail, code);
+          const next = await authService.verifyEmailWithCode(
+            pendingVerificationEmail,
+            code,
+          );
           await completeSession(next);
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'Invalid verification code.');
+          setError(
+            err instanceof Error ? err.message : "Invalid verification code.",
+          );
         } finally {
           setIsSubmitting(false);
         }
@@ -285,8 +322,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearPendingOnboardingQuiz();
         clearUserProfileCache();
         setNeedsOnboardingQuiz(false);
-        window.sessionStorage.setItem('lavey:navigateToFeed', '1');
-        window.dispatchEvent(new CustomEvent('lavey:navigate', { detail: { nav: 'feed' } }));
+        window.sessionStorage.setItem("lavey:navigateToFeed", "1");
+        window.dispatchEvent(
+          new CustomEvent("lavey:navigate", { detail: { nav: "feed" } }),
+        );
       },
       establishSessionAfterOAuth,
       clearError: () => setError(null),
@@ -313,7 +352,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return ctx;
 }

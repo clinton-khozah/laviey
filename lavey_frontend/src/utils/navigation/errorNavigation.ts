@@ -76,7 +76,11 @@ export function maybeNavigateToErrorPage(error: ApiError): void {
     error.code === 'MEETING_TRANSCRIPT_FORMAT' ||
     error.code === 'MEETING_TRANSCRIPT_EMPTY' ||
     error.code === 'MEETING_TRANSLATE_FAILED' ||
-    error.code === 'PUSH_NOT_CONFIGURED'
+    error.code === 'PUSH_NOT_CONFIGURED' ||
+    error.code === 'PUSH_NOT_SUBSCRIBED' ||
+    error.code === 'PUSH_STORAGE_UNAVAILABLE' ||
+    error.code === 'PUSH_SCHEMA_MISSING' ||
+    error.code === 'PUSH_SUBSCRIBE_FAILED'
   ) {
     return;
   }

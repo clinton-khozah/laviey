@@ -119,8 +119,28 @@ export function DiscoverFilterSheet({
           </div>
         </section>
 
+        <section className="discover-filter-sheet__section discover-filter-sheet__section--toggle">
+          <div className="discover-filter-sheet__toggle-row">
+            <div className="discover-filter-sheet__toggle-text">
+              <span className="discover-filter-sheet__label">Verified only</span>
+              <span className="discover-filter-sheet__toggle-hint">
+                Show people with the blue verified badge
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draft.verifiedOnly}
+              aria-label="Verified only"
+              className={`discover-filter-sheet__toggle profile-sheet__toggle ${draft.verifiedOnly ? 'profile-sheet__toggle--on discover-filter-sheet__toggle--on' : ''}`}
+              onClick={() =>
+                setDraft((prev) => ({ ...prev, verifiedOnly: !prev.verifiedOnly }))
+              }
+            />
+          </div>
+        </section>
+
         <section className="discover-filter-sheet__section">
-          <h3 className="discover-filter-sheet__label">Show me</h3>
           <div className="discover-filter-sheet__chips">
             {DISCOVER_GENDER_OPTIONS.map(({ id, label }) => (
               <button

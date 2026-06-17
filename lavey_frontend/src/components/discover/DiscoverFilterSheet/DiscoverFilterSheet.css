@@ -65,6 +65,40 @@
   color: var(--text-muted);
 }
 
+.discover-filter-sheet__section--toggle {
+  margin-top: 2px;
+}
+
+.discover-filter-sheet__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.discover-filter-sheet__toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.discover-filter-sheet__toggle-hint {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.discover-filter-sheet__toggle {
+  flex-shrink: 0;
+}
+
+.discover-filter-sheet__toggle--on {
+  background: #22c55e;
+  border-color: transparent;
+}
+
 .discover-filter-sheet__chips {
   display: flex;
   flex-wrap: wrap;

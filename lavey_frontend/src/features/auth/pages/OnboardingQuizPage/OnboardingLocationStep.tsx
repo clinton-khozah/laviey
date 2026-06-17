@@ -31,8 +31,8 @@ export function OnboardingLocationStep({
     <section className="onboarding-location">
       <h1 className="onboarding-quiz__title">Share your location</h1>
       <p className="onboarding-quiz__subtitle">
-        We use this to find people near you — suburb level only, never your exact address on your
-        profile.
+        We use this to find people near you — your city is shown on your profile, never your exact
+        address.
       </p>
 
       <div className="onboarding-location__panel">
@@ -94,8 +94,8 @@ export function OnboardingLocationStep({
           <>
             <dl className="onboarding-location__details">
               <div className="onboarding-location__row">
-                <dt>Suburb</dt>
-                <dd>{location.suburb || (isResolvingPlace ? 'Updating…' : '—')}</dd>
+                <dt>City</dt>
+                <dd>{location.city || (isResolvingPlace ? 'Updating…' : '—')}</dd>
               </div>
               <div className="onboarding-location__row">
                 <dt>Province</dt>

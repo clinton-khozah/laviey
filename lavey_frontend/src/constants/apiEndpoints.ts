@@ -16,11 +16,15 @@ export const API_ENDPOINTS = {
   profiles: {
     discover: '/profiles/discover',
     byId: (id: string) => `/profiles/${id}`,
+    recordView: (id: string) => `/profiles/${id}/view`,
   },
   matches: {
     flame: '/matches/flame',
     list: '/matches',
     greetings: '/matches/greetings',
+    iCrush: '/matches/i-crush',
+    iCrushAccept: (inviteId: string) => `/matches/i-crush/${inviteId}/accept`,
+    iCrushReject: (inviteId: string) => `/matches/i-crush/${inviteId}/reject`,
   },
   subscription: {
     flameQuota: '/subscription/flame-quota',
@@ -70,6 +74,7 @@ export const API_ENDPOINTS = {
     deleteAccount: '/users/me',
     pushVapidPublicKey: '/users/me/push/vapid-public-key',
     pushSubscribe: '/users/me/push/subscribe',
+    pushTest: '/users/me/push/test',
   },
   content: {
     posts: '/users/me/posts',

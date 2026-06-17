@@ -1,8 +1,8 @@
-import { FaceMatchError } from '@/utils/face/faceMatcher';
-import { ImageQualityError } from '@/utils/media/imageQualityCheck';
-import * as nsfwjs from 'nsfwjs';
-import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-backend-webgl';
+import { FaceMatchError } from "@/utils/face/faceMatcher";
+import { ImageQualityError } from "@/utils/media/imageQualityCheck";
+import * as nsfwjs from "nsfwjs";
+import * as tf from "@tensorflow/tfjs";
+import "@tensorflow/tfjs-backend-webgl";
 
 const PORN_THRESHOLD = 0.55;
 const HENTAI_THRESHOLD = 0.55;
@@ -12,15 +12,15 @@ let modelPromise: Promise<nsfwjs.NSFWJS> | null = null;
 
 export class NsfwImageError extends Error {
   constructor(
-    message = 'We can\'t save this photo because it appears to contain explicit or inappropriate adult content. Please choose a different image.',
+    message = "We can't save this photo because it appears to contain explicit or inappropriate adult content. Please choose a different image.",
   ) {
     super(message);
-    this.name = 'NsfwImageError';
+    this.name = "NsfwImageError";
   }
 }
 
 async function ensureBackend(): Promise<void> {
-  await tf.setBackend('webgl');
+  await tf.setBackend("webgl");
   await tf.ready();
 }
 
@@ -44,13 +44,16 @@ function loadImageFromFile(file: File): Promise<HTMLImageElement> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Could not read image.'));
+      reject(new Error("Could not read image."));
     };
     img.src = url;
   });
 }
 
-function scoreFor(predictions: nsfwjs.PredictionType[], className: string): number {
+function scoreFor(
+  predictions: nsfwjs.PredictionType[],
+  className: string,
+): number {
   return predictions.find((p) => p.className === className)?.probability ?? 0;
 }
 
@@ -60,8 +63,8 @@ export async function validateSafeImage(file: File): Promise<void> {
   const model = await loadNsfwModel();
   const predictions = await model.classify(img);
 
-  const porn = scoreFor(predictions, 'Porn');
-  const hentai = scoreFor(predictions, 'Hentai');
+  const porn = scoreFor(predictions, "Porn");
+  const hentai = scoreFor(predictions, "Hentai");
 
   if (
     porn >= PORN_THRESHOLD ||
@@ -77,5 +80,5 @@ export function nsfwImageUserMessage(error: unknown): string {
   if (error instanceof ImageQualityError) return error.message;
   if (error instanceof FaceMatchError) return error.message;
   if (error instanceof Error && error.message) return error.message;
-  return 'We couldn\'t upload this photo. The file may be unreadable or unsupported — please try a different image.';
+  return "We couldn't upload this photo. The file may be unreadable or unsupported — please try a different image.";
 }

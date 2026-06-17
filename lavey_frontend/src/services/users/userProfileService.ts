@@ -43,7 +43,7 @@ function mockProfileFromSession(): UserProfile {
     isPremium: false,
     verified: isProfileVerified(userId),
     stats: {
-      flamesSent: 47,
+      crushesReceived: 12,
       matches: 12,
       vibeScore: 89,
       profileViews: 234,
@@ -90,6 +90,7 @@ export interface UpdateUserLocationInput {
   longitude: number;
   country?: string;
   province?: string;
+  city?: string;
   suburb?: string;
 }
 

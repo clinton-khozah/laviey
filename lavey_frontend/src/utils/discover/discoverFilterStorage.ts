@@ -23,6 +23,7 @@ export function loadDiscoverFilters(): DiscoverFilters {
       ...DEFAULT_DISCOVER_FILTERS,
       ...parsed,
       genders: parsed.genders.length > 0 ? parsed.genders : DEFAULT_DISCOVER_FILTERS.genders,
+      verifiedOnly: parsed.verifiedOnly === true,
     };
   } catch {
     return { ...DEFAULT_DISCOVER_FILTERS };

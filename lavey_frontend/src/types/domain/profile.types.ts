@@ -27,6 +27,8 @@ export interface Profile {
   age: number;
   bio: string;
   distance: string;
+  /** City from onboarding location (e.g. Pretoria, New York). */
+  locationName?: string;
   verified: boolean;
   vibeScore: number;
   interests: string[];

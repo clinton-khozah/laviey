@@ -25,13 +25,6 @@
   box-shadow: 0 2px 10px rgba(255, 107, 53, 0.35);
 }
 
-.action-rail__avatar.profile-initial-avatar {
-  background: linear-gradient(145deg, #ff9a62 0%, #ff7340 100%);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 12px rgba(255, 107, 53, 0.45);
-}
-
 .action-rail__verified {
   position: absolute;
   bottom: -3px;
@@ -113,4 +106,25 @@
   width: 18px;
   height: 18px;
   opacity: 0.7;
+}
+
+.action-rail__btn--crushy {
+  margin: 2px 0 0;
+  gap: 2px;
+}
+
+.action-rail__btn--crushy-pending .action-rail__label {
+  color: #ffb8cc;
+}
+
+.action-rail__btn--crushy-active .action-rail__label {
+  color: #ff4d8a;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(255, 45, 106, 0.45);
+}
+
+.action-rail__label--crushy-sent {
+  color: #ff4d8a;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(255, 45, 106, 0.45);
 }

@@ -14,7 +14,12 @@ export interface GoogleIdentityServices {
       }) => void;
       renderButton: (
         parent: HTMLElement,
-        options: { theme?: string; size?: string; type?: string; width?: number },
+        options: {
+          theme?: string;
+          size?: string;
+          type?: string;
+          width?: number;
+        },
       ) => void;
     };
   };

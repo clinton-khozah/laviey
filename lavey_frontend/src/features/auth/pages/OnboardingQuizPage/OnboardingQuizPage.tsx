@@ -241,7 +241,7 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
   const hasLocationReady =
     locationStatus === 'watching' &&
-    Boolean(liveLocation?.suburb && liveLocation?.province && liveLocation?.country) &&
+    Boolean(liveLocation?.city && liveLocation?.province && liveLocation?.country) &&
     !isResolvingPlace;
 
 

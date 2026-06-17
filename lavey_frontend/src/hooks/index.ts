@@ -15,6 +15,8 @@ export { useConversations } from './messages/useConversations';
 export { useNotificationInbox } from './messages/useNotificationInbox';
 export { useChatThread } from './messages/useChatThread';
 export { useMatchProfile, type ProfileLookup } from './messages/useMatchProfile';
+export { useMessagesDiscoverSuggestions } from './messages/useMessagesDiscoverSuggestions';
+export { useMessagesFindSuggestions } from './messages/useMessagesFindSuggestions';
 export { useOnlineDates } from './rooms/useOnlineDates';
 export { useMeetupWebRTC } from './rooms/useMeetupWebRTC';
 export { useMeetingReactions } from './rooms/useMeetingReactions';

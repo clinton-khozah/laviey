@@ -1,29 +1,38 @@
-import { AppLoader } from '@/components/ui/AppLoader';
-import { PrivacyGuard } from '@/components/privacy/PrivacyGuard';
-import { MainApp } from '@/app/MainApp';
-import { AuthPage, AuthCallbackPage, OnboardingQuizPage } from '@/features/auth';
-import { ErrorPage } from '@/features/errors';
-import { AdminDashboardPage, AdminLoginPage } from '@/features/admin';
-import { adminAuthService } from '@/services/admin/adminAuthService';
-import { useAuth } from '@/hooks';
+import { AppLoader } from "@/components/ui/AppLoader";
+import { PrivacyGuard } from "@/components/privacy/PrivacyGuard";
+import { MainApp } from "@/app/MainApp";
+import {
+  AuthPage,
+  AuthCallbackPage,
+  OnboardingQuizPage,
+} from "@/features/auth";
+import { ErrorPage } from "@/features/errors";
+import { AdminDashboardPage, AdminLoginPage } from "@/features/admin";
+import { adminAuthService } from "@/services/admin/adminAuthService";
+import { useAuth } from "@/hooks";
 import {
   parseErrorPagePath,
   parseErrorPageSearch,
-} from '@/utils/navigation/errorNavigation';
+} from "@/utils/navigation/errorNavigation";
 import {
   isMeetupJoinPath,
   parseMeetupJoinCode,
   storePendingMeetupCode,
-} from '@/utils/meeting/meetupJoinLink';
-import { hasOAuthReturnParams } from '@/utils/auth/oauthCallbackState';
-import { applyThemeToDocument, loadTheme } from '@/utils/theme/themeStorage';
-import { useEffect, useState } from 'react';
+} from "@/utils/meeting/meetupJoinLink";
+import { hasOAuthReturnParams } from "@/utils/auth/oauthCallbackState";
+import { applyThemeToDocument, loadTheme } from "@/utils/theme/themeStorage";
+import { useEffect, useState } from "react";
 
-const ADMIN_ROOT_PATH = '/admin/19990808';
-const ADMIN_LOGIN_PATH = '/admin/19990808/adminlogin';
+const ADMIN_ROOT_PATH = "/admin/19990808";
+const ADMIN_LOGIN_PATH = "/admin/19990808/adminlogin";
 
 function App() {
-  const { isAuthenticated, isLoading, needsOnboardingQuiz, completeOnboardingQuiz } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading,
+    needsOnboardingQuiz,
+    completeOnboardingQuiz,
+  } = useAuth();
   const [path, setPath] = useState(() => window.location.pathname);
 
   const isAdminRoute = path.startsWith(ADMIN_ROOT_PATH);
@@ -37,21 +46,21 @@ function App() {
 
   const navigateTo = (nextPath: string) => {
     if (window.location.pathname === nextPath) return;
-    window.history.pushState(null, '', nextPath);
+    window.history.pushState(null, "", nextPath);
     setPath(nextPath);
   };
 
   useEffect(() => {
     const onPopState = () => setPath(window.location.pathname);
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   useEffect(() => {
     if (!isMeetupJoinPath(path)) return;
     const code = parseMeetupJoinCode(window.location.search);
     if (code) storePendingMeetupCode(code);
-    navigateTo('/');
+    navigateTo("/");
   }, [path]);
 
   useEffect(() => {
@@ -83,7 +92,7 @@ function App() {
 
   useEffect(() => {
     if (!isAdminRoute) return;
-    applyThemeToDocument('light');
+    applyThemeToDocument("light");
     return () => {
       applyThemeToDocument(loadTheme());
     };
@@ -101,7 +110,7 @@ function App() {
         onNavigate={navigateTo}
       />
     );
-  } else if (path === '/auth/callback' || hasOAuthReturnParams()) {
+  } else if (path === "/auth/callback" || hasOAuthReturnParams()) {
     content = <AuthCallbackPage />;
   } else if (isAdminRoute) {
     if (adminAuthLoading) {

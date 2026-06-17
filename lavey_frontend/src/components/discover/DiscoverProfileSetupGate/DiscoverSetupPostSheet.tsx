@@ -1,13 +1,16 @@
-import { useRef, useState } from 'react';
-import { ProfileSheet } from '@/components/profile/ProfileSheet';
-import { ProfilePostsGrid } from '@/components/profile/ProfilePostsGrid';
-import { LogoLoader } from '@/components/ui/LogoLoader';
-import { MAX_PROFILE_POSTS, POST_LIMIT_MESSAGE } from '@/constants/profilePosts';
-import { contentService } from '@/services/content/contentService';
-import { prepareImageForUpload } from '@/utils/media/prepareUploadMedia';
-import { nsfwImageUserMessage } from '@/utils/media/nsfwImageCheck';
-import type { ProfilePost } from '@/types';
-import './DiscoverSetupSheets.css';
+import { useRef, useState } from "react";
+import { ProfileSheet } from "@/components/profile/ProfileSheet";
+import { ProfilePostsGrid } from "@/components/profile/ProfilePostsGrid";
+import { LogoLoader } from "@/components/ui/LogoLoader";
+import {
+  MAX_PROFILE_POSTS,
+  POST_LIMIT_MESSAGE,
+} from "@/constants/profilePosts";
+import { contentService } from "@/services/content/contentService";
+import { prepareImageForUpload } from "@/utils/media/prepareUploadMedia";
+import { nsfwImageUserMessage } from "@/utils/media/nsfwImageCheck";
+import type { ProfilePost } from "@/types";
+import "./DiscoverSetupSheets.css";
 
 interface DiscoverSetupGallerySheetProps {
   open: boolean;
@@ -40,14 +43,16 @@ export function DiscoverSetupGallerySheet({
         setError(POST_LIMIT_MESSAGE);
         return;
       }
-      if (!file.type.startsWith('image/')) {
-        setError('Please choose a photo (images only).');
+      if (!file.type.startsWith("image/")) {
+        setError("Please choose a photo (images only).");
         return;
       }
 
       setIsSaving(true);
       try {
-        const prepared = await prepareImageForUpload(file, undefined, { galleryUpload: true });
+        const prepared = await prepareImageForUpload(file, undefined, {
+          galleryUpload: true,
+        });
         const created = await contentService.createPost({ file: prepared });
         setLocalPosts((prev) => [created, ...prev]);
         await onMomentAdded();
@@ -60,7 +65,12 @@ export function DiscoverSetupGallerySheet({
   };
 
   return (
-    <ProfileSheet open={open} title="Your profile gallery" onClose={onClose} compact>
+    <ProfileSheet
+      open={open}
+      title="Your profile gallery"
+      onClose={onClose}
+      compact
+    >
       <div className="discover-setup-sheet discover-setup-sheet--posts">
         <p className="discover-setup-sheet__lead">
           Add up to {MAX_PROFILE_POSTS} clear photos for your match card.
@@ -78,7 +88,11 @@ export function DiscoverSetupGallerySheet({
           limitItemLabel="photos"
           addAriaLabel="Add photo"
           addButtonLabel="Add"
-          onAdd={atPostLimit || isSaving ? undefined : () => fileInputRef.current?.click()}
+          onAdd={
+            atPostLimit || isSaving
+              ? undefined
+              : () => fileInputRef.current?.click()
+          }
         />
 
         <input
@@ -90,7 +104,7 @@ export function DiscoverSetupGallerySheet({
           className="discover-setup-sheet__hidden-input"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            e.target.value = '';
+            e.target.value = "";
             if (file) saveMoment(file);
           }}
         />
@@ -103,7 +117,11 @@ export function DiscoverSetupGallerySheet({
           disabled={isSaving || atPostLimit}
           onClick={() => fileInputRef.current?.click()}
         >
-          {isSaving ? 'Add photo' : atPostLimit ? 'Photo limit reached' : 'Add photo'}
+          {isSaving
+            ? "Add photo"
+            : atPostLimit
+              ? "Photo limit reached"
+              : "Add photo"}
         </button>
 
         {hasMoments && (

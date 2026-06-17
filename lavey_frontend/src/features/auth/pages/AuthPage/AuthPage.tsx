@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
-import { EmailAuthForm } from '@/components/auth/EmailAuthForm';
-import { EmailVerificationForm } from '@/components/auth/EmailVerificationForm';
-import type { EmailAuthMode } from '@/components/auth/EmailAuthForm';
-import { APP_IMAGES } from '@/constants/images';
-import { useAuth } from '@/hooks';
-import { getApiConfigurationError } from '@/utils/api/apiConfiguration';
-import { usesBackendAuth } from '@/config/env';
-import { getGoogleSignInBlockedMessage } from '@/utils/google/googleEnvironment';
-import './AuthPage.css';
+import { useState } from "react";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { EmailAuthForm } from "@/components/auth/EmailAuthForm";
+import { EmailVerificationForm } from "@/components/auth/EmailVerificationForm";
+import type { EmailAuthMode } from "@/components/auth/EmailAuthForm";
+import { APP_IMAGES } from "@/constants/images";
+import { useAuth } from "@/hooks";
+import { getApiConfigurationError } from "@/utils/api/apiConfiguration";
+import { usesBackendAuth } from "@/config/env";
+import { getGoogleSignInBlockedMessage } from "@/utils/google/googleEnvironment";
+import "./AuthPage.css";
 
 export function AuthPage() {
   const {
@@ -26,9 +26,11 @@ export function AuthPage() {
     clearPendingVerification,
     clearError,
   } = useAuth();
-  const [emailMode, setEmailMode] = useState<EmailAuthMode>('sign-in');
+  const [emailMode, setEmailMode] = useState<EmailAuthMode>("sign-in");
   const webViewWarning = getGoogleSignInBlockedMessage();
-  const apiConfigWarning = usesBackendAuth() ? getApiConfigurationError() : null;
+  const apiConfigWarning = usesBackendAuth()
+    ? getApiConfigurationError()
+    : null;
   const showVerification = Boolean(pendingVerificationEmail);
 
   const handleModeChange = (mode: EmailAuthMode) => {
@@ -63,7 +65,7 @@ export function AuthPage() {
 
           {webViewWarning && (
             <p className="auth-page__hint" role="status">
-              {webViewWarning}{' '}
+              {webViewWarning}{" "}
               <a href={window.location.href} target="_blank" rel="noreferrer">
                 Open in browser
               </a>
@@ -84,11 +86,15 @@ export function AuthPage() {
               <EmailAuthForm
                 mode={emailMode}
                 onModeChange={handleModeChange}
-                onSignIn={(email, password) => void signInWithEmail({ email, password })}
+                onSignIn={(email, password) =>
+                  void signInWithEmail({ email, password })
+                }
                 onSignUp={(email, password, displayName) =>
                   void signUpWithEmail({ email, password, displayName })
                 }
-                onResendVerification={(email) => void resendVerificationForEmail(email)}
+                onResendVerification={(email) =>
+                  void resendVerificationForEmail(email)
+                }
                 resendCooldownSec={resendCooldownSec}
                 disabled={isSubmitting}
               />
@@ -102,7 +108,7 @@ export function AuthPage() {
               onResend={() => void resendVerificationEmail()}
               onBack={() => {
                 clearPendingVerification();
-                setEmailMode('sign-in');
+                setEmailMode("sign-in");
               }}
               disabled={isSubmitting}
               resendCooldownSec={resendCooldownSec}

@@ -12,6 +12,26 @@ export interface SendFlameResponse {
   myAvatar?: string;
 }
 
+export interface SendICrushResponse {
+  matched: boolean;
+  pending: boolean;
+  alreadySent: boolean;
+  mutualAccepted?: boolean;
+  inviteId?: string;
+  conversationId?: string;
+  matchId?: string;
+  profileName: string;
+  profileAvatar: string;
+  myAvatar?: string;
+}
+
+export interface RespondICrushResponse {
+  matchId: string;
+  conversationId: string;
+  profileName: string;
+  profileAvatar: string;
+}
+
 export interface LikePostResponse {
   liked: boolean;
   likeCount: number;
