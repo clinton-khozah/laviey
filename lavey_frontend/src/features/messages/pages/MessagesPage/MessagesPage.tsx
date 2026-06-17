@@ -73,6 +73,7 @@ export function MessagesPage() {
   const [mutedConversationIds, setMutedConversationIds] = useState<Set<string>>(() => new Set());
   const [actionToast, setActionToast] = useState<{ text: string; success?: boolean } | null>(null);
   const [notificationProfileId, setNotificationProfileId] = useState<string | null>(null);
+  const [iCrushResponding, setICrushResponding] = useState(false);
 
   const showActionToast = useCallback((message: string, success = false) => {
     setActionToast({ text: message, success });
