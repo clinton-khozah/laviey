@@ -31,6 +31,10 @@ export const env = {
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL?.trim() || DEFAULT_SUPABASE_URL,
   supabasePublishableKey:
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || DEFAULT_SUPABASE_PUBLISHABLE_KEY,
+  /** Optional TURN relay — improves connectivity across strict NATs/firewalls */
+  turnUrl: import.meta.env.VITE_TURN_URL?.trim() || '',
+  turnUsername: import.meta.env.VITE_TURN_USERNAME?.trim() || '',
+  turnCredential: import.meta.env.VITE_TURN_CREDENTIAL?.trim() || '',
   isDev: import.meta.env.DEV,
 } as const;
 

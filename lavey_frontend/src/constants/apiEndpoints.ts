@@ -121,6 +121,7 @@ export const API_ENDPOINTS = {
     guidelines: '/legal/guidelines',
   },
   meetings: {
+    turnCredentials: '/meetings/turn-credentials',
     liveTranscript: '/meetings/live-transcript',
     attend: (meetupId: string) => `/meetings/${meetupId}/attend`,
   },

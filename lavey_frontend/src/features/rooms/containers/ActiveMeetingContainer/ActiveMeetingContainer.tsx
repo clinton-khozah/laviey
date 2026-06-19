@@ -3,6 +3,7 @@ import { VideoMeetingRoom } from '@/components/rooms/VideoMeetingRoom';
 import { useAuth, useLocalMedia, useMeetupWebRTC } from '@/hooks';
 import { meetupSocialService } from '@/services/rooms/meetupSocialService';
 import type { ActiveMeetingSession } from '@/types';
+import { getMeetupParticipantId } from '@/utils/meeting/meetupParticipantId';
 import { useEffect } from 'react';
 
 interface ActiveMeetingContainerProps {
@@ -14,7 +15,7 @@ export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContai
   const { user } = useAuth();
   const localMedia = useLocalMedia(true);
 
-  const localUserId = user?.id ?? `guest-${session.date.id}`;
+  const localUserId = getMeetupParticipantId(user?.id, session.date.id);
   const mediaReady = Boolean(localMedia.localStream);
 
   const { participants, status } = useMeetupWebRTC({
@@ -24,7 +25,8 @@ export function ActiveMeetingContainer({ session, onLeave }: ActiveMeetingContai
     localAvatarUrl: user?.avatarUrl ?? '',
     isHost: Boolean(session.date.isHostedByYou),
     localStream: localMedia.localStream,
-    enabled: mediaReady,
+    enabled: true,
+    mediaReady,
   });
 
   useEffect(() => {
