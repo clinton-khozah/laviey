@@ -5,7 +5,8 @@ import { MeetingGiftRecipientSheet } from '@/components/rooms/MeetingGiftRecipie
 import { MeetingLiveTranscriptModal } from '@/components/rooms/MeetingLiveTranscriptModal';
 import { MeetingReactionOverlay } from '@/components/rooms/MeetingReactionOverlay';
 import { MeetingSelfVideo } from '@/components/rooms/MeetingSelfVideo';
-import { RemoteParticipantVideo } from '@/components/rooms/RemoteParticipantVideo';
+import { RemoteParticipantVideo, resumeRemoteParticipantAudio } from '@/components/rooms/RemoteParticipantVideo';
+import { RemoteParticipantAudio } from '@/components/rooms/RemoteParticipantAudio/RemoteParticipantAudio';
 import { MeetingCaptions } from '@/components/rooms/MeetingCaptions';
 import { MeetingGiftBursts } from '@/components/rooms/MeetingGiftPanel/MeetingGiftBursts';
 import { GiftIcon, MeetingGiftPanel } from '@/components/rooms/MeetingGiftPanel';
@@ -50,6 +51,22 @@ export function VideoMeetingRoom({
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const meetingRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = meetingRef.current;
+    if (!root) return;
+
+    const unlockRemoteAudio = () => {
+      resumeRemoteParticipantAudio(root);
+    };
+
+    root.addEventListener('pointerdown', unlockRemoteAudio);
+    return () => root.removeEventListener('pointerdown', unlockRemoteAudio);
+  }, []);
+
+  useEffect(() => {
+    resumeRemoteParticipantAudio(meetingRef.current);
+  }, [participants]);
 
   const {
     entries: transcriptEntries,
@@ -278,6 +295,9 @@ export function VideoMeetingRoom({
                       <span className="video-meeting__tile-connecting">Connecting…</span>
                     )}
                   </div>
+                )}
+                {p.stream && !p.isMuted && p.isVideoOff && (
+                  <RemoteParticipantAudio stream={p.stream} />
                 )}
                 <div className="video-meeting__tile-footer">
                   <span className="video-meeting__tile-name">

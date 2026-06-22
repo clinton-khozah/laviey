@@ -1,5 +1,7 @@
 import { useRef } from 'react';
 import { FeedProfileAvatar } from '@/components/feed/FeedProfileAvatar';
+import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
+import { LAVEY_OFFICIAL_PROMO } from '@/constants/laveyOfficial';
 import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
 import type { Conversation } from '@/types';
 import './ConversationListItem.css';
@@ -25,6 +27,13 @@ function buildSubtitle(conversation: Conversation): string {
     const time = conversation.lastMessageAt?.trim();
     if (preview && time) return `${preview} · ${time}`;
     return preview || 'Likes & crushes';
+  }
+
+  if (conversation.conversationKind === 'lavey_official') {
+    const preview = formatPreview(conversation.lastMessage);
+    const time = conversation.lastMessageAt?.trim();
+    if (preview && time) return `${preview} · ${time}`;
+    return preview || LAVEY_OFFICIAL_PROMO.preview;
   }
 
   if (
@@ -57,6 +66,7 @@ export function ConversationListItem({
   onMoreClick,
 }: ConversationListItemProps) {
   const isNotifications = conversation.conversationKind === 'notifications';
+  const isLaveyOfficial = conversation.conversationKind === 'lavey_official';
   const isICrush =
     conversation.conversationKind === 'i_crush_incoming' ||
     conversation.conversationKind === 'i_crush_outgoing';
@@ -98,8 +108,9 @@ export function ConversationListItem({
         'conversation-item',
         hasUnread ? 'conversation-item--unread' : '',
         conversation.isOnline ? 'conversation-item--online' : '',
-        conversation.isPinned || isNotifications || isICrush ? 'conversation-item--starred' : '',
+        conversation.isPinned || isNotifications || isLaveyOfficial || isICrush ? 'conversation-item--starred' : '',
         isNotifications ? 'conversation-item--notifications' : '',
+        isLaveyOfficial ? 'conversation-item--lavey' : '',
         isICrush ? 'conversation-item--icrush' : '',
       ]
         .filter(Boolean)
@@ -108,9 +119,13 @@ export function ConversationListItem({
       <button
         type="button"
         className="conversation-item__avatar-btn"
-        onClick={isNotifications ? onClick : onAvatarClick}
+        onClick={isNotifications || isLaveyOfficial ? onClick : onAvatarClick}
         aria-label={
-          isNotifications ? 'Open notifications' : `View ${conversation.participantName}'s profile`
+          isNotifications
+            ? 'Open notifications'
+            : isLaveyOfficial
+              ? 'Open message from Lavey'
+              : `View ${conversation.participantName}'s profile`
         }
       >
         {isNotifications ? (
@@ -118,6 +133,10 @@ export function ConversationListItem({
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5-6.71V3a2 2 0 1 0-4 0v1.29A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z" />
             </svg>
+          </span>
+        ) : isLaveyOfficial ? (
+          <span className="conversation-item__lavey-icon" aria-hidden>
+            <img src={LAVEY_OFFICIAL_PROMO.logoUrl} alt="" />
           </span>
         ) : (
           <FeedProfileAvatar
@@ -127,7 +146,7 @@ export function ConversationListItem({
             className="conversation-item__avatar"
           />
         )}
-        {!isNotifications && conversation.isOnline && (
+        {!isNotifications && !isLaveyOfficial && conversation.isOnline && (
           <span className="conversation-item__online" title="Active now" />
         )}
       </button>
@@ -148,7 +167,10 @@ export function ConversationListItem({
       >
         <span className="conversation-item__name-row">
           <span className="conversation-item__name">{conversation.participantName}</span>
-          {!isNotifications && !isICrush && conversation.isOnline && !conversation.isTyping && (
+          {isLaveyOfficial && (
+            <VerifiedBadge size="sm" title="Verified official account" className="conversation-item__verified" />
+          )}
+          {!isNotifications && !isLaveyOfficial && !isICrush && conversation.isOnline && !conversation.isTyping && (
             <span className="conversation-item__online-label">Online</span>
           )}
           {isICrush && (
@@ -156,7 +178,7 @@ export function ConversationListItem({
               💋
             </span>
           )}
-          {(conversation.isPinned || isNotifications) && (
+          {(conversation.isPinned || isNotifications || isLaveyOfficial) && (
             <span className="conversation-item__pin" aria-label="Pinned">
               ★
             </span>

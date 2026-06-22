@@ -2,12 +2,45 @@ import { useEffect, useMemo, useState } from 'react';
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import { SheetSaveSuccess } from '@/components/profile/SheetSaveSuccess';
 import { usePlatinumCatalog } from '@/hooks/subscription/usePlatinumCatalog';
+import type { PlatinumPlan } from '@/types';
+import { applyPriceDiscount } from '@/utils/subscription/platinumPricing';
 import './PlatinumUpgradeSheet.css';
 
 interface PlatinumUpgradeSheetProps {
   open: boolean;
   onClose: () => void;
   onSubscribe?: () => void;
+  /** When set, show an Apply button before discounted prices appear (e.g. Lavey promo). */
+  promoDiscountPercent?: number;
+}
+
+function discountedPlanPrice(plan: PlatinumPlan, percentOff: number): string {
+  return applyPriceDiscount(plan.price, percentOff);
+}
+
+function PriceWithDiscount({
+  original,
+  discounted,
+  showDiscount,
+  className = 'platinum-upgrade__plan-price',
+  wasClassName = 'platinum-upgrade__price-was',
+}: {
+  original: string;
+  discounted: string;
+  showDiscount: boolean;
+  className?: string;
+  wasClassName?: string;
+}) {
+  if (!showDiscount || discounted === original) {
+    return <span className={className}>{original}</span>;
+  }
+
+  return (
+    <span className="platinum-upgrade__price-stack">
+      <span className={wasClassName}>{original}</span>
+      <span className={className}>{discounted}</span>
+    </span>
+  );
 }
 
 function FeatureIcon({ id }: { id: string }) {
@@ -73,17 +106,27 @@ function FeatureIcon({ id }: { id: string }) {
   }
 }
 
-export function PlatinumUpgradeSheet({ open, onClose, onSubscribe }: PlatinumUpgradeSheetProps) {
+export function PlatinumUpgradeSheet({
+  open,
+  onClose,
+  onSubscribe,
+  promoDiscountPercent,
+}: PlatinumUpgradeSheetProps) {
   const { catalog, isLoading, error, reload } = usePlatinumCatalog(open);
   const [planId, setPlanId] = useState<string | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [discountApplied, setDiscountApplied] = useState(false);
+
+  const hasPromo = Boolean(promoDiscountPercent && promoDiscountPercent > 0);
+  const showDiscountedPrices = hasPromo && discountApplied;
 
   useEffect(() => {
     if (!open) {
       setIsSubscribing(false);
       setSubscribeSuccess(false);
       setPlanId(null);
+      setDiscountApplied(false);
     }
   }, [open]);
 
@@ -99,6 +142,12 @@ export function PlatinumUpgradeSheet({ open, onClose, onSubscribe }: PlatinumUpg
     () => catalog?.plans.find((item) => item.id === planId) ?? catalog?.plans[0],
     [catalog, planId],
   );
+
+  const selectedPrice = useMemo(() => {
+    if (!plan) return '';
+    if (!showDiscountedPrices || !promoDiscountPercent) return plan.price;
+    return discountedPlanPrice(plan, promoDiscountPercent);
+  }, [plan, promoDiscountPercent, showDiscountedPrices]);
 
   const handleSubscribe = () => {
     setIsSubscribing(true);
@@ -143,14 +192,43 @@ export function PlatinumUpgradeSheet({ open, onClose, onSubscribe }: PlatinumUpg
             <h2 className="platinum-upgrade__title">{catalog.heroTitle}</h2>
             <p className="platinum-upgrade__tagline">{catalog.heroTagline}</p>
             <p className="platinum-upgrade__price">
-              {plan.price}
+              <PriceWithDiscount
+                original={plan.price}
+                discounted={
+                  promoDiscountPercent
+                    ? discountedPlanPrice(plan, promoDiscountPercent)
+                    : plan.price
+                }
+                showDiscount={showDiscountedPrices}
+                className="platinum-upgrade__price-current"
+                wasClassName="platinum-upgrade__price-was platinum-upgrade__price-was--hero"
+              />
               <span className="platinum-upgrade__price-period"> {plan.period}</span>
             </p>
           </div>
 
+          {hasPromo && !discountApplied ? (
+            <button
+              type="button"
+              className="platinum-upgrade__apply-discount"
+              onClick={() => setDiscountApplied(true)}
+            >
+              Apply {promoDiscountPercent}% off
+            </button>
+          ) : null}
+
+          {showDiscountedPrices ? (
+            <p className="platinum-upgrade__discount-applied" role="status">
+              {promoDiscountPercent}% off applied
+            </p>
+          ) : null}
+
           <div className="platinum-upgrade__plans" role="radiogroup" aria-label="Choose a plan">
             {catalog.plans.map((option) => {
               const selected = option.id === planId;
+              const discounted = promoDiscountPercent
+                ? discountedPlanPrice(option, promoDiscountPercent)
+                : option.price;
               return (
                 <button
                   key={option.id}
@@ -161,10 +239,12 @@ export function PlatinumUpgradeSheet({ open, onClose, onSubscribe }: PlatinumUpg
                   onClick={() => setPlanId(option.id)}
                 >
                   <span className="platinum-upgrade__plan-label">{option.label}</span>
-                  <span className="platinum-upgrade__plan-price">
-                    {option.price}
-                    <span className="platinum-upgrade__plan-period">{option.period}</span>
-                  </span>
+                  <PriceWithDiscount
+                    original={option.price}
+                    discounted={discounted}
+                    showDiscount={showDiscountedPrices}
+                  />
+                  <span className="platinum-upgrade__plan-period">{option.period}</span>
                 </button>
               );
             })}
@@ -192,7 +272,7 @@ export function PlatinumUpgradeSheet({ open, onClose, onSubscribe }: PlatinumUpg
           >
             {isSubscribing
               ? 'Processing…'
-              : `Start Platinum — ${plan.price}${plan.id === 'day' ? '' : plan.period}`}
+              : `Start Platinum — ${selectedPrice}${plan.id === 'day' ? '' : plan.period}`}
           </button>
           <p className="platinum-upgrade__fine-print">
             {plan.id === 'day' ? catalog.oneTimeFinePrint : catalog.recurringFinePrint}

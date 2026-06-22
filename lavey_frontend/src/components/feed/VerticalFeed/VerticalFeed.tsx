@@ -208,6 +208,90 @@ export function VerticalFeed({
 
   useEffect(() => {
     const el = feedRef.current;
+    if (!el || isLocked) return;
+
+    let snapLock = false;
+    let unlockTimer: number | null = null;
+
+    const feedItems = () => Array.from(el.querySelectorAll<HTMLElement>('.feed-item'));
+
+    const activeIndex = () => {
+      const items = feedItems();
+      if (items.length === 0) return 0;
+
+      const scrollTop = el.scrollTop;
+      let best = 0;
+      let bestDistance = Number.POSITIVE_INFINITY;
+
+      for (let i = 0; i < items.length; i += 1) {
+        const distance = Math.abs(items[i]!.offsetTop - scrollTop);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = i;
+        }
+      }
+
+      return best;
+    };
+
+    const releaseSnapLock = () => {
+      snapLock = false;
+      if (unlockTimer !== null) {
+        window.clearTimeout(unlockTimer);
+        unlockTimer = null;
+      }
+    };
+
+    const lockSnap = () => {
+      snapLock = true;
+      if (unlockTimer !== null) window.clearTimeout(unlockTimer);
+      unlockTimer = window.setTimeout(releaseSnapLock, 520);
+    };
+
+    const scrollToIndex = (index: number) => {
+      const items = feedItems();
+      const target = items[index];
+      if (!target) return;
+
+      lockSnap();
+      el.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      if (snapLock) {
+        event.preventDefault();
+        return;
+      }
+
+      if (Math.abs(event.deltaY) < 8) return;
+
+      const items = feedItems();
+      if (items.length <= 1) return;
+
+      const current = activeIndex();
+      const direction = event.deltaY > 0 ? 1 : -1;
+      const next = Math.max(0, Math.min(items.length - 1, current + direction));
+
+      if (next === current) return;
+
+      event.preventDefault();
+      scrollToIndex(next);
+    };
+
+    const onScrollEnd = () => releaseSnapLock();
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('scrollend', onScrollEnd);
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('scrollend', onScrollEnd);
+      releaseSnapLock();
+    };
+  }, [isLocked, displayEntries.length, fingerprint]);
+
+  useEffect(() => {
+    const el = feedRef.current;
     if (!el || !isLocked) return;
 
     const blockScroll = (event: Event) => {

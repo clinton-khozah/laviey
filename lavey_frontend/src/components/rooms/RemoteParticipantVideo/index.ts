@@ -1,1 +1,1 @@
-export { RemoteParticipantVideo } from './RemoteParticipantVideo';
+export { RemoteParticipantVideo, resumeRemoteParticipantAudio } from './RemoteParticipantVideo';

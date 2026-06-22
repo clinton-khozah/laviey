@@ -1,0 +1,1 @@
+export { LaveyPromoThread } from './LaveyPromoThread';

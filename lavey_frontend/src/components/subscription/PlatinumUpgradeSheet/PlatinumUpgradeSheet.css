@@ -96,6 +96,64 @@
   opacity: 0.9;
 }
 
+.platinum-upgrade__price-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.platinum-upgrade__price-was {
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: line-through;
+  opacity: 0.65;
+  color: inherit;
+}
+
+.platinum-upgrade__price-was--hero {
+  font-size: 13px;
+}
+
+.platinum-upgrade__price-current {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.platinum-upgrade__apply-discount {
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.28);
+  cursor: pointer;
+}
+
+.platinum-upgrade__discount-applied {
+  margin: -4px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.platinum-upgrade__plan .platinum-upgrade__price-stack {
+  align-items: center;
+}
+
+.platinum-upgrade__plan .platinum-upgrade__price-was {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 .platinum-upgrade__plans {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

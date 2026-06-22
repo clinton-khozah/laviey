@@ -150,6 +150,32 @@
   height: 26px;
 }
 
+.conversation-item__lavey-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(255, 77, 109, 0.18));
+  border: 1.5px solid rgba(168, 85, 247, 0.35);
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.18);
+}
+
+.conversation-item__lavey-icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.conversation-item__verified {
+  flex-shrink: 0;
+}
+
+.conversation-item--lavey .conversation-item__subtitle {
+  color: var(--text-secondary);
+}
+
 .conversation-item__badge {
   flex-shrink: 0;
   min-width: 20px;

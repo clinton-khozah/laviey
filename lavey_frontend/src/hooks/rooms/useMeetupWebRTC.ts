@@ -279,11 +279,13 @@ export function useMeetupWebRTC({
       const peerId = meta.odUserId;
 
       pc.ontrack = (event) => {
-        const [remoteStream] = event.streams;
-        if (remoteStream) {
-          record.stream = remoteStream;
-        } else if (event.track) {
+        if (event.track) {
           attachRemoteTrack(record, event.track);
+        }
+        for (const remoteStream of event.streams) {
+          for (const track of remoteStream.getTracks()) {
+            attachRemoteTrack(record, track);
+          }
         }
 
         const refresh = () => syncParticipants();

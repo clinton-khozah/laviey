@@ -3,6 +3,7 @@ import { ConversationListItem } from '@/components/messages/ConversationListItem
 import { ChatThread } from '@/components/messages/ChatThread';
 import { ICrushThread } from '@/components/messages/ICrushThread';
 import { NotificationThread } from '@/components/messages/NotificationThread';
+import { LaveyPromoThread } from '@/components/messages/LaveyPromoThread';
 import type { ChatConversationAction } from '@/components/messages/ChatSendOptionsMenu';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage';
@@ -15,12 +16,14 @@ import { ConversationOptionsSheet } from '@/components/messages/ConversationOpti
 import { DeleteChatSheet } from '@/components/messages/DeleteChatSheet';
 import { APP_IMAGES } from '@/constants/images';
 import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
+import { LAVEY_OFFICIAL_CONVERSATION_ID } from '@/constants/laveyOfficial';
 import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox, useMessagesDiscoverSuggestions, useMessagesFindSuggestions, useDiscoverFilters } from '@/hooks';
 import { messageService, matchService } from '@/services';
 import { privacyService } from '@/services/privacy/privacyService';
 import type { Conversation, DeleteConversationScope, Profile } from '@/types';
 import { isMatchConversation, sortConversations } from '@/utils/messages/sortConversations';
 import { isICrushConversation } from '@/utils/messages/iCrushConversation';
+import { isLaveyOfficialConversation } from '@/utils/messages/laveyOfficialConversation';
 import { openChatWithProfile } from '@/utils/navigation/appNav';
 import './MessagesPage.css';
 
@@ -90,7 +93,10 @@ export function MessagesPage() {
     reactToMessage,
     deleteMessage,
   } = useChatThread(
-    !activeId || activeId === NOTIFICATIONS_CONVERSATION_ID || activeId.startsWith('icrush-')
+    !activeId ||
+    activeId === NOTIFICATIONS_CONVERSATION_ID ||
+    activeId === LAVEY_OFFICIAL_CONVERSATION_ID ||
+    activeId.startsWith('icrush-')
       ? null
       : activeId,
   );
@@ -525,6 +531,8 @@ export function MessagesPage() {
             if (item.actorUserId) setNotificationProfileId(item.actorUserId);
           }}
         />
+      ) : activeConversation && isLaveyOfficialConversation(activeConversation.id) ? (
+        <LaveyPromoThread onBack={() => setActiveId(null)} onRead={() => void refetch(true)} />
       ) : isICrushActive && activeConversation ? (
         <ICrushThread
           conversation={activeConversation}
@@ -650,10 +658,15 @@ export function MessagesPage() {
                         conversation={c}
                         onClick={() => setActiveId(c.id)}
                         onAvatarClick={() =>
-                          c.conversationKind === 'notifications' ? setActiveId(c.id) : openProfile(c)
+                          c.conversationKind === 'notifications' ||
+                          c.conversationKind === 'lavey_official'
+                            ? setActiveId(c.id)
+                            : openProfile(c)
                         }
                         onMoreClick={
-                          c.conversationKind === 'notifications' || isICrushConversation(c)
+                          c.conversationKind === 'notifications' ||
+                          c.conversationKind === 'lavey_official' ||
+                          isICrushConversation(c)
                             ? undefined
                             : () => openOptionsSheet(c)
                         }

@@ -4,6 +4,7 @@ import {
   type LivenessProgress,
 } from '@/utils/face/faceLiveness';
 import { faceMatchUserMessage } from '@/utils/face/faceMatcher';
+import { acquireFrontCameraStream, cameraAccessUserMessage } from '@/utils/media/cameraAccess';
 
 type CameraPhase = 'consent' | 'starting' | 'ready' | 'error';
 
@@ -68,9 +69,15 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
   }, []);
 
   const requestCameraAndVerify = useCallback(async () => {
+    if (!window.isSecureContext) {
+      setCameraPhase('error');
+      setError(cameraAccessUserMessage(new DOMException('insecure', 'NotSupportedError')));
+      return;
+    }
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraPhase('error');
-      setError('Camera is not supported on this device.');
+      setError('Camera is not supported in this browser.');
       return;
     }
 
@@ -83,10 +90,7 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
     });
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } },
-        audio: false,
-      });
+      const stream = await acquireFrontCameraStream();
 
       streamRef.current = stream;
       const video = videoRef.current;
@@ -101,15 +105,12 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
       await runLivenessOnVideo(video);
     } catch (err) {
       stopCamera();
+      const message = cameraAccessUserMessage(err);
       setCameraPhase('error');
-      setError(
-        err instanceof Error && err.name === 'NotAllowedError'
-          ? 'Camera access was blocked. Allow camera for this site, then try again.'
-          : faceMatchUserMessage(err),
-      );
+      setError(message);
       setLiveness({
         phase: 'failed',
-        message: 'Camera access is required for live verification.',
+        message,
         progress: 0,
       });
     }
@@ -119,6 +120,7 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
   const showStarting = cameraPhase === 'starting';
   const showCameraError = cameraPhase === 'error';
   const showLiveFeed = cameraPhase === 'ready' && !capturedUrl;
+  const useLightFrame = showConsent || showStarting || showCameraError;
 
   return (
     <div className="verify-camera-step">
@@ -129,7 +131,7 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
         device.
       </p>
 
-      <div className="verify-camera-step__frame">
+      <div className={`verify-camera-step__frame ${useLightFrame ? 'verify-camera-step__frame--light' : ''}`}>
         {capturedUrl ? (
           <img src={capturedUrl} alt="Live capture" className="verify-camera-step__preview" />
         ) : (
@@ -163,9 +165,9 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
                 </button>
               </div>
             ) : showStarting ? (
-              <div className="verify-camera-step__overlay" role="status">
+              <div className="verify-camera-step__consent verify-camera-step__consent--status" role="status">
                 <span
-                  className="verify-camera-step__fallback-icon verify-camera-step__fallback-icon--spin"
+                  className="verify-camera-step__consent-icon verify-camera-step__fallback-icon--spin"
                   aria-hidden
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -173,21 +175,31 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
                     <circle cx="12" cy="13" r="4" />
                   </svg>
                 </span>
-                <p>Waiting for camera permission…</p>
+                <p className="verify-camera-step__consent-title">Waiting for camera…</p>
+                <p className="verify-camera-step__consent-copy">Choose Allow when your browser asks.</p>
               </div>
             ) : showCameraError ? (
-              <div className="verify-camera-step__overlay">
-                <span className="verify-camera-step__fallback-icon" aria-hidden>
+              <div className="verify-camera-step__consent verify-camera-step__consent--status">
+                <span className="verify-camera-step__consent-icon" aria-hidden>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
                 </span>
-                <p>{error ?? 'Camera access is required for live verification.'}</p>
+                <p className="verify-camera-step__consent-title">Camera unavailable</p>
+                <p className="verify-camera-step__consent-copy">{error ?? 'Could not start the camera.'}</p>
                 <button
                   type="button"
                   className="verify-camera-step__consent-btn"
-                  onClick={() => void requestCameraAndVerify()}
+                  onClick={() => {
+                    setCameraPhase('consent');
+                    setError(null);
+                    setLiveness({
+                      phase: 'loading',
+                      message: 'Tap Allow camera to begin your live check.',
+                      progress: 0,
+                    });
+                  }}
                 >
                   Try again
                 </button>
@@ -205,10 +217,14 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
           />
         </div>
       ) : null}
-      <p className="verify-liveness__status" aria-live="polite">
-        {liveness.message}
-      </p>
-      {error && cameraPhase !== 'error' && <p className="verify-face-match__error">{error}</p>}
+      {!showCameraError && !showConsent && !showStarting ? (
+        <p className="verify-liveness__status" aria-live="polite">
+          {liveness.message}
+        </p>
+      ) : null}
+      {error && cameraPhase === 'ready' && !isChecking ? (
+        <p className="verify-face-match__error">{error}</p>
+      ) : null}
 
       {capturedUrl ? (
         <div className="verify-camera-step__actions">

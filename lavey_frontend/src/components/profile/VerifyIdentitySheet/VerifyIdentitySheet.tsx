@@ -15,6 +15,8 @@ type VerifyFlowStep = 'intro' | 'reference' | 'live' | 'matching' | 'fail' | 're
 interface VerifyIdentitySheetProps {
   open: boolean;
   verified: boolean;
+  /** User's current profile photo for reference verification */
+  profilePhotoUrl?: string | null;
   onClose: () => void;
   onVerify: () => void;
 }
@@ -23,7 +25,7 @@ function sheetTitle(step: VerifyFlowStep, verified: boolean): string {
   if (verified) return 'Identity verified';
   switch (step) {
     case 'reference':
-      return 'Upload reference photo';
+      return 'Reference photo';
     case 'live':
       return 'Take a live selfie';
     case 'matching':
@@ -37,7 +39,13 @@ function sheetTitle(step: VerifyFlowStep, verified: boolean): string {
   }
 }
 
-export function VerifyIdentitySheet({ open, verified, onClose, onVerify }: VerifyIdentitySheetProps) {
+export function VerifyIdentitySheet({
+  open,
+  verified,
+  profilePhotoUrl = null,
+  onClose,
+  onVerify,
+}: VerifyIdentitySheetProps) {
   const [step, setStep] = useState<VerifyFlowStep>('intro');
   const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
@@ -149,15 +157,23 @@ export function VerifyIdentitySheet({ open, verified, onClose, onVerify }: Verif
             <span className="verify-identity-sheet__status">Unverified</span>
             <h3 className="verify-identity-sheet__heading">Prove it&apos;s really you</h3>
             <p className="verify-identity-sheet__text">
-              Upload a clear front-facing photo, then take a live selfie. We compare them on your device.
+              Use your profile photo or upload a reference, then take a live selfie. We compare them on your device.
             </p>
             <div className="verify-identity-sheet__photo-preview-row" aria-hidden>
               <div className="verify-identity-sheet__photo-placeholder">
-                <span>1</span>
-                <small>Gallery</small>
+                <div className="verify-identity-sheet__photo-thumb">
+                  {profilePhotoUrl ? (
+                    <img src={profilePhotoUrl} alt="" className="verify-identity-sheet__intro-thumb" />
+                  ) : (
+                    <span>1</span>
+                  )}
+                </div>
+                <small>{profilePhotoUrl ? 'Profile' : 'Reference'}</small>
               </div>
               <div className="verify-identity-sheet__photo-placeholder">
-                <span>2</span>
+                <div className="verify-identity-sheet__photo-thumb">
+                  <span>2</span>
+                </div>
                 <small>Live selfie</small>
               </div>
             </div>
@@ -174,6 +190,7 @@ export function VerifyIdentitySheet({ open, verified, onClose, onVerify }: Verif
           </>
         ) : step === 'reference' ? (
           <ReferenceUploadStep
+            profilePhotoUrl={profilePhotoUrl}
             onBack={() => setStep('intro')}
             onContinue={(url) => {
               setReferenceUrl(url);

@@ -47,6 +47,7 @@ import {
 } from "@/hooks";
 import { openChatWithProfile } from "@/utils/navigation/appNav";
 import { setProfileVerified } from "@/utils/profile/verificationStorage";
+import { resolveProfilePhotoReferenceUrl } from "@/utils/profile/profilePhotoReference";
 import { setStoredProfileAvatar } from "@/utils/profile/profileAvatarStorage";
 import {
   getUserFacingErrorMessage,
@@ -168,6 +169,7 @@ export function ProfilePage() {
   };
 
   const avatarSrc = avatarOverride ?? profile?.avatarUrl ?? defaultAvatar;
+  const profilePhotoReference = resolveProfilePhotoReferenceUrl(profile?.id, avatarSrc);
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -811,6 +813,7 @@ export function ProfilePage() {
       <VerifyIdentitySheet
         open={sheet === "verify"}
         verified={verified}
+        profilePhotoUrl={profilePhotoReference}
         onClose={closeSheet}
         onVerify={completeVerification}
       />

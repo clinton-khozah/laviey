@@ -1,4 +1,4 @@
-export type ConversationKind = 'match' | 'notifications' | 'i_crush_incoming' | 'i_crush_outgoing';
+export type ConversationKind = 'match' | 'notifications' | 'lavey_official' | 'i_crush_incoming' | 'i_crush_outgoing';
 
 export interface Conversation {
   id: string;

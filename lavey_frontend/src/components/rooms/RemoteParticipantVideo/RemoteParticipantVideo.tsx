@@ -6,15 +6,17 @@ interface RemoteParticipantVideoProps {
   className?: string;
 }
 
+/** Play remote A/V — never mute (local preview is muted separately to avoid echo). */
 async function bindStream(video: HTMLVideoElement, stream: MediaStream) {
   if (video.srcObject !== stream) {
     video.srcObject = stream;
   }
+  video.muted = false;
+  video.volume = 1;
   try {
     await video.play();
   } catch {
-    video.muted = true;
-    await video.play().catch(() => {});
+    /* Browser may block audio until user taps the meeting — handled by meeting-level unlock */
   }
 }
 
@@ -75,4 +77,19 @@ export function RemoteParticipantVideo({ stream, className }: RemoteParticipantV
       playsInline
     />
   );
+}
+
+/** Call after user interaction to satisfy autoplay policies for remote audio. */
+export function resumeRemoteParticipantAudio(root: ParentNode | null) {
+  if (!root) return;
+  for (const el of root.querySelectorAll(
+    'video.remote-participant-video, audio.remote-participant-audio',
+  )) {
+    const media = el as HTMLVideoElement | HTMLAudioElement;
+    media.muted = false;
+    if ('volume' in media) {
+      media.volume = 1;
+    }
+    void media.play().catch(() => {});
+  }
 }
