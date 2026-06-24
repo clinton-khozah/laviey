@@ -7,6 +7,7 @@ import {
   isLocalApiBaseUrl,
   stashOAuthRedirectContext,
 } from "@/utils/auth/oauthRedirectStorage";
+import { markPendingOnboardingQuiz } from "@/utils/onboarding/pendingOnboardingQuiz";
 import { requestGoogleIdToken } from "@/utils/google/googleIdTokenSignIn";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { defaultAvatar } from "@/constants/defaultAvatar";
@@ -146,6 +147,7 @@ export const authService = {
     }
 
     resetOAuthCallbackState();
+    markPendingOnboardingQuiz();
     stashOAuthRedirectContext(apiConfig.baseUrl, window.location.origin);
     const origin = encodeURIComponent(window.location.origin);
     window.location.assign(

@@ -12,6 +12,7 @@ import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { messageService } from '@/services';
 import {
+  useAuth,
   useDiscoverFeed,
   useDiscoverFilters,
   useDiscoverSetupGate,
@@ -35,6 +36,7 @@ import './DiscoverPage.css';
  * Discover feature page — wires hooks (data) to presentational components (UI).
  */
 export function DiscoverPage() {
+  const { needsOnboardingQuiz } = useAuth();
   const { filters, setFilters, resetFilters, hasActiveFilters } = useDiscoverFilters();
   const { profiles, feedPool, isFeedRecycling, myLikedProfileIds, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed, feedAlgorithm, tasteInsight } =
     useDiscoverFeed('for-you', filters);
@@ -222,6 +224,10 @@ export function DiscoverPage() {
     isGateActive && gatePhase === 'setup-modal' && !userProfile && profileLoading;
   const showSetupError =
     isGateActive && gatePhase === 'setup-modal' && !userProfile && !profileLoading && Boolean(profileError);
+
+  if (needsOnboardingQuiz) {
+    return null;
+  }
 
   return (
     <div className="discover-page">

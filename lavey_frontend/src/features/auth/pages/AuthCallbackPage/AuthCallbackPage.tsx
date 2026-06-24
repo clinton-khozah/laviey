@@ -48,7 +48,7 @@ export function AuthCallbackPage() {
     async function finishSignIn(token: string): Promise<void> {
       const session = await authService.completeGoogleOAuthCallback(token);
       clearOAuthRedirectContext();
-      establishRef.current(session);
+      await establishRef.current(session);
       navigateHome();
     }
 

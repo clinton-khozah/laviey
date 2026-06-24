@@ -22,7 +22,7 @@ import {
   loadOnboardingQuizAnswers,
   clearOnboardingQuizAnswers,
 } from "@/utils/onboarding/onboardingQuizStorage";
-import { clearPendingOnboardingQuiz } from "@/utils/onboarding/pendingOnboardingQuiz";
+import { clearPendingOnboardingQuiz, consumePendingOnboardingQuiz } from "@/utils/onboarding/pendingOnboardingQuiz";
 import { discoverFiltersFromOnboarding } from "@/utils/discover/discoverFiltersFromOnboarding";
 import { clearDiscoverFiltersManual, saveDiscoverFilters } from "@/utils/discover/discoverFilterStorage";
 import { resetDiscoverSetupState } from "@/utils/discover/discoverSetupStorage";
@@ -46,7 +46,7 @@ export interface AuthContextValue {
   clearPendingVerification: () => void;
   signOut: () => Promise<void>;
   completeOnboardingQuiz: (answers: OnboardingQuizAnswers) => Promise<void>;
-  establishSessionAfterOAuth: (session: AuthSession) => void;
+  establishSessionAfterOAuth: (session: AuthSession) => Promise<void>;
   clearError: () => void;
 }
 
@@ -57,9 +57,12 @@ async function resolveNeedsOnboardingQuiz(userId?: string): Promise<boolean> {
     return !loadOnboardingQuizAnswers(userId);
   }
 
+  const pendingOAuthQuiz = consumePendingOnboardingQuiz();
+
   try {
     const status = await onboardingService.getOnboardingStatus();
     if (status.completed) {
+      clearPendingOnboardingQuiz();
       return false;
     }
     // Server says incomplete — ignore stale browser cache (other accounts / old tests).
@@ -67,7 +70,7 @@ async function resolveNeedsOnboardingQuiz(userId?: string): Promise<boolean> {
     return true;
   } catch {
     clearOnboardingQuizAnswers();
-    return true;
+    return pendingOAuthQuiz || true;
   }
 }
 
@@ -183,13 +186,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const establishSessionAfterOAuth = useCallback((next: AuthSession) => {
+  const establishSessionAfterOAuth = useCallback(async (next: AuthSession) => {
+    setIsLoading(true);
     setSession(next);
+    setPendingVerificationEmail(null);
+    setVerificationStatus(null);
+    const needsQuiz = await resolveNeedsOnboardingQuiz(next.user.id);
+    setNeedsOnboardingQuiz(needsQuiz);
     setIsLoading(false);
-
-    void resolveNeedsOnboardingQuiz(next.user.id).then((needsQuiz) => {
-      setNeedsOnboardingQuiz(needsQuiz);
-    });
   }, []);
 
   const value = useMemo<AuthContextValue>(
