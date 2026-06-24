@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminService } from '@/services/admin/adminService';
-import type { AdminUserRecord, AdminUsersSummary, AdminUsersView } from '@/types/admin.types';
+import type {
+  AdminUserRecord,
+  AdminUsersRecordFilter,
+  AdminUsersStatusFilter,
+  AdminUsersSummary,
+  AdminUsersView,
+} from '@/types/admin.types';
 
 interface UseAdminUsersResult {
   users: AdminUserRecord[];
@@ -17,6 +23,8 @@ export function useAdminUsers(
   page: number,
   enabled: boolean,
   search?: string,
+  status: AdminUsersStatusFilter = 'all',
+  record: AdminUsersRecordFilter = 'all',
 ): UseAdminUsersResult {
   const [users, setUsers] = useState<AdminUserRecord[]>([]);
   const [summary, setSummary] = useState<AdminUsersSummary | null>(null);
@@ -39,7 +47,7 @@ export function useAdminUsers(
       setLoading(true);
       setError(null);
       try {
-        const result = await adminService.listUsers({ view, page, limit: 10, search });
+        const result = await adminService.listUsers({ view, page, limit: 10, search, status, record });
         if (cancelled) return;
         setUsers(result.users);
         setSummary(result.summary);
@@ -60,7 +68,7 @@ export function useAdminUsers(
     return () => {
       cancelled = true;
     };
-  }, [view, page, enabled, search, reloadToken]);
+  }, [view, page, enabled, search, status, record, reloadToken]);
 
   return { users, summary, total, totalPages, loading, error, refetch };
 }

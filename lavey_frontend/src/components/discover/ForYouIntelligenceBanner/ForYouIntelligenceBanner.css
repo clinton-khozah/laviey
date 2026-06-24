@@ -1,0 +1,125 @@
+.for-you-intelligence {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 58px);
+  left: 12px;
+  right: 12px;
+  z-index: 12;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 10px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, rgba(18, 18, 24, 0.82), rgba(34, 20, 48, 0.78));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+
+.for-you-intelligence--expanded {
+  transform: translateY(0);
+}
+
+.for-you-intelligence__main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.for-you-intelligence__pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 105, 180, 0.18), transparent 55%);
+  animation: for-you-intelligence-pulse 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.for-you-intelligence__icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 1rem;
+}
+
+.for-you-intelligence__copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.for-you-intelligence__headline {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.for-you-intelligence__subtitle {
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.for-you-intelligence__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 44px;
+}
+
+.for-you-intelligence__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.for-you-intelligence__chip--meta {
+  background: rgba(255, 105, 180, 0.18);
+  color: #ffd7ec;
+}
+
+.for-you-intelligence__dismiss {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes for-you-intelligence-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}

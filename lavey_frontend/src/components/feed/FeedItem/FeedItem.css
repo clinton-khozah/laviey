@@ -151,18 +151,14 @@
 
 .feed-item .profile-overlay__bio,
 .feed-item .profile-overlay__distance,
+.feed-item .profile-overlay__location-text,
 .feed-item .profile-overlay__vibe {
   color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 }
 
-.feed-item .profile-overlay__location-text {
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
-}
-
 .feed-item .profile-overlay__location-icon {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.95);
   opacity: 1;
 }
 

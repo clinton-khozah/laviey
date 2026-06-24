@@ -4,8 +4,10 @@ export const LAVEY_OFFICIAL_CONVERSATION_ID = '__lavey_official__';
 
 export const LAVEY_OFFICIAL_STORAGE_KEY = 'lavey:official-promo-read';
 
+export const LAVEY_OFFICIAL_ADMIN_NAME = 'Lavey Admin';
+
 export const LAVEY_OFFICIAL_PROMO = {
-  name: 'Lavey',
+  name: LAVEY_OFFICIAL_ADMIN_NAME,
   logoUrl: APP_IMAGES.logo,
   headline: 'Lavey would like to offer you 10% off Platinum',
   preview: '10% off Platinum — exclusive for you',

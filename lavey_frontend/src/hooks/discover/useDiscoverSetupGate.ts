@@ -79,6 +79,16 @@ export function useDiscoverSetupGate(profile: UserProfile | null | undefined): U
     }
   }, [userId]);
 
+  useEffect(() => {
+    const onOnboardingCompleted = () => {
+      setSkippedOverride(false);
+      setContinuedOverride(false);
+      setPeekDone(false);
+    };
+    window.addEventListener('lavey:onboarding-completed', onOnboardingCompleted);
+    return () => window.removeEventListener('lavey:onboarding-completed', onOnboardingCompleted);
+  }, []);
+
   const skip = useCallback(() => {
     if (userId) {
       markDiscoverSetupSkipped(userId);

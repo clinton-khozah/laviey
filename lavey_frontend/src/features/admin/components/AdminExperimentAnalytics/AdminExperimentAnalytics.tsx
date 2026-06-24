@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { adminOpsService, type AnalyticsSummary } from '@/services/admin/adminOpsService';
 import {
   ANALYTICS_CURRENT_MONTH,
   ANALYTICS_YEARS,
@@ -65,18 +66,76 @@ function ChartPanel({
 }
 
 export function AdminExperimentAnalytics() {
-  const [year, setYear] = useState<AnalyticsYear>(2026);
+  const [year, setYear] = useState<AnalyticsYear>(new Date().getFullYear() as AnalyticsYear);
   const [period, setPeriod] = useState<AnalyticsPeriod>('monthly-revenue');
+  const [liveSummary, setLiveSummary] = useState<AnalyticsSummary | null>(null);
 
-  const registrations = REGISTRATIONS_BY_YEAR[year];
-  const engagement = ENGAGEMENT_BY_YEAR[year];
-  const revenue = REVENUE_BY_YEAR[year];
+  useEffect(() => {
+    let cancelled = false;
+    void adminOpsService
+      .getAnalyticsSummary(year)
+      .then((summary) => {
+        if (!cancelled) setLiveSummary(summary);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveSummary(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [year]);
+
+  const registrations = useMemo(() => {
+    if (liveSummary?.year === year) {
+      return liveSummary.monthlyRegistrations.map((row) => ({
+        month: row.month,
+        men: row.men,
+        women: row.women,
+      }));
+    }
+    return REGISTRATIONS_BY_YEAR[year];
+  }, [liveSummary, year]);
+
+  const engagement = useMemo(() => {
+    if (liveSummary?.year === year) {
+      return liveSummary.monthlyEngagement.map((row) => ({
+        month: row.month,
+        activeUsers: row.activeUsers,
+        avgHours: row.avgHours,
+      }));
+    }
+    return ENGAGEMENT_BY_YEAR[year];
+  }, [liveSummary, year]);
+
+  const revenue = useMemo(() => {
+    if (liveSummary?.year === year) {
+      return liveSummary.monthlyRevenue.map((row) => ({
+        month: row.month,
+        revenue: row.amount,
+      }));
+    }
+    return REVENUE_BY_YEAR[year];
+  }, [liveSummary, year]);
 
   const thisMonthRegistration = registrations.find((row) => row.month === ANALYTICS_CURRENT_MONTH) ?? registrations[4];
   const thisMonthEngagement = engagement.find((row) => row.month === ANALYTICS_CURRENT_MONTH) ?? engagement[4];
   const thisMonthRevenue = revenue.find((row) => row.month === ANALYTICS_CURRENT_MONTH) ?? revenue[4];
 
-  const dailyNewUsers = useMemo(() => newUsersByDay(year), [year]);
+  const dailyNewUsers = useMemo(() => {
+    if (liveSummary?.year === year && liveSummary.newMembersThisMonth > 0) {
+      const daysInMonth = new Date(year, new Date().getMonth() + 1, 0).getDate();
+      const total = liveSummary.newMembersThisMonth;
+      const base = Math.floor(total / daysInMonth);
+      let remainder = total - base * daysInMonth;
+      return Array.from({ length: daysInMonth }, (_, index) => {
+        const day = index + 1;
+        const extra = remainder > 0 ? 1 : 0;
+        if (extra) remainder -= 1;
+        return { day, users: base + extra };
+      });
+    }
+    return newUsersByDay(year);
+  }, [liveSummary, year]);
 
   const plotWidth = CHART_WIDTH - PAD.left - PAD.right;
   const plotHeight = CHART_HEIGHT - PAD.top - PAD.bottom;
@@ -189,16 +248,18 @@ export function AdminExperimentAnalytics() {
         { label: 'Peak day', value: `Day ${peak.day} · ${peak.users.toLocaleString()}` },
       ];
     }
-    const yearRevenue = yearlyRevenueTotal(year);
+    const yearRevenue = revenue.reduce((sum, row) => sum + row.revenue, 0);
     return [
       { label: `${year} revenue`, value: formatRevenue(yearRevenue) },
       { label: `${ANALYTICS_CURRENT_MONTH} revenue`, value: formatRevenue(thisMonthRevenue.revenue) },
       {
         label: 'YTD registrations',
-        value: (thisMonthRegistration.men + thisMonthRegistration.women).toLocaleString(),
+        value: registrations
+          .reduce((sum, row) => sum + row.men + row.women + ('other' in row ? Number(row.other) : 0), 0)
+          .toLocaleString(),
       },
     ];
-  }, [period, year, engagement, thisMonthEngagement, thisMonthRevenue, thisMonthRegistration, dailyNewUsers.length]);
+  }, [period, year, engagement, thisMonthEngagement, thisMonthRevenue, thisMonthRegistration, dailyNewUsers.length, registrations, revenue]);
 
   const yTicksFor = (max: number, formatter: (v: number) => string) =>
     [0, 0.25, 0.5, 0.75, 1].map((t) => ({

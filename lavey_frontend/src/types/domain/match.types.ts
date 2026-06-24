@@ -32,6 +32,8 @@ export interface RespondICrushResponse {
   profileAvatar: string;
 }
 
+import type { ForYouTasteInsight } from '@/types/discoverIntelligence';
+
 export interface LikePostResponse {
   liked: boolean;
   likeCount: number;
@@ -41,6 +43,7 @@ export interface LikePostResponse {
   ownerName: string;
   ownerAvatar: string;
   myAvatar: string;
+  tasteInsight?: ForYouTasteInsight;
 }
 
 export interface PostLiker {

@@ -1,14 +1,18 @@
-import { useMemo, useState } from 'react';
-import { applyAlgorithm, getAppliedAlgorithm } from '@/features/admin/algorithm/algorithmConfig';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  applyAlgorithm,
+  getAppliedAlgorithm,
+  subscribeAlgorithmChange,
+} from '@/features/admin/algorithm/algorithmConfig';
+import { adminAlgorithmService, type AlgorithmTrendSeries } from '@/services/admin/adminAlgorithmService';
 import { AdminAlgorithmCharts } from './AdminAlgorithmCharts';
 import {
-  ALGORITHMS,
-  PLATFORM_ALGORITHM_KPIS,
   RESULT_WINDOWS,
   getAlgorithm,
   getCompareMaxes,
+  type AlgorithmDefinition,
   type AlgorithmId,
-  type AlgorithmResults,
+  type PlatformOverview,
   type ResultsWindow,
 } from './adminAlgorithmOverseer.data';
 import './AdminAlgorithmOverseer.css';
@@ -35,10 +39,10 @@ function statusLabel(status: string): string {
 }
 
 const PRIMARY_METRICS: {
-  key: keyof AlgorithmResults;
+  key: keyof AlgorithmDefinition['resultsByWindow']['30d'];
   label: string;
   format: (v: number) => string;
-  deltaKey?: keyof AlgorithmResults;
+  deltaKey?: keyof AlgorithmDefinition['resultsByWindow']['30d'];
 }[] = [
   { key: 'registrations', label: 'Registrations', format: formatNumber, deltaKey: 'registrationsDelta' },
   { key: 'matches', label: 'Matches', format: formatNumber, deltaKey: 'matchesDelta' },
@@ -68,24 +72,116 @@ const FRONTEND_PREVIEW: Record<
 };
 
 export function AdminAlgorithmOverseer() {
+  const [algorithms, setAlgorithms] = useState<AlgorithmDefinition[]>([]);
+  const [overview, setOverview] = useState<PlatformOverview | null>(null);
+  const [trend, setTrend] = useState<AlgorithmTrendSeries | null>(null);
   const [activeId, setActiveId] = useState<AlgorithmId>('swipe-index');
   const [resultsWindow, setResultsWindow] = useState<ResultsWindow>('30d');
   const [applied, setApplied] = useState(() => getAppliedAlgorithm());
   const [applyNotice, setApplyNotice] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [applying, setApplying] = useState(false);
 
-  const algorithm = useMemo(() => getAlgorithm(activeId), [activeId]);
-  const results = algorithm.resultsByWindow[resultsWindow];
+  const loadData = useCallback(async () => {
+    setError('');
+    try {
+      const [algoList, overviewData, active] = await Promise.all([
+        adminAlgorithmService.listAlgorithms(),
+        adminAlgorithmService.getOverview(resultsWindow),
+        adminAlgorithmService.getActive(),
+      ]);
+      setAlgorithms(algoList);
+      setOverview(overviewData);
+      if (active) {
+        setApplied({
+          id: active.id,
+          appliedAt: active.appliedAt,
+          name: active.name,
+          codename: active.codename,
+          feedBanner: active.feedBanner,
+        });
+        setActiveId(active.id);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load algorithms');
+    } finally {
+      setLoading(false);
+    }
+  }, [resultsWindow]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (!activeId) return;
+    let cancelled = false;
+    void adminAlgorithmService
+      .getTrend(activeId)
+      .then((series) => {
+        if (!cancelled) setTrend(series);
+      })
+      .catch(() => {
+        if (!cancelled) setTrend(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId]);
+
+  useEffect(() => subscribeAlgorithmChange(setApplied), []);
+
+  const algorithm = useMemo(() => {
+    if (algorithms.length === 0) return null;
+    return getAlgorithm(algorithms, activeId);
+  }, [algorithms, activeId]);
+
+  const results = algorithm?.resultsByWindow[resultsWindow];
   const windowLabel = RESULT_WINDOWS.find((w) => w.id === resultsWindow)?.label ?? '';
-  const compareMax = useMemo(() => getCompareMaxes(resultsWindow), [resultsWindow]);
+  const compareMax = useMemo(
+    () => (algorithms.length > 0 ? getCompareMaxes(algorithms, resultsWindow) : { matches: 1, registrations: 1 }),
+    [algorithms, resultsWindow],
+  );
   const preview = FRONTEND_PREVIEW[activeId];
   const isLiveOnApp = applied?.id === activeId;
 
-  const handleApply = () => {
-    const config = applyAlgorithm(activeId);
-    setApplied(config);
-    setApplyNotice(`${config.name} is now live on the Discover feed. Open the app to see the new order.`);
-    globalThis.setTimeout(() => setApplyNotice(''), 6000);
+  const handleApply = async () => {
+    setApplying(true);
+    setError('');
+    try {
+      const config = await applyAlgorithm(activeId);
+      setApplied(config);
+      const refreshed = await adminAlgorithmService.getOverview(resultsWindow);
+      setOverview(refreshed);
+      setApplyNotice(`${config.name} is now live on the Discover feed. Members will see the new order on their next refresh.`);
+      globalThis.setTimeout(() => setApplyNotice(''), 6000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to apply algorithm');
+    } finally {
+      setApplying(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="admin-algo-overseer">
+        <p className="admin-algo-overseer__apply-notice">Loading algorithm data…</p>
+      </div>
+    );
+  }
+
+  if (error && algorithms.length === 0) {
+    return (
+      <div className="admin-algo-overseer">
+        <p className="admin-algo-overseer__apply-notice">{error}</p>
+      </div>
+    );
+  }
+
+  if (!algorithm || !results) {
+    return null;
+  }
 
   return (
     <div className="admin-algo-overseer">
@@ -97,19 +193,19 @@ export function AdminAlgorithmOverseer() {
         <div className="admin-algo-overseer__head-kpis">
           <article>
             <span>Algorithms</span>
-            <strong>{PLATFORM_ALGORITHM_KPIS.activeAlgorithms}</strong>
+            <strong>{overview?.activeAlgorithms ?? algorithms.length}</strong>
           </article>
           <article>
             <span>Live on app</span>
-            <strong>{applied ? applied.name : 'None'}</strong>
+            <strong>{applied ? applied.name : overview?.liveOnApp?.name ?? 'None'}</strong>
           </article>
           <article>
             <span>Avg match lift</span>
-            <strong>{PLATFORM_ALGORITHM_KPIS.avgLiftMatches}</strong>
+            <strong>{overview?.avgLiftMatches ?? '—'}</strong>
           </article>
           <article>
             <span>Attributed revenue (30d)</span>
-            <strong>{PLATFORM_ALGORITHM_KPIS.attributedRevenue30d}</strong>
+            <strong>{overview?.attributedRevenue30d ?? '—'}</strong>
           </article>
         </div>
       </header>
@@ -131,11 +227,12 @@ export function AdminAlgorithmOverseer() {
       ) : null}
 
       {applyNotice ? <p className="admin-algo-overseer__apply-notice">{applyNotice}</p> : null}
+      {error ? <p className="admin-algo-overseer__apply-notice">{error}</p> : null}
 
       <section className="admin-algo-overseer__section">
         <h4 className="admin-algo-overseer__section-title">1. Select algorithm</h4>
         <div className="admin-algo-overseer__picker" role="tablist" aria-label="Matching algorithms">
-          {ALGORITHMS.map((algo, index) => (
+          {algorithms.map((algo, index) => (
             <button
               key={algo.id}
               type="button"
@@ -176,7 +273,7 @@ export function AdminAlgorithmOverseer() {
               ))}
             </div>
           </div>
-          <AdminAlgorithmCharts algorithm={algorithm} results={results} compareMax={compareMax} />
+          <AdminAlgorithmCharts algorithm={algorithm} results={results} compareMax={compareMax} trend={trend} />
         </section>
 
         <section className="admin-algo-overseer__section admin-algo-overseer__section--card admin-algo-overseer__section--apply">
@@ -204,12 +301,13 @@ export function AdminAlgorithmOverseer() {
               <button
                 type="button"
                 className={`admin-algo-overseer__btn admin-algo-overseer__btn--apply ${isLiveOnApp ? 'is-applied' : ''}`}
-                onClick={handleApply}
+                onClick={() => void handleApply()}
+                disabled={applying}
               >
-                {isLiveOnApp ? 'Re-apply algorithm' : 'Apply to app'}
+                {applying ? 'Applying…' : isLiveOnApp ? 'Re-apply algorithm' : 'Apply to app'}
               </button>
               <p className="admin-algo-overseer__apply-hint">
-                Changes the For You feed immediately for all members using mock data.
+                Changes the For You feed immediately for all members on the next Discover load.
               </p>
               {isLiveOnApp ? (
                 <span className="admin-algo-overseer__apply-badge">Active on Discover</span>
@@ -313,13 +411,6 @@ export function AdminAlgorithmOverseer() {
               <p>Safety reports</p>
               <strong>{results.safetyReports}</strong>
             </article>
-            {algorithm.id === 'engagement-ai' ? (
-              <article className="admin-algo-overseer__results-highlight">
-                <p>AI-assisted matches</p>
-                <strong>68%</strong>
-                <span>first 48h cohort</span>
-              </article>
-            ) : null}
           </div>
         </section>
 
@@ -340,7 +431,7 @@ export function AdminAlgorithmOverseer() {
                 </tr>
               </thead>
               <tbody>
-                {ALGORITHMS.map((algo) => {
+                {algorithms.map((algo) => {
                   const row = algo.resultsByWindow[resultsWindow];
                   return (
                     <tr

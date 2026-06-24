@@ -20,6 +20,7 @@ import { LAVEY_OFFICIAL_CONVERSATION_ID } from '@/constants/laveyOfficial';
 import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox, useMessagesDiscoverSuggestions, useMessagesFindSuggestions, useDiscoverFilters } from '@/hooks';
 import { messageService, matchService } from '@/services';
 import { privacyService } from '@/services/privacy/privacyService';
+import { reportsService } from '@/services/reports/reportsService';
 import type { Conversation, DeleteConversationScope, Profile } from '@/types';
 import { isMatchConversation, sortConversations } from '@/utils/messages/sortConversations';
 import { isICrushConversation } from '@/utils/messages/iCrushConversation';
@@ -419,7 +420,14 @@ export function MessagesPage() {
         });
         return;
       case 'report':
-        showActionToast(`Report submitted for ${activeConversation.participantName}`);
+        void reportsService
+          .submit({
+            subjectUserId: activeConversation.participantProfileId,
+            contentType: 'chat_message',
+            reason: 'Inappropriate behavior in chat',
+          })
+          .then(() => showActionToast(`Report submitted for ${activeConversation.participantName}`))
+          .catch(() => showActionToast('Could not submit report'));
         return;
       case 'block':
         void privacyService

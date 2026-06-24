@@ -13,18 +13,16 @@ export function applyDiscoverDemographicFilters(
   return profiles.filter((profile) => {
     if (filters.verifiedOnly && !profile.verified) return false;
     if (profile.age < filters.ageMin || profile.age > filters.ageMax) return false;
-    if (
-      filters.genders.length > 0 &&
-      profile.gender &&
-      !filters.genders.includes(profile.gender)
-    ) {
-      return false;
+    if (filters.genders.length > 0) {
+      if (!profile.gender || !filters.genders.includes(profile.gender)) {
+        return false;
+      }
     }
     return true;
   });
 }
 
-/** Age + gender for For You — relaxes filters when they would hide every profile. */
+/** Age + gender for For You — keeps explicit gender picks from onboarding/filters. */
 export function applyForYouFeedFilters(
   profiles: Profile[],
   filters: DiscoverFilters,
@@ -33,6 +31,11 @@ export function applyForYouFeedFilters(
   if (filtered.length > 0 || profiles.length === 0) return filtered;
 
   if (filters.verifiedOnly) return filtered;
+
+  // User chose a specific gender — don't fall back to showing everyone.
+  if (filters.genders.length > 0 && filters.genders.length < 3) {
+    return filtered;
+  }
 
   if (filters.genders.length > 0) {
     const withoutGender = applyDiscoverDemographicFilters(profiles, {

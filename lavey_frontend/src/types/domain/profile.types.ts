@@ -30,6 +30,9 @@ export interface Profile {
   distance: string;
   /** City from onboarding location (e.g. Pretoria, New York). */
   locationName?: string;
+  city?: string;
+  suburb?: string;
+  province?: string;
   verified: boolean;
   vibeScore: number;
   interests: string[];

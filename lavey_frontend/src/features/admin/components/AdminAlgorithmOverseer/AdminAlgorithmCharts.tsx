@@ -1,5 +1,5 @@
 import type { AlgorithmDefinition, AlgorithmResults } from './adminAlgorithmOverseer.data';
-import { ALGORITHM_TREND_SERIES } from './adminAlgorithmOverseer.data';
+import type { AlgorithmTrendSeries } from '@/services/admin/adminAlgorithmService';
 
 const CHART_W = 400;
 const CHART_H = 140;
@@ -9,6 +9,7 @@ interface AdminAlgorithmChartsProps {
   algorithm: AlgorithmDefinition;
   results: AlgorithmResults;
   compareMax: { matches: number; registrations: number };
+  trend: AlgorithmTrendSeries | null;
 }
 
 function buildLinePath(values: number[], width: number, height: number): string {
@@ -45,11 +46,10 @@ function buildAreaPath(values: number[], width: number, height: number): string 
   return `${line} L ${endX} ${baseY} L ${PAD.l} ${baseY} Z`;
 }
 
-export function AdminAlgorithmCharts({ algorithm, results, compareMax }: AdminAlgorithmChartsProps) {
-  const trend = ALGORITHM_TREND_SERIES[algorithm.id];
-  const last14 = trend.matches.slice(-14);
-  const linePath = buildLinePath(last14, CHART_W, CHART_H);
-  const areaPath = buildAreaPath(last14, CHART_W, CHART_H);
+export function AdminAlgorithmCharts({ algorithm, results, compareMax, trend }: AdminAlgorithmChartsProps) {
+  const last14 = (trend?.matches ?? []).slice(-14);
+  const linePath = buildLinePath(last14.length > 0 ? last14 : [0], CHART_W, CHART_H);
+  const areaPath = buildAreaPath(last14.length > 0 ? last14 : [0], CHART_W, CHART_H);
 
   const matchPct = (results.matches / compareMax.matches) * 100;
   const regPct = (results.registrations / compareMax.registrations) * 100;

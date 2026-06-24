@@ -1,7 +1,6 @@
-import { getAlgorithm, type AlgorithmId } from '@/features/admin/components/AdminAlgorithmOverseer/adminAlgorithmOverseer.data';
-import type { Profile } from '@/types';
+import { adminAlgorithmService } from '@/services/admin/adminAlgorithmService';
+import type { AlgorithmId } from '@/features/admin/components/AdminAlgorithmOverseer/adminAlgorithmOverseer.data';
 
-const STORAGE_KEY = 'lavey_active_algorithm_v1';
 const CHANGE_EVENT = 'lavey-algorithm-change';
 
 export interface AppliedAlgorithmConfig {
@@ -12,32 +11,48 @@ export interface AppliedAlgorithmConfig {
   feedBanner: string;
 }
 
+let cachedActive: AppliedAlgorithmConfig | null = null;
+
 export function getAppliedAlgorithm(): AppliedAlgorithmConfig | null {
+  return cachedActive;
+}
+
+export async function fetchAppliedAlgorithm(): Promise<AppliedAlgorithmConfig | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as AppliedAlgorithmConfig;
+    const active = await adminAlgorithmService.getActive();
+    if (!active) {
+      cachedActive = null;
+      return null;
+    }
+    cachedActive = {
+      id: active.id,
+      appliedAt: active.appliedAt,
+      name: active.name,
+      codename: active.codename,
+      feedBanner: active.feedBanner,
+    };
+    return cachedActive;
   } catch {
-    return null;
+    return cachedActive;
   }
 }
 
-export function applyAlgorithm(id: AlgorithmId): AppliedAlgorithmConfig {
-  const algo = getAlgorithm(id);
+export async function applyAlgorithm(id: AlgorithmId): Promise<AppliedAlgorithmConfig> {
+  const active = await adminAlgorithmService.activate(id);
   const config: AppliedAlgorithmConfig = {
-    id,
-    appliedAt: new Date().toISOString(),
-    name: algo.name,
-    codename: algo.codename,
-    feedBanner: algo.pattern,
+    id: active.id,
+    appliedAt: active.appliedAt,
+    name: active.name,
+    codename: active.codename,
+    feedBanner: active.feedBanner,
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  cachedActive = config;
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: config }));
   return config;
 }
 
 export function clearAppliedAlgorithm(): void {
-  localStorage.removeItem(STORAGE_KEY);
+  cachedActive = null;
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: null }));
 }
 
@@ -50,26 +65,27 @@ export function subscribeAlgorithmChange(listener: (config: AppliedAlgorithmConf
   return () => window.removeEventListener(CHANGE_EVENT, handler);
 }
 
-/** Re-order discover feed mock data to reflect the active algorithm. */
-export function sortProfilesByAlgorithm(profiles: Profile[], algorithmId: AlgorithmId): Profile[] {
-  const list = [...profiles];
-
-  if (algorithmId === 'swipe-index') {
-    return list.sort((a, b) => (b.vibeScore ?? 0) - (a.vibeScore ?? 0));
-  }
-
-  if (algorithmId === 'affinity-proximity') {
-    return list.sort((a, b) => {
-      const scoreA = (a.verified ? 20 : 0) + (a.vibeScore ?? 0) * 0.6 + (a.age % 5);
-      const scoreB = (b.verified ? 20 : 0) + (b.vibeScore ?? 0) * 0.6 + (b.age % 5);
-      return scoreB - scoreA;
-    });
-  }
-
-  // engagement-ai: prioritize profiles likely to reply (likedYou, verified) for warmth
-  return list.sort((a, b) => {
-    const warmA = (a.likedYou ? 30 : 0) + (a.verified ? 10 : 0) + (a.vibeScore ?? 0) * 0.3;
-    const warmB = (b.likedYou ? 30 : 0) + (b.verified ? 10 : 0) + (b.vibeScore ?? 0) * 0.3;
-    return warmB - warmA;
-  });
+export function syncAppliedAlgorithmFromFeed(
+  algorithm: {
+    slug: AlgorithmId;
+    name: string;
+    code: string;
+    feedBanner: string;
+  } | null,
+): void {
+  if (!algorithm?.slug) return;
+  const next: AppliedAlgorithmConfig = {
+    id: algorithm.slug,
+    appliedAt: new Date().toISOString(),
+    name: algorithm.name,
+    codename: algorithm.code,
+    feedBanner: algorithm.feedBanner,
+  };
+  const unchanged =
+    cachedActive?.id === next.id &&
+    cachedActive.name === next.name &&
+    cachedActive.feedBanner === next.feedBanner;
+  if (unchanged) return;
+  cachedActive = next;
+  window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: next }));
 }

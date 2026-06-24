@@ -11,6 +11,7 @@ import {
   loadOnboardingQuizAnswers,
   saveOnboardingQuizAnswers,
 } from '@/utils/onboarding/onboardingQuizStorage';
+import { authService } from '@/services/auth/authService';
 import { sleep } from '@/utils/sleep';
 import { MOCK_ONBOARDING_CATALOG } from './onboarding.mock';
 
@@ -40,7 +41,8 @@ export const onboardingService = {
   async getOnboardingStatus(): Promise<UserOnboardingStatusDto> {
     if (!usesBackendApi()) {
       await sleep(80);
-      const answers = loadOnboardingQuizAnswers();
+      const userId = authService.getStoredSession()?.user.id;
+      const answers = loadOnboardingQuizAnswers(userId);
       return {
         completed: Boolean(answers),
         completedAt: answers?.completedAt ?? null,
@@ -54,9 +56,11 @@ export const onboardingService = {
   },
 
   async submitOnboarding(answers: OnboardingQuizAnswers): Promise<UserOnboardingStatusDto> {
+    const userId = authService.getStoredSession()?.user.id;
+
     if (!usesBackendApi()) {
       await sleep(200);
-      saveOnboardingQuizAnswers(answers);
+      saveOnboardingQuizAnswers(answers, userId);
       return { completed: true, completedAt: answers.completedAt };
     }
 
@@ -77,7 +81,7 @@ export const onboardingService = {
         },
       },
     );
-    saveOnboardingQuizAnswers(answers);
+    saveOnboardingQuizAnswers(answers, userId);
     return res.data;
   },
 };

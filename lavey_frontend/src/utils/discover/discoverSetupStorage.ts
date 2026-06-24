@@ -42,3 +42,14 @@ export function hasSeenDiscoverFeedPeek(userId: string): boolean {
 export function markDiscoverFeedPeek(userId: string): void {
   localStorage.setItem(`${PEEK_PREFIX}${userId}`, '1');
 }
+
+/** Clear setup flags so profile + post prompt shows again (e.g. after onboarding). */
+export function resetDiscoverSetupState(userId: string): void {
+  try {
+    localStorage.removeItem(`${SKIP_PREFIX}${userId}`);
+    localStorage.removeItem(`${FINISHED_PREFIX}${userId}`);
+    localStorage.removeItem(`${PEEK_PREFIX}${userId}`);
+  } catch {
+    /* ignore */
+  }
+}

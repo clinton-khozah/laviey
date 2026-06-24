@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  fetchAppliedAlgorithm,
   getAppliedAlgorithm,
   subscribeAlgorithmChange,
   type AppliedAlgorithmConfig,
@@ -10,8 +11,12 @@ export function useActiveAlgorithm() {
 
   useEffect(() => subscribeAlgorithmChange(setApplied), []);
 
+  useEffect(() => {
+    void fetchAppliedAlgorithm().then(setApplied);
+  }, []);
+
   const refresh = useCallback(() => {
-    setApplied(getAppliedAlgorithm());
+    void fetchAppliedAlgorithm().then(setApplied);
   }, []);
 
   return { applied, refresh };

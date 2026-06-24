@@ -1,10 +1,15 @@
 import { usesBackendApi } from '@/config/env';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { getAppliedAlgorithm, sortProfilesByAlgorithm } from '@/features/admin/algorithm/algorithmConfig';
+import { getAppliedAlgorithm } from '@/features/admin/algorithm/algorithmConfig';
+import type { AlgorithmId } from '@/features/admin/components/AdminAlgorithmOverseer/adminAlgorithmOverseer.data';
 import { httpClient } from '@/services/api/httpClient';
 import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
 import type { ApiResponse } from '@/types';
 import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
+import type {
+  DiscoverFeedAlgorithm,
+  ForYouTasteInsight,
+} from '@/types/discoverIntelligence';
 import {
   defaultNearbyDistanceTier,
   filterProfilesByDistanceCap,
@@ -21,12 +26,8 @@ import { sleep } from '@/utils/sleep';
 interface DiscoverFeedApiPayload {
   profiles: Profile[];
   nextCursor: string | null;
-  algorithm?: {
-    id: string;
-    name: string;
-    code: string;
-    description: string;
-  } | null;
+  algorithm?: DiscoverFeedAlgorithm | null;
+  tasteInsight?: ForYouTasteInsight | null;
   distanceTierKm?: number | null;
   nextDistanceTierKm?: number | null;
   expandedDistance?: boolean;
@@ -44,19 +45,40 @@ export interface DiscoverFeedRequest {
   ageMin?: number;
   ageMax?: number;
   verifiedOnly?: boolean;
+  genders?: string[];
   limit?: number;
 }
 
 export interface DiscoverFeedResponse {
   profiles: Profile[];
   nextCursor: string | null;
-  algorithm?: DiscoverFeedApiPayload['algorithm'];
+  algorithm: DiscoverFeedAlgorithm | null;
+  tasteInsight: ForYouTasteInsight | null;
   distanceTierKm: number | null;
   nextDistanceTierKm: number | null;
   expandedDistance: boolean;
   canExpandDistance: boolean;
   isRecycling: boolean;
   myLikedProfileIds: string[];
+}
+
+function sortMockProfilesByAlgorithm(profiles: Profile[], algorithmId: AlgorithmId): Profile[] {
+  const list = [...profiles];
+  if (algorithmId === 'swipe-index') {
+    return list.sort((a, b) => (b.vibeScore ?? 0) - (a.vibeScore ?? 0));
+  }
+  if (algorithmId === 'affinity-proximity') {
+    return list.sort((a, b) => {
+      const scoreA = (a.verified ? 20 : 0) + (a.vibeScore ?? 0) * 0.6 + (a.age % 5);
+      const scoreB = (b.verified ? 20 : 0) + (b.vibeScore ?? 0) * 0.6 + (b.age % 5);
+      return scoreB - scoreA;
+    });
+  }
+  return list.sort((a, b) => {
+    const warmA = (a.likedYou ? 30 : 0) + (a.verified ? 10 : 0) + (a.vibeScore ?? 0) * 0.3;
+    const warmB = (b.likedYou ? 30 : 0) + (b.verified ? 10 : 0) + (b.vibeScore ?? 0) * 0.3;
+    return warmB - warmA;
+  });
 }
 
 function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedResponse {
@@ -82,7 +104,7 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
   let profiles = [...MOCK_PROFILES];
   const applied = getAppliedAlgorithm();
   if (applied) {
-    profiles = sortProfilesByAlgorithm(profiles, applied.id);
+    profiles = sortMockProfilesByAlgorithm(profiles, applied.id);
   }
 
   profiles = applyDiscoverDemographicFilters(profiles, filters);
@@ -111,7 +133,17 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
   return {
     profiles,
     nextCursor: null,
-    algorithm: null,
+    algorithm: applied
+      ? {
+          id: applied.id,
+          slug: applied.id,
+          name: applied.name,
+          code: applied.codename,
+          description: '',
+          feedBanner: applied.feedBanner,
+        }
+      : null,
+    tasteInsight: null,
     distanceTierKm,
     nextDistanceTierKm,
     expandedDistance,
@@ -147,6 +179,7 @@ export const profileService = {
           ageMin: request.ageMin,
           ageMax: request.ageMax,
           verifiedOnly: request.verifiedOnly ? 'true' : undefined,
+          genders: request.genders?.length ? request.genders.join(',') : undefined,
         },
       },
     );
@@ -157,6 +190,7 @@ export const profileService = {
         profiles,
         nextCursor: null,
         algorithm: null,
+        tasteInsight: null,
         distanceTierKm: null,
         nextDistanceTierKm: null,
         expandedDistance: false,
@@ -171,6 +205,7 @@ export const profileService = {
       profiles: normalizeProfiles(payload.profiles ?? []),
       nextCursor: payload.nextCursor ?? null,
       algorithm: payload.algorithm ?? null,
+      tasteInsight: payload.tasteInsight ?? null,
       distanceTierKm: payload.distanceTierKm ?? null,
       nextDistanceTierKm: payload.nextDistanceTierKm ?? null,
       expandedDistance: payload.expandedDistance ?? false,

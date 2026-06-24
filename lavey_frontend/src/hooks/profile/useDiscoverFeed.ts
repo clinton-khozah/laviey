@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { profileService } from '@/services';
+import { syncAppliedAlgorithmFromFeed } from '@/features/admin/algorithm/algorithmConfig';
 import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
+import type { DiscoverFeedAlgorithm, ForYouTasteInsight } from '@/types/discoverIntelligence';
+import { FOR_YOU_TASTE_UPDATED_EVENT } from '@/types/discoverIntelligence';
 import { applyDiscoverDemographicFilters, applyForYouFeedFilters } from '@/utils/discover/applyDiscoverFilters';
 import { isProfileVerified } from '@/utils/profile/verificationStorage';
 import {
@@ -13,6 +16,8 @@ interface UseDiscoverFeedResult {
   feedPool: Profile[];
   isFeedRecycling: boolean;
   myLikedProfileIds: string[];
+  feedAlgorithm: DiscoverFeedAlgorithm | null;
+  tasteInsight: ForYouTasteInsight | null;
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
@@ -48,6 +53,8 @@ export function useDiscoverFeed(
   const [feedPool, setFeedPool] = useState<Profile[]>([]);
   const [isFeedRecycling, setIsFeedRecycling] = useState(false);
   const [myLikedProfileIds, setMyLikedProfileIds] = useState<string[]>([]);
+  const [feedAlgorithm, setFeedAlgorithm] = useState<DiscoverFeedAlgorithm | null>(null);
+  const [tasteInsight, setTasteInsight] = useState<ForYouTasteInsight | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +81,16 @@ export function useDiscoverFeed(
 
     window.addEventListener('lavey:verification-changed', onVerificationChanged);
     return () => window.removeEventListener('lavey:verification-changed', onVerificationChanged);
+  }, []);
+
+  useEffect(() => {
+    const onTasteUpdated = (event: Event) => {
+      const custom = event as CustomEvent<ForYouTasteInsight>;
+      if (custom.detail?.likeCount > 0) setTasteInsight(custom.detail);
+    };
+
+    window.addEventListener(FOR_YOU_TASTE_UPDATED_EVENT, onTasteUpdated);
+    return () => window.removeEventListener(FOR_YOU_TASTE_UPDATED_EVENT, onTasteUpdated);
   }, []);
 
   useEffect(() => {
@@ -135,11 +152,12 @@ export function useDiscoverFeed(
           ageMin: activeFilters.ageMin,
           ageMax: activeFilters.ageMax,
           verifiedOnly: activeFilters.verifiedOnly,
+          genders: activeFilters.genders,
         });
 
         const demographic = enrichVerifiedStatus(
           response.isRecycling
-            ? response.profiles
+            ? applyForYouFeedFilters(response.profiles, activeFilters)
             : activeFilter === 'for-you'
               ? applyForYouFeedFilters(response.profiles, activeFilters)
               : applyDiscoverDemographicFilters(response.profiles, activeFilters),
@@ -149,16 +167,23 @@ export function useDiscoverFeed(
           options.replace ? demographic : mergeProfiles(prev, demographic),
         );
         setFeedPool((prev) => {
-          if (activeFilter === 'for-you') {
-            if (demographic.length === 0 && prev.length > 0) return prev;
-            return mergeProfiles(prev, demographic);
+          if (options.replace) {
+            return demographic;
           }
-          return options.replace ? demographic : mergeProfiles(prev, demographic);
+          if (activeFilter === 'for-you') {
+            return applyForYouFeedFilters(mergeProfiles(prev, demographic), activeFilters);
+          }
+          return mergeProfiles(prev, demographic);
         });
         setIsFeedRecycling(response.isRecycling);
         setMyLikedProfileIds((prev) => [
           ...new Set([...prev, ...response.myLikedProfileIds]),
         ]);
+        if (options.replace || activeFilter === 'for-you') {
+          setFeedAlgorithm(response.algorithm);
+          setTasteInsight(response.tasteInsight);
+          syncAppliedAlgorithmFromFeed(response.algorithm);
+        }
         setNextCursor(response.nextCursor);
         setDistanceTierKm(response.distanceTierKm);
         setExpandedDistance(response.expandedDistance);
@@ -198,6 +223,8 @@ export function useDiscoverFeed(
           setFeedPool([]);
           setIsFeedRecycling(false);
           setMyLikedProfileIds([]);
+          setFeedAlgorithm(null);
+          setTasteInsight(null);
           setNextCursor(null);
         }
       } finally {
@@ -221,6 +248,8 @@ export function useDiscoverFeed(
     setCanExpandDistance(false);
     setIsFeedRecycling(false);
     setMyLikedProfileIds([]);
+    setFeedAlgorithm(null);
+    setTasteInsight(null);
     distanceTierRef.current = tier;
     expandedRef.current = false;
     setFeedPool([]);
@@ -305,6 +334,8 @@ export function useDiscoverFeed(
     feedPool,
     isFeedRecycling,
     myLikedProfileIds,
+    feedAlgorithm,
+    tasteInsight,
     isLoading,
     isLoadingMore,
     error,

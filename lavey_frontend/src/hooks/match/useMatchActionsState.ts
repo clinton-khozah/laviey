@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { matchService } from '@/services';
 import { contentService } from '@/services/content/contentService';
+import { FOR_YOU_TASTE_UPDATED_EVENT } from '@/types/discoverIntelligence';
 import type { MatchToastProfile } from '@/types';
 import { playMatchCelebrationSound, primeMatchAudio } from '@/utils/audio/playMatchCelebrationSound';
 
@@ -161,6 +162,12 @@ export function useMatchActionsState(): UseMatchActionsResult {
             myAvatar: result.myAvatar,
             subtitle: `You and ${result.ownerName.split(' ')[0] ?? result.ownerName} liked each other's posts`,
           });
+        }
+
+        if (result.tasteInsight && result.tasteInsight.likeCount > 0) {
+          window.dispatchEvent(
+            new CustomEvent(FOR_YOU_TASTE_UPDATED_EVENT, { detail: result.tasteInsight }),
+          );
         }
 
         return { likeCount: result.likeCount };

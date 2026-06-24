@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DiscoverFilterSheet } from '@/components/discover/DiscoverFilterSheet';
+import { ForYouIntelligenceBanner } from '@/components/discover/ForYouIntelligenceBanner';
 import { DiscoverProfileSetupGate } from '@/components/discover/DiscoverProfileSetupGate';
 import { ReceivedLikesSheet } from '@/components/feed/ReceivedLikesSheet';
 import { TopBar } from '@/components/layout/TopBar';
@@ -26,6 +27,7 @@ import { subscribeAlgorithmChange } from '@/features/admin/algorithm/algorithmCo
 import type { Profile } from '@/types';
 import { hasPremiumAccess } from '@/config/features';
 import { navigateAppTo, openChatWithProfile } from '@/utils/navigation/appNav';
+import { applyForYouFeedFilters } from '@/utils/discover/applyDiscoverFilters';
 import { resolveForYouFeedProfiles } from '@/utils/discover/forYouFeedProfiles';
 import './DiscoverPage.css';
 
@@ -34,7 +36,7 @@ import './DiscoverPage.css';
  */
 export function DiscoverPage() {
   const { filters, setFilters, resetFilters, hasActiveFilters } = useDiscoverFilters();
-  const { profiles, feedPool, isFeedRecycling, myLikedProfileIds, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed } =
+  const { profiles, feedPool, isFeedRecycling, myLikedProfileIds, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed, feedAlgorithm, tasteInsight } =
     useDiscoverFeed('for-you', filters);
   const { quota, isLoading: isQuotaLoading } = useFlameQuota();
   const {
@@ -62,6 +64,7 @@ export function DiscoverPage() {
   const [findProfile, setFindProfile] = useState<Profile | null>(null);
   const { location, requestLocation } = useLiveUserLocation();
   const lastSyncedLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const lastSyncedPlaceRef = useRef('');
   const lastSyncAtRef = useRef<number>(0);
   const { profiles: receivedLikers, count: likeCount } = useProfilesWhoLikedYou();
   const isPremium = hasPremiumAccess(userProfile?.isPremium);
@@ -85,7 +88,11 @@ export function DiscoverPage() {
     };
   }, []);
 
-  const forYouPool = feedPool.length > 0 ? feedPool : profiles;
+  const forYouPool = useMemo(() => {
+    const pool = feedPool.length > 0 ? feedPool : profiles;
+    if (filter !== 'for-you') return pool;
+    return applyForYouFeedFilters(pool, filters);
+  }, [feedPool, profiles, filter, filters]);
 
   const mergedLikedIds = useMemo(() => {
     const merged = new Set([...likedIds, ...myLikedProfileIds]);
@@ -170,8 +177,13 @@ export function DiscoverPage() {
 
   useEffect(() => {
     if (!location) return;
+
+    const placeKey = [location.city, location.suburb, location.province, location.country]
+      .map((part) => part.trim())
+      .join('|');
+    const hasResolvedPlace = Boolean(location.city.trim() || location.suburb.trim());
     const now = Date.now();
-    if (now - lastSyncAtRef.current < 15000) return;
+    if (now - lastSyncAtRef.current < 15000 && !hasResolvedPlace) return;
 
     const last = lastSyncedLocationRef.current;
     const movedKm = last
@@ -181,13 +193,17 @@ export function DiscoverPage() {
         ) * 111
       : Number.POSITIVE_INFINITY;
 
-    if (movedKm < 0.15) return;
+    const placeChanged = hasResolvedPlace && placeKey !== lastSyncedPlaceRef.current;
+    if (movedKm < 0.15 && !placeChanged) return;
 
     lastSyncAtRef.current = now;
     lastSyncedLocationRef.current = {
       latitude: location.latitude,
       longitude: location.longitude,
     };
+    if (placeChanged) {
+      lastSyncedPlaceRef.current = placeKey;
+    }
 
     void (async () => {
       try {
@@ -243,6 +259,13 @@ export function DiscoverPage() {
           isPremium={isPremium}
           onUpgrade={() => setPlatinumOpen(true)}
           onFindClick={() => setFindOpen(true)}
+        />
+      ) : null}
+      {showDiscoverChrome && !findOpen && filter === 'for-you' ? (
+        <ForYouIntelligenceBanner
+          algorithm={feedAlgorithm}
+          tasteInsight={tasteInsight}
+          visible={!isLoading || forYouDisplayProfiles.length > 0}
         />
       ) : null}
       <DiscoverFilterSheet

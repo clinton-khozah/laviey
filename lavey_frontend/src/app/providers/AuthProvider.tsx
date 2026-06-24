@@ -20,8 +20,12 @@ import { clearUserProfileCache } from "@/hooks/profile/useUserProfile";
 import {
   saveOnboardingQuizAnswers,
   loadOnboardingQuizAnswers,
+  clearOnboardingQuizAnswers,
 } from "@/utils/onboarding/onboardingQuizStorage";
 import { clearPendingOnboardingQuiz } from "@/utils/onboarding/pendingOnboardingQuiz";
+import { discoverFiltersFromOnboarding } from "@/utils/discover/discoverFiltersFromOnboarding";
+import { clearDiscoverFiltersManual, saveDiscoverFilters } from "@/utils/discover/discoverFilterStorage";
+import { resetDiscoverSetupState } from "@/utils/discover/discoverSetupStorage";
 
 export interface AuthContextValue {
   user: AuthSession["user"] | null;
@@ -48,19 +52,22 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function resolveNeedsOnboardingQuiz(): Promise<boolean> {
-  const localAnswers = loadOnboardingQuizAnswers();
-
+async function resolveNeedsOnboardingQuiz(userId?: string): Promise<boolean> {
   if (!usesBackendAuth()) {
-    return !localAnswers;
+    return !loadOnboardingQuizAnswers(userId);
   }
 
   try {
     const status = await onboardingService.getOnboardingStatus();
-    if (status.completed) return false;
-    return !localAnswers;
+    if (status.completed) {
+      return false;
+    }
+    // Server says incomplete — ignore stale browser cache (other accounts / old tests).
+    clearOnboardingQuizAnswers();
+    return true;
   } catch {
-    return !localAnswers;
+    clearOnboardingQuizAnswers();
+    return true;
   }
 }
 
@@ -97,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled && !onOAuthCallback && restored) {
           setSession(restored);
 
-          const needsQuiz = await resolveNeedsOnboardingQuiz();
+          const needsQuiz = await resolveNeedsOnboardingQuiz(restored.user.id);
           if (!cancelled) {
             setNeedsOnboardingQuiz(needsQuiz);
           }
@@ -115,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const syncOnboardingAfterAuth = useCallback(async () => {
-    setNeedsOnboardingQuiz(await resolveNeedsOnboardingQuiz());
+  const syncOnboardingAfterAuth = useCallback(async (userId: string) => {
+    setNeedsOnboardingQuiz(await resolveNeedsOnboardingQuiz(userId));
   }, []);
 
   const sendVerificationEmail = useCallback(async (email: string) => {
@@ -149,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       setPendingVerificationEmail(null);
       setVerificationStatus(null);
-      await syncOnboardingAfterAuth();
+      await syncOnboardingAfterAuth(next.user.id);
     },
     [syncOnboardingAfterAuth],
   );
@@ -180,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(next);
     setIsLoading(false);
 
-    void resolveNeedsOnboardingQuiz().then((needsQuiz) => {
+    void resolveNeedsOnboardingQuiz(next.user.id).then((needsQuiz) => {
       setNeedsOnboardingQuiz(needsQuiz);
     });
   }, []);
@@ -305,6 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         setIsSubmitting(true);
         clearPendingOnboardingQuiz();
+        clearOnboardingQuizAnswers();
         clearUserProfileCache();
         await authService.signOut();
         setSession(null);
@@ -314,15 +322,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsSubmitting(false);
       },
       completeOnboardingQuiz: async (answers) => {
+        const userId = session?.user.id;
         if (usesBackendAuth()) {
           await onboardingService.submitOnboarding(answers);
+          if (userId) {
+            saveOnboardingQuizAnswers(answers, userId);
+          }
         } else {
-          saveOnboardingQuizAnswers(answers);
+          saveOnboardingQuizAnswers(answers, userId);
         }
+
+        const discoverFilters = discoverFiltersFromOnboarding(answers);
+        clearDiscoverFiltersManual(userId);
+        saveDiscoverFilters(discoverFilters, userId);
+        if (userId) {
+          resetDiscoverSetupState(userId);
+        }
+
         clearPendingOnboardingQuiz();
         clearUserProfileCache();
         setNeedsOnboardingQuiz(false);
         window.sessionStorage.setItem("lavey:navigateToFeed", "1");
+        window.dispatchEvent(
+          new CustomEvent("lavey:onboarding-completed", { detail: { filters: discoverFilters } }),
+        );
         window.dispatchEvent(
           new CustomEvent("lavey:navigate", { detail: { nav: "feed" } }),
         );

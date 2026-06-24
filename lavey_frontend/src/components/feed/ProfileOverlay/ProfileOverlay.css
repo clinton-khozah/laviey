@@ -7,13 +7,19 @@
 
 .profile-overlay__location {
   position: absolute;
-  top: calc(var(--top-bar-height) + var(--safe-top) + 14px);
+  top: calc(var(--top-bar-height) + var(--safe-top) + 36px);
   left: 14px;
-  z-index: 9;
+  z-index: 12;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  max-width: calc(100% - 28px);
+  gap: 5px;
+  max-width: min(220px, calc(100% - 28px));
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
 }
 
 .profile-overlay__location-icon {
@@ -26,13 +32,13 @@
 
 .profile-overlay__location-text {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.2;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
 }
 
 .profile-overlay__bottom {
@@ -84,6 +90,12 @@
 .profile-overlay__distance {
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+.profile-overlay__meta-dot {
+  color: var(--text-muted);
+  font-weight: 700;
+  user-select: none;
 }
 
 .profile-overlay__vibe {

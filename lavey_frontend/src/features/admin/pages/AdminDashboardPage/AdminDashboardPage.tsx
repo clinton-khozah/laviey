@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
 import { APP_IMAGES } from '@/constants/images';
-import { pickMockFeedImage } from '@/constants/mockMedia';
-import { PLATINUM_FEATURES, PLATINUM_PLANS } from '@/constants/platinum';
-import { OnlineDateCard } from '@/components/rooms/OnlineDateCard/OnlineDateCard';
 import { getAdminSession } from '@/features/admin/session/adminSession';
 import { adminAuthService } from '@/services/admin/adminAuthService';
 import type { AdminAccount } from '@/types/domain/adminAuth.types';
-import type { OnlineDate } from '@/types';
-import { storePendingMeetupCode } from '@/utils/meeting/meetupJoinLink';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { AdminAlgorithmOverseer } from '@/features/admin/components/AdminAlgorithmOverseer';
 import { AdminExperimentAnalytics } from '@/features/admin/components/AdminExperimentAnalytics';
 import { AdminSupportInbox } from '@/features/admin/components/AdminSupportInbox';
-import { useAdminUsers } from '@/hooks/admin/useAdminUsers';
-import type { AdminUserRecord } from '@/types/admin.types';
+import { AdminContentModeration } from '@/features/admin/components/AdminContentModeration';
+import { AdminUserManagement } from '@/features/admin/components/AdminUserManagement';
+import { AdminQuickToolsPage, getToolPageMeta, isHrQuickTool, isOpsQuickTool, isQuickToolView, hrTabFromTool, TOOL_PAGE_META, type QuickToolId } from '@/features/admin/components/AdminQuickToolsPanel';
+import { AdminHrHub } from '@/features/admin/components/AdminHrHub';
+import { adminHrService } from '@/services/admin/adminHrService';
+import { adminModerationService } from '@/services/admin/adminModerationService';
+import { adminOpsService, type CommandOverview, type MonetizationWallet } from '@/services/admin/adminOpsService';
+import { adminSupportService } from '@/services/admin/adminSupportService';
 import './AdminDashboardPage.css';
+import '@/features/admin/components/AdminQuickToolsPanel/AdminQuickToolsPanel.css';
+import '@/features/admin/components/AdminHrHub/AdminHrHub.css';
 
 interface AdminDashboardPageProps {
   adminPath: string;
@@ -38,21 +41,6 @@ interface ModuleCard {
   icon: string;
   summary: string;
   capabilities: string[];
-}
-
-interface LikerProfile {
-  id: string;
-  name: string;
-  handle: string;
-  avatar?: string;
-  age: number;
-  gender: string;
-  city: string;
-  about: string;
-  lastActive: string;
-  hoursPerDay: number;
-  plan: 'Platinum' | 'Free';
-  verified: boolean;
 }
 
 const MODULES: ModuleCard[] = [
@@ -147,6 +135,8 @@ const MODULES: ModuleCard[] = [
   },
 ];
 
+type AdminViewId = AdminSectionId | QuickToolId | 'settings';
+
 const API_ENDPOINTS = [
   '/admin-api/dashboard',
   '/admin-api/users',
@@ -161,12 +151,47 @@ const API_ENDPOINTS = [
   '/admin-api/notifications',
 ];
 
-const COMMAND_KPIS = [
-  { label: 'Total users (DAU)', value: '18,420', delta: '+6.2% vs last week', trend: 'up' as const, tone: 'blue' as const },
-  { label: 'Matches per day', value: '3,284', delta: '+4.1% vs last week', trend: 'up' as const, tone: 'red' as const },
-  { label: 'Active subscriptions', value: '1,437', delta: '+112 this month', trend: 'up' as const, tone: 'green' as const },
-  { label: '30-day churn (freemode)', value: '4.9%', delta: '-0.3 pts vs prior', trend: 'down' as const, tone: 'amber' as const },
+const COMMAND_KPIS_FALLBACK = [
+  { label: 'Total members', value: '—', delta: 'Loading live data…', trend: 'up' as const, tone: 'blue' as const },
+  { label: 'Swipes today', value: '—', delta: 'Discover activity', trend: 'up' as const, tone: 'red' as const },
+  { label: 'Platinum members', value: '—', delta: 'Active subscriptions', trend: 'up' as const, tone: 'green' as const },
+  { label: 'Needs attention', value: '—', delta: 'Moderation + support + HR', trend: 'down' as const, tone: 'amber' as const },
 ];
+
+function commandKpisFromOverview(overview: CommandOverview | null) {
+  if (!overview) return COMMAND_KPIS_FALLBACK;
+  const attention = overview.moderationQueue + overview.openSupportTickets + overview.pendingHrItems;
+  return [
+    {
+      label: 'Total members',
+      value: overview.totalMembers.toLocaleString(),
+      delta: `${overview.platinumMembers.toLocaleString()} Platinum`,
+      trend: 'up' as const,
+      tone: 'blue' as const,
+    },
+    {
+      label: 'Swipes today',
+      value: overview.matchesToday.toLocaleString(),
+      delta: overview.activeAlgorithm ? `Live: ${overview.activeAlgorithm}` : 'No live algorithm',
+      trend: 'up' as const,
+      tone: 'red' as const,
+    },
+    {
+      label: 'Platinum members',
+      value: overview.platinumMembers.toLocaleString(),
+      delta: `Revenue 30d: ${overview.revenueAttributed30d}`,
+      trend: 'up' as const,
+      tone: 'green' as const,
+    },
+    {
+      label: 'Needs attention',
+      value: attention.toLocaleString(),
+      delta: `${overview.moderationQueue} mod · ${overview.openSupportTickets} support · ${overview.pendingHrItems} HR`,
+      trend: attention > 0 ? ('down' as const) : ('up' as const),
+      tone: 'amber' as const,
+    },
+  ];
+}
 
 function sectionBreadcrumb(id: AdminSectionId): string {
   if (id === 'command') return 'Admin / Overview';
@@ -232,317 +257,6 @@ function KpiStatIcon({ tone }: { tone: 'blue' | 'red' | 'green' | 'amber' }) {
   );
 }
 
-function createAvatarDataUri(name: string, bgColor: string): string {
-  const initials = name
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="${bgColor}"/><text x="40" y="48" text-anchor="middle" font-size="28" font-family="Inter, Arial, sans-serif" fill="#ffffff">${initials}</text></svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
-
-const LIKER_PROFILES: LikerProfile[] = [
-  {
-    id: 'liker-1',
-    name: 'Mia Turner',
-    handle: '@miaturner',
-    avatar: createAvatarDataUri('Mia Turner', '#ef4444'),
-    age: 26,
-    gender: 'Female',
-    city: 'Cape Town',
-    about: 'Loves beach runs, jazz nights, and spontaneous road trips.',
-    lastActive: '2m ago',
-    hoursPerDay: 3.8,
-    plan: 'Platinum',
-    verified: true,
-  },
-  {
-    id: 'liker-2',
-    name: 'Noah Reed',
-    handle: '@noahreed',
-    avatar: createAvatarDataUri('Noah Reed', '#3b82f6'),
-    age: 29,
-    gender: 'Male',
-    city: 'Johannesburg',
-    about: 'Tech founder, gym regular, and foodie explorer.',
-    lastActive: '8m ago',
-    hoursPerDay: 2.1,
-    plan: 'Free',
-    verified: true,
-  },
-  {
-    id: 'liker-3',
-    name: 'Ava Daniels',
-    handle: '@avadaniels',
-    avatar: createAvatarDataUri('Ava Daniels', '#8b5cf6'),
-    age: 24,
-    gender: 'Female',
-    city: 'Pretoria',
-    about: 'Creative stylist who enjoys art shows and coffee dates.',
-    lastActive: '18m ago',
-    hoursPerDay: 4.2,
-    plan: 'Platinum',
-    verified: false,
-  },
-  {
-    id: 'liker-4',
-    name: 'Ethan Cole',
-    handle: '@ethancole',
-    avatar: createAvatarDataUri('Ethan Cole', '#0ea5e9'),
-    age: 31,
-    gender: 'Male',
-    city: 'Durban',
-    about: 'Surfer, entrepreneur, and sunset photographer.',
-    lastActive: '27m ago',
-    hoursPerDay: 1.7,
-    plan: 'Free',
-    verified: true,
-  },
-  {
-    id: 'liker-5',
-    name: 'Lina Brooks',
-    handle: '@linabrooks',
-    avatar: createAvatarDataUri('Lina Brooks', '#f97316'),
-    age: 27,
-    gender: 'Female',
-    city: 'Port Elizabeth',
-    about: 'Book lover, wellness coach, and brunch fanatic.',
-    lastActive: '4m ago',
-    hoursPerDay: 3.4,
-    plan: 'Platinum',
-    verified: true,
-  },
-];
-
-const USER_TABLE_ROWS = [
-  {
-    name: 'Alice Smith',
-    handle: '@alicesmith',
-    avatar: createAvatarDataUri('Alice Smith', '#7c3aed'),
-    payment: 'Visa · Ends in ****-**18',
-    clickthrough: 48,
-    subscribed: true,
-    isNew: false,
-    matches: 72,
-    topUser: true,
-    plan: 'Platinum',
-    quizCompletion: 96,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Dating' },
-      { question: 'Who are you interested in?', answer: 'Men' },
-      { question: 'Your age preference?', answer: '22-32' },
-      { question: 'Religion preference?', answer: 'Open to all' },
-      { question: 'Top interests?', answer: 'Travel, Fitness, Music' },
-    ],
-    posts: ['Sunset walk by the beach tonight ✨', 'Gym session done. Feeling great!', 'Who is up for a travel buddy challenge?'],
-    meetings: ['Coffee date - Saturday 7:00 PM', 'Video vibe check - Tuesday 8:30 PM'],
-    lastSeen: '2m ago',
-    age: 27,
-    gender: 'Female',
-  },
-  {
-    name: 'Bob Johnson',
-    handle: '@bobjohnson',
-    payment: 'Mastercard · Ends in ****-**99',
-    clickthrough: 17,
-    subscribed: false,
-    isNew: true,
-    matches: 14,
-    topUser: false,
-    plan: 'Free',
-    quizCompletion: 78,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Friendship' },
-      { question: 'Who are you interested in?', answer: 'Women' },
-      { question: 'Your age preference?', answer: '24-34' },
-      { question: 'Religion preference?', answer: 'Christian' },
-      { question: 'Top interests?', answer: 'Movies, Football, Tech' },
-    ],
-    posts: ['New city, new energy.', 'Late-night coding and coffee.', 'Looking for real conversations.'],
-    meetings: ['Lunch meetup - Friday 1:00 PM'],
-    lastSeen: '18m ago',
-    age: 31,
-    gender: 'Male',
-  },
-  {
-    name: 'Clara Garcia',
-    handle: '@claragarcia',
-    avatar: createAvatarDataUri('Clara Garcia', '#0ea5e9'),
-    payment: 'Mastercard · Ends in ****-**14',
-    clickthrough: 92,
-    subscribed: true,
-    isNew: true,
-    matches: 110,
-    topUser: true,
-    plan: 'Platinum',
-    quizCompletion: 100,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Both' },
-      { question: 'Who are you interested in?', answer: 'Men' },
-      { question: 'Your age preference?', answer: '24-34' },
-      { question: 'Religion preference?', answer: 'Spiritual' },
-      { question: 'Top interests?', answer: 'Cooking, Books, Travel' },
-    ],
-    posts: ['Just posted a new cooking reel.', 'Bookstore dates are elite.', 'Weekend travel plans loading...'],
-    meetings: ['Museum date - Sunday 4:00 PM', 'Evening call - Thursday 9:00 PM'],
-    lastSeen: '5m ago',
-    age: 28,
-    gender: 'Female',
-  },
-  {
-    name: 'Emma Lee',
-    handle: '@emmalee',
-    avatar: createAvatarDataUri('Emma Lee', '#14b8a6'),
-    payment: 'Mastercard · Ends in ****-**19',
-    clickthrough: 49,
-    subscribed: false,
-    isNew: false,
-    matches: 38,
-    topUser: false,
-    plan: 'Free',
-    quizCompletion: 82,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Dating' },
-      { question: 'Who are you interested in?', answer: 'Men' },
-      { question: 'Your age preference?', answer: '23-31' },
-      { question: 'Religion preference?', answer: 'Open to all' },
-      { question: 'Top interests?', answer: 'Fashion, Wellness, Music' },
-    ],
-    posts: ['Morning routine locked in.', 'Music and matcha day.', 'Who loves fashion markets?'],
-    meetings: [],
-    lastSeen: '1h ago',
-    age: 24,
-    gender: 'Female',
-  },
-  {
-    name: 'Grace Taylor',
-    handle: '@gracetaylor',
-    avatar: createAvatarDataUri('Grace Taylor', '#f97316'),
-    payment: 'Visa · Ends in ****-**50',
-    clickthrough: 77,
-    subscribed: true,
-    isNew: false,
-    matches: 95,
-    topUser: true,
-    plan: 'Platinum',
-    quizCompletion: 94,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Dating' },
-      { question: 'Who are you interested in?', answer: 'Men' },
-      { question: 'Your age preference?', answer: '25-35' },
-      { question: 'Religion preference?', answer: 'Christian' },
-      { question: 'Top interests?', answer: 'Travel, Business, Lifestyle' },
-    ],
-    posts: ['Airport mode again.', 'Business brunch this morning.', 'Looking for genuine energy.'],
-    meetings: ['Dinner date - Saturday 8:00 PM'],
-    lastSeen: '7m ago',
-    age: 30,
-    gender: 'Female',
-  },
-  {
-    name: 'Isabella Clark',
-    handle: '@isabellaclark',
-    avatar: createAvatarDataUri('Isabella Clark', '#ec4899'),
-    payment: 'Visa · Ends in ****-**80',
-    clickthrough: 25,
-    subscribed: false,
-    isNew: true,
-    matches: 19,
-    topUser: false,
-    plan: 'Free',
-    quizCompletion: 67,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Friendship' },
-      { question: 'Who are you interested in?', answer: 'Everyone' },
-      { question: 'Your age preference?', answer: '21-30' },
-      { question: 'Religion preference?', answer: 'Open to all' },
-      { question: 'Top interests?', answer: 'AI, Coffee, Books' },
-    ],
-    posts: ['Coffee shop hopping this week.', 'AI talks > small talk.', 'Book recs please!'],
-    meetings: [],
-    lastSeen: '32m ago',
-    age: 23,
-    gender: 'Female',
-  },
-  {
-    name: 'David Brown',
-    handle: '@davidbrown',
-    avatar: createAvatarDataUri('David Brown', '#3b82f6'),
-    payment: 'Mastercard · Ends in ****-**96',
-    clickthrough: 48,
-    subscribed: true,
-    isNew: false,
-    matches: 57,
-    topUser: false,
-    plan: 'Platinum',
-    quizCompletion: 88,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Dating' },
-      { question: 'Who are you interested in?', answer: 'Women' },
-      { question: 'Your age preference?', answer: '24-33' },
-      { question: 'Religion preference?', answer: 'Christian' },
-      { question: 'Top interests?', answer: 'Music, Movies, Fitness' },
-    ],
-    posts: ['Movie night was perfect.', 'Leg day complete.', 'New playlist out now.'],
-    meetings: ['Coffee meetup - Monday 6:30 PM'],
-    lastSeen: '12m ago',
-    age: 29,
-    gender: 'Male',
-  },
-  {
-    name: 'Frank Wong',
-    handle: '@frankwong',
-    avatar: createAvatarDataUri('Frank Wong', '#10b981'),
-    payment: 'Visa · Ends in ****-**28',
-    clickthrough: 26,
-    subscribed: false,
-    isNew: true,
-    matches: 23,
-    topUser: false,
-    plan: 'Free',
-    quizCompletion: 74,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Both' },
-      { question: 'Who are you interested in?', answer: 'Women' },
-      { question: 'Your age preference?', answer: '22-31' },
-      { question: 'Religion preference?', answer: 'Open to all' },
-      { question: 'Top interests?', answer: 'Sports, Jogging, Gaming' },
-    ],
-    posts: ['Morning jog around the park.', 'Need gaming partner tonight.', 'Sports vibes all week.'],
-    meetings: [],
-    lastSeen: '53m ago',
-    age: 26,
-    gender: 'Male',
-  },
-  {
-    name: 'Luna Brooks',
-    handle: '@lunabrooks',
-    avatar: createAvatarDataUri('Luna Brooks', '#8b5cf6'),
-    payment: 'Visa · Ends in ****-**50',
-    clickthrough: 77,
-    subscribed: true,
-    isNew: false,
-    matches: 89,
-    topUser: true,
-    plan: 'Platinum',
-    quizCompletion: 98,
-    quizAnswers: [
-      { question: 'What are you here for?', answer: 'Dating' },
-      { question: 'Who are you interested in?', answer: 'Men' },
-      { question: 'Your age preference?', answer: '24-35' },
-      { question: 'Religion preference?', answer: 'Spiritual' },
-      { question: 'Top interests?', answer: 'Beauty, Travel, Fashion' },
-    ],
-    posts: ['Skincare and self-care Sunday.', 'Travel board updated.', 'New outfit drop soon.'],
-    meetings: ['Sunset date - Friday 7:30 PM'],
-    lastSeen: '4m ago',
-    age: 27,
-    gender: 'Female',
-  },
-];
-
 const ADMIN_BASE = '/admin/19990808';
 
 const SECTION_PATHS: Record<AdminSectionId, string> = {
@@ -555,12 +269,77 @@ const SECTION_PATHS: Record<AdminSectionId, string> = {
   ai: `${ADMIN_BASE}/ai-overseer`,
 };
 
-function sectionFromPath(path: string): AdminSectionId {
-  if (path === ADMIN_BASE) return 'command';
+const TOOL_PATHS: Record<QuickToolId, string> = {
+  notifications: `${ADMIN_BASE}/notifications`,
+  activity: `${ADMIN_BASE}/activity-log`,
+  alerts: `${ADMIN_BASE}/system-alerts`,
+  broadcast: `${ADMIN_BASE}/push-broadcast`,
+  export: `${ADMIN_BASE}/data-export`,
+  help: `${ADMIN_BASE}/help-center`,
+  employees: `${ADMIN_BASE}/hr/employees`,
+  'roles-pay': `${ADMIN_BASE}/hr/roles`,
+  leaves: `${ADMIN_BASE}/hr/leaves`,
+  claims: `${ADMIN_BASE}/hr/claims`,
+};
+
+const SETTINGS_PATH = `${ADMIN_BASE}/settings`;
+
+const VIEW_PATHS: Record<AdminViewId, string> = {
+  ...SECTION_PATHS,
+  ...TOOL_PATHS,
+  settings: SETTINGS_PATH,
+};
+
+const RIGHT_RAIL_GROUPS: Array<{
+  title: string;
+  subtitle?: string;
+  items: typeof TOOL_PAGE_META;
+}> = [
+  {
+    title: 'Shortcuts & alerts',
+    subtitle: 'Ops utilities',
+    items: TOOL_PAGE_META.filter((tool) => isOpsQuickTool(tool.id)),
+  },
+  {
+    title: 'People & HR',
+    subtitle: 'Team management',
+    items: TOOL_PAGE_META.filter((tool) => isHrQuickTool(tool.id)),
+  },
+];
+
+function viewFromPath(path: string): AdminViewId {
   if (path.includes('matching-studio') || path.includes('safety-compliance')) return 'experiments';
-  const entry = Object.entries(SECTION_PATHS).find(([, p]) => p === path);
-  if (!entry) return 'command';
-  return entry[0] as AdminSectionId;
+  if (path === SETTINGS_PATH || path.endsWith('/settings')) return 'settings';
+  const entry = Object.entries(VIEW_PATHS).find(([, viewPath]) => viewPath === path);
+  return (entry?.[0] as AdminViewId) ?? 'command';
+}
+
+function isModuleView(view: AdminViewId): view is AdminSectionId {
+  return Object.prototype.hasOwnProperty.call(SECTION_PATHS, view);
+}
+
+function getViewMeta(view: AdminViewId): { label: string; summary: string; breadcrumb: string } {
+  if (view === 'settings') {
+    return {
+      label: 'Settings',
+      summary: 'Admin account, workspace preferences, and database setup guidance.',
+      breadcrumb: 'Admin / Settings',
+    };
+  }
+  if (isModuleView(view)) {
+    const module = MODULES.find((item) => item.id === view) ?? MODULES[0]!;
+    return {
+      label: module.label,
+      summary: module.summary,
+      breadcrumb: sectionBreadcrumb(view),
+    };
+  }
+  const tool = getToolPageMeta(view);
+  return {
+    label: tool.label,
+    summary: tool.summary,
+    breadcrumb: tool.breadcrumb,
+  };
 }
 
 function MenuIcon({ kind }: { kind: string }) {
@@ -623,6 +402,80 @@ function MenuIcon({ kind }: { kind: string }) {
       </svg>
     );
   }
+  if (kind === 'activity') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M12 8v4l3 3" />
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    );
+  }
+  if (kind === 'shield') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    );
+  }
+  if (kind === 'megaphone') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M3 10v4h4l5 4V6L7 10H3z" />
+        <path d="M16 8.5a5 5 0 010 7M19 5a9 9 0 010 14" />
+      </svg>
+    );
+  }
+  if (kind === 'download') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M12 3v12M7 10l5 5 5-5" />
+        <path d="M5 21h14" />
+      </svg>
+    );
+  }
+  if (kind === 'help') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9a2.5 2.5 0 015 1c0 2-2.5 2-2.5 4" />
+        <path d="M12 17h.01" />
+      </svg>
+    );
+  }
+  if (kind === 'team') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="3" />
+        <path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    );
+  }
+  if (kind === 'badge') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.3L12 14.8 7.2 16.8l.9-5.3L4.2 7.7l5.4-.8L12 2z" />
+      </svg>
+    );
+  }
+  if (kind === 'calendar') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M16 2v4M8 2v4M3 10h18" />
+      </svg>
+    );
+  }
+  if (kind === 'clipboard') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+        <rect x="9" y="3" width="6" height="4" rx="1" />
+        <path d="M9 12h6M9 16h6" />
+      </svg>
+    );
+  }
   if (kind === 'logout') {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -656,77 +509,41 @@ function MenuIcon({ kind }: { kind: string }) {
   );
 }
 
+interface MonetizationWalletRow {
+  id: string;
+  name: string;
+  handle: string;
+  avatar?: string;
+  plan: 'Platinum' | 'Free';
+  giftBalance: number;
+  withdrawEnabled: boolean;
+  wasGifted: boolean;
+  lastGiftAt?: string;
+}
+
 export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDashboardPageProps) {
-  const [activeSection, setActiveSection] = useState<AdminSectionId>(() => sectionFromPath(adminPath));
+  const [activeView, setActiveView] = useState<AdminViewId>(() => viewFromPath(adminPath));
   const [maximized, setMaximized] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [usersView, setUsersView] = useState<'all' | 'subscribed' | 'new' | 'matches' | 'top'>('all');
-  const [usersPage, setUsersPage] = useState(1);
-  const [likesPanelRowName, setLikesPanelRowName] = useState<string | null>(null);
-  const [selectedLiker, setSelectedLiker] = useState<LikerProfile | null>(null);
-  const [likesSearch, setLikesSearch] = useState('');
-  const [likesFilter, setLikesFilter] = useState<'all' | 'verified' | 'female' | 'male'>('all');
-  const [, setSelectedCommsProfile] = useState<LikerProfile | null>(null);
-  const [selectedFullProfile, setSelectedFullProfile] = useState<LikerProfile | null>(null);
-  const [selectedPlanUser, setSelectedPlanUser] = useState<{ name: string; plan: 'Platinum' | 'Free' } | null>(null);
-  const [selectedViewedUser, setSelectedViewedUser] = useState<AdminUserRecord | null>(null);
-  const [avatarFullView, setAvatarFullView] = useState<{ src: string; name: string } | null>(null);
-  const [quizModalUser, setQuizModalUser] = useState<AdminUserRecord | null>(null);
-  const [activityModalUser, setActivityModalUser] = useState<AdminUserRecord | null>(null);
-  const [usersSearch, setUsersSearch] = useState('');
   const [adminOperator, setAdminOperator] = useState<AdminAccount | null>(
     () => getAdminSession()?.admin ?? null,
   );
-  const [activityModalTab, setActivityModalTab] = useState<'posts' | 'meetings'>('posts');
-  const [joiningMeetingId, setJoiningMeetingId] = useState<string | null>(null);
-  const [copiedMeetingCode, setCopiedMeetingCode] = useState('');
-  const [activePostMenuId, setActivePostMenuId] = useState<string | null>(null);
-  const [postModerationNotice, setPostModerationNotice] = useState('');
-  const [meetingModerationNotice, setMeetingModerationNotice] = useState('');
-  const [contentSearch, setContentSearch] = useState('');
-  const [contentActionNotice, setContentActionNotice] = useState('');
-  const [activeContentMenuId, setActiveContentMenuId] = useState<string | null>(null);
   const [monetizationSearch, setMonetizationSearch] = useState('');
   const [monetizationNotice, setMonetizationNotice] = useState('');
   const [giftPanelUserId, setGiftPanelUserId] = useState<string | null>(null);
   const [giftAmount, setGiftAmount] = useState('100');
-  const [monetizationWallets, setMonetizationWallets] = useState(() =>
-    USER_TABLE_ROWS.map((row, index) => ({
-      id: row.handle,
-      name: row.name,
-      handle: row.handle,
-      avatar: row.avatar,
-      plan: row.plan,
-      giftBalance: [420, 85, 1240, 310, 0, 675, 152, 980, 44][index % 9] ?? 120,
-      withdrawEnabled: index % 4 !== 0,
-      wasGifted: index % 3 === 0,
-      lastGiftAt: index % 3 === 0 ? '2 days ago' : undefined,
-    })),
-  );
-  const activeModule = MODULES.find((m) => m.id === activeSection) ?? MODULES[0];
-  const {
-    users: adminUsers,
-    summary: adminUsersSummary,
-    total: adminUsersTotal,
-    totalPages: adminUsersTotalPages,
-    loading: adminUsersLoading,
-    error: adminUsersError,
-  } = useAdminUsers(usersView, usersPage, activeSection === 'users', usersSearch);
-  const { users: contentReviewUsers } = useAdminUsers(
-    'all',
-    1,
-    activeSection === 'content',
-    contentSearch,
-  );
+  const [monetizationWallets, setMonetizationWallets] = useState<MonetizationWalletRow[]>([]);
+  const [monetizationLoading, setMonetizationLoading] = useState(false);
+  const [commandOverview, setCommandOverview] = useState<CommandOverview | null>(null);
+  const [experimentHead, setExperimentHead] = useState({ activeUsers30d: 0, avgHours: 0 });
+  const [attentionCount, setAttentionCount] = useState(0);
+  const [pendingHrLeaves, setPendingHrLeaves] = useState(0);
+  const [pendingHrClaims, setPendingHrClaims] = useState(0);
+  const pageMeta = getViewMeta(activeView);
 
   useEffect(() => {
-    const fromPath = sectionFromPath(adminPath);
-    setActiveSection(fromPath);
+    setActiveView(viewFromPath(adminPath));
   }, [adminPath]);
-
-  useEffect(() => {
-    setUsersPage(1);
-  }, [usersView]);
 
   useEffect(() => {
     void adminAuthService.restoreSession().then((session) => {
@@ -734,27 +551,228 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
     });
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      adminModerationService.getStats().catch(() => null),
+      adminSupportService.listTickets().catch(() => []),
+    ]).then(([modStats, tickets]) => {
+      if (cancelled) return;
+      let count = 0;
+      if (modStats) {
+        count += modStats.aiPrescreen + modStats.humanReview + modStats.userReports;
+      }
+      count += tickets.filter((ticket) => ticket.unread).length;
+      setAttentionCount(count);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void adminHrService
+      .getOverview()
+      .then((overview) => {
+        if (!cancelled) {
+          setPendingHrClaims(overview.pendingClaims);
+          setPendingHrLeaves(overview.pendingLeaves);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPendingHrClaims(0);
+          setPendingHrLeaves(0);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
+
+  useEffect(() => {
+    if (activeView !== 'command') return;
+    let cancelled = false;
+    void adminOpsService
+      .getCommandOverview()
+      .then((overview) => {
+        if (!cancelled) setCommandOverview(overview);
+      })
+      .catch(() => {
+        if (!cancelled) setCommandOverview(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
+
+  useEffect(() => {
+    if (activeView !== 'experiments' && activeView !== 'command') return;
+    let cancelled = false;
+    const year = new Date().getFullYear();
+    void adminOpsService
+      .getAnalyticsSummary(year)
+      .then((summary) => {
+        if (!cancelled) {
+          setExperimentHead({
+            activeUsers30d: summary.activeUsers30d,
+            avgHours: summary.avgHoursOnPlatform,
+          });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView]);
+
+  useEffect(() => {
+    if (activeView !== 'monetization') return;
+    let cancelled = false;
+    setMonetizationLoading(true);
+    void adminOpsService
+      .listMonetizationWallets(monetizationSearch.trim() || undefined)
+      .then((wallets) => {
+        if (!cancelled) {
+          setMonetizationWallets(
+            wallets.map((w: MonetizationWallet) => ({
+              id: w.id,
+              name: w.name,
+              handle: w.handle,
+              avatar: w.avatarUrl ?? undefined,
+              plan: w.plan,
+              giftBalance: w.giftBalance,
+              withdrawEnabled: w.withdrawEnabled,
+              wasGifted: w.wasGifted,
+              lastGiftAt: w.lastGiftAt
+                ? adminOpsService.formatActivityTime(w.lastGiftAt)
+                : undefined,
+            })),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMonetizationWallets([]);
+      })
+      .finally(() => {
+        if (!cancelled) setMonetizationLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, monetizationSearch]);
+
   const handleLogout = () => {
     adminAuthService.signOut();
     onLogout();
   };
 
-  const switchSection = (nextSection: AdminSectionId) => {
-    if (nextSection === activeSection) return;
+  const switchView = (nextView: AdminViewId) => {
+    if (nextView === activeView) return;
     setIsNavigating(true);
-    setActiveSection(nextSection);
+    setActiveView(nextView);
     window.setTimeout(() => {
-      onNavigate(SECTION_PATHS[nextSection]);
+      onNavigate(VIEW_PATHS[nextView]);
       setIsNavigating(false);
     }, 160);
   };
 
   const renderSectionBody = () => {
-    if (activeSection === 'command') {
+    if (isQuickToolView(activeView) && isHrQuickTool(activeView)) {
+      return (
+        <AdminHrHub
+          initialTab={hrTabFromTool(activeView)}
+          onPendingCountsChange={({ leaves, claims }) => {
+            setPendingHrLeaves(leaves);
+            setPendingHrClaims(claims);
+          }}
+        />
+      );
+    }
+
+    if (isQuickToolView(activeView) && isOpsQuickTool(activeView)) {
+      return (
+        <AdminQuickToolsPage
+          toolId={activeView}
+          onOpenSupport={() => switchView('comms')}
+          onOpenModeration={() => switchView('content')}
+          onOpenUsers={() => switchView('users')}
+          onOpenHr={() => switchView('employees')}
+          onOpenAi={() => switchView('ai')}
+        />
+      );
+    }
+
+    if (activeView === 'settings') {
+      return (
+        <section className="admin-settings">
+          <div className="admin-surface-card admin-settings__card">
+            <h4>Admin account</h4>
+            {adminOperator ? (
+              <dl className="admin-settings__dl">
+                <div>
+                  <dt>Name</dt>
+                  <dd>{adminOperator.displayName}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{adminOperator.email}</dd>
+                </div>
+                <div>
+                  <dt>Role</dt>
+                  <dd>Super Admin</dd>
+                </div>
+              </dl>
+            ) : (
+              <p>Loading account…</p>
+            )}
+          </div>
+
+          <div className="admin-surface-card admin-settings__card">
+            <h4>Workspace</h4>
+            <p>Full-width mode and quick navigation are available from the top bar and right rail.</p>
+            <div className="admin-settings__actions">
+              <button type="button" className="admin-settings__btn" onClick={() => switchView('notifications')}>
+                Open notifications
+              </button>
+              <button type="button" className="admin-settings__btn" onClick={() => switchView('export')}>
+                Data export
+              </button>
+              <button type="button" className="admin-settings__btn" onClick={() => switchView('broadcast')}>
+                Push broadcast
+              </button>
+            </div>
+          </div>
+
+          <div className="admin-surface-card admin-settings__card">
+            <h4>Database setup</h4>
+            <p>If HR or ops features show schema errors, run these SQL migrations in Supabase (in order):</p>
+            <ol className="admin-settings__sql-list">
+              <li><code>042_admin_hr.sql</code> — HR tables</li>
+              <li><code>046_hr_repair.sql</code> — column repairs</li>
+              <li><code>047_hr_role_seeds.sql</code> — role catalog</li>
+              <li><code>048_admin_ops.sql</code> — broadcasts & monetization</li>
+            </ol>
+          </div>
+
+          <div className="admin-surface-card admin-settings__card admin-settings__card--danger">
+            <h4>Session</h4>
+            <p>Sign out of the admin dashboard on this device.</p>
+            <button type="button" className="admin-settings__btn admin-settings__btn--logout" onClick={handleLogout}>
+              Log out
+            </button>
+          </div>
+        </section>
+      );
+    }
+
+    if (activeView === 'command') {
+      const commandKpis = commandKpisFromOverview(commandOverview);
       return (
         <section className="admin-overview">
           <div className="admin-stat-grid admin-stat-grid--4">
-            {COMMAND_KPIS.map((kpi) => (
+            {commandKpis.map((kpi) => (
               <article key={kpi.label} className={`admin-stat-card admin-stat-card--${kpi.tone}`}>
                 <div className="admin-stat-card__icon" aria-hidden>
                   <KpiStatIcon tone={kpi.tone} />
@@ -779,944 +797,15 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       );
     }
 
-    if (activeSection === 'users') {
-      const pagedRows = adminUsers;
-      const filteredLikers = LIKER_PROFILES.filter((liker) => {
-        const search = likesSearch.trim().toLowerCase();
-        const matchesSearch =
-          !search || liker.name.toLowerCase().includes(search) || liker.handle.toLowerCase().includes(search);
-        if (!matchesSearch) return false;
-        if (likesFilter === 'verified') return liker.verified;
-        if (likesFilter === 'female') return liker.gender.toLowerCase() === 'female';
-        if (likesFilter === 'male') return liker.gender.toLowerCase() === 'male';
-        return true;
-      });
-      const totalPages = adminUsersTotalPages;
-      const currentPage = Math.min(usersPage, totalPages);
-      const pageStart = adminUsersTotal === 0 ? 0 : (currentPage - 1) * 10 + 1;
-      const pageEnd = Math.min(currentPage * 10, adminUsersTotal);
-      const hasInlineUsersPage = Boolean(
-        likesPanelRowName || selectedFullProfile || selectedViewedUser || selectedPlanUser || quizModalUser || activityModalUser,
-      );
-
-      return (
-        <section className="admin-customers-card">
-          {!hasInlineUsersPage && (
-            <>
-              <div className="admin-stat-grid admin-stat-grid--3">
-                <article className="admin-stat-card admin-stat-card--blue">
-                  <div className="admin-stat-card__icon" aria-hidden>
-                    <KpiStatIcon tone="blue" />
-                  </div>
-                  <div className="admin-stat-card__body">
-                    <strong>{adminUsersSummary?.activeUsers.toLocaleString() ?? '—'}</strong>
-                    <p>Active users</p>
-                    <span className="admin-stat-card__meta admin-stat-card__meta--up">Live from database</span>
-                  </div>
-                </article>
-                <article className="admin-stat-card admin-stat-card--green">
-                  <div className="admin-stat-card__icon" aria-hidden>
-                    <KpiStatIcon tone="green" />
-                  </div>
-                  <div className="admin-stat-card__body">
-                    <strong>{adminUsersSummary?.subscribedMembers.toLocaleString() ?? '—'}</strong>
-                    <p>Subscribed members</p>
-                    <span className="admin-stat-card__meta">Platinum members</span>
-                  </div>
-                </article>
-                <article className="admin-stat-card admin-stat-card--red">
-                  <div className="admin-stat-card__icon" aria-hidden>
-                    <KpiStatIcon tone="red" />
-                  </div>
-                  <div className="admin-stat-card__body">
-                    <strong>{adminUsersSummary?.highMatchUsers.toLocaleString() ?? '—'}</strong>
-                    <p>High match users</p>
-                    <span className="admin-stat-card__meta">10+ matches</span>
-                  </div>
-                </article>
-              </div>
-
-              <div className="admin-filter-bar">
-                <label className="admin-filter-bar__search">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="M20 20l-3-3" />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search by name, email, or handle..."
-                    value={usersSearch}
-                    onChange={(e) => {
-                      setUsersSearch(e.target.value);
-                      setUsersPage(1);
-                    }}
-                  />
-                </label>
-                <select className="admin-filter-bar__select" defaultValue="all" aria-label="Status filter">
-                  <option value="all">All status</option>
-                  <option value="active">Active</option>
-                  <option value="restricted">Restricted</option>
-                </select>
-                <select className="admin-filter-bar__select" defaultValue="all" aria-label="Record filter">
-                  <option value="all">All records</option>
-                  <option value="verified">Verified</option>
-                  <option value="platinum">Platinum</option>
-                </select>
-              </div>
-
-              <div className="admin-customers-card__segments">
-                <button
-                  type="button"
-                  className={usersView === 'all' ? 'is-active' : ''}
-                  onClick={() => setUsersView('all')}
-                >
-                  All users
-                </button>
-                <button
-                  type="button"
-                  className={usersView === 'subscribed' ? 'is-active' : ''}
-                  onClick={() => setUsersView('subscribed')}
-                >
-                  Subscribed users
-                </button>
-                <button
-                  type="button"
-                  className={usersView === 'new' ? 'is-active' : ''}
-                  onClick={() => setUsersView('new')}
-                >
-                  New users
-                </button>
-                <button
-                  type="button"
-                  className={usersView === 'matches' ? 'is-active' : ''}
-                  onClick={() => setUsersView('matches')}
-                >
-                  Most matches
-                </button>
-                <button
-                  type="button"
-                  className={usersView === 'top' ? 'is-active' : ''}
-                  onClick={() => setUsersView('top')}
-                >
-                  Top users
-                </button>
-              </div>
-            </>
-          )}
-
-          {!hasInlineUsersPage && (
-            <div className="admin-customers-card__table-panel admin-surface-card">
-              <header className="admin-surface-card__head admin-surface-card__head--table">
-                <h4>Member records ({adminUsersTotal})</h4>
-              </header>
-              {adminUsersError ? (
-                <p className="admin-customers-card__error">{adminUsersError}</p>
-              ) : null}
-              <div className="admin-users-table-wrap admin-users-table-wrap--customers">
-                <table className="admin-users-table admin-users-table--customers">
-                  <thead>
-                    <tr>
-                      <th>Full Name</th>
-                      <th>Likes</th>
-                      <th>Age</th>
-                      <th>Gender</th>
-                      <th>Total Matches</th>
-                      <th>Plan</th>
-                      <th>Last Seen</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {adminUsersLoading ? (
-                      <tr>
-                        <td colSpan={8}>
-                          <p className="admin-customers-card__loading">Loading members…</p>
-                        </td>
-                      </tr>
-                    ) : null}
-                    {!adminUsersLoading && pagedRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={8}>
-                          <p className="admin-customers-card__empty">No members found for this filter.</p>
-                        </td>
-                      </tr>
-                    ) : null}
-                    {!adminUsersLoading &&
-                      pagedRows.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <div className="admin-users-table__customer">
-                            <img
-                              src={row.avatarUrl ?? APP_IMAGES.logo}
-                              alt={`${row.name} profile`}
-                              onError={(event) => {
-                                event.currentTarget.onerror = null;
-                                event.currentTarget.src = APP_IMAGES.logo;
-                              }}
-                            />
-                            <div>
-                              <strong>{row.name}</strong>
-                              <span>{row.handle}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="admin-users-table__likes"
-                            onClick={() => {
-                              setLikesPanelRowName(row.name);
-                              setSelectedLiker(LIKER_PROFILES[0] ?? null);
-                              setLikesSearch('');
-                              setLikesFilter('all');
-                            }}
-                            aria-label={`Open likes list for ${row.name}`}
-                          >
-                            <span className="admin-users-table__likes-icon" aria-hidden>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
-                                <path d="M12 20s-6.8-4.4-8.8-8A5.4 5.4 0 014.8 4.8 5.5 5.5 0 0112 6.9a5.5 5.5 0 017.2-2.1A5.4 5.4 0 0120.8 12c-2 3.6-8.8 8-8.8 8z" />
-                              </svg>
-                            </span>
-                            {row.likes}
-                          </button>
-                        </td>
-                        <td>
-                          <span className="admin-users-table__metric admin-users-table__metric--age">
-                            {row.age ?? '—'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="admin-users-table__metric admin-users-table__metric--gender">{row.gender}</span>
-                        </td>
-                        <td>
-                          <span className="admin-users-table__metric admin-users-table__metric--matches">{row.matches}</span>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className={`admin-pill admin-pill--plan admin-pill--${row.plan.toLowerCase()} admin-pill--interactive`}
-                            onClick={() => setSelectedPlanUser({ name: row.name, plan: row.plan as 'Platinum' | 'Free' })}
-                          >
-                            {row.plan}
-                          </button>
-                        </td>
-                        <td className="admin-users-table__last-seen">{row.lastSeen}</td>
-                        <td>
-                          <div className="admin-users-table__actions">
-                            <button type="button" aria-label="View user" onClick={() => setSelectedViewedUser(row)}>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
-                                <circle cx="12" cy="12" r="2.6" />
-                              </svg>
-                            </button>
-                            <button type="button" aria-label="Message user">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                              </svg>
-                            </button>
-                            <button type="button" className="admin-users-table__danger" aria-label="Ban user">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                <circle cx="12" cy="12" r="8" />
-                                <path d="M7 17l10-10" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="admin-users-table__pagination">
-                <p>
-                  Showing <strong>{adminUsersTotal === 0 ? 0 : pageStart}</strong>-
-                  <strong>{pageEnd}</strong> of <strong>{adminUsersTotal}</strong>
-                </p>
-                <div>
-                  <button type="button" disabled={currentPage <= 1} onClick={() => setUsersPage((p) => Math.max(1, p - 1))}>
-                    Previous
-                  </button>
-                  <span>
-                    Page {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setUsersPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          {likesPanelRowName && (
-            <div className="admin-likes-modal" role="dialog" aria-modal="true" aria-label="Users who liked this profile">
-              <button type="button" className="admin-likes-modal__backdrop" onClick={() => setLikesPanelRowName(null)} />
-              <div className="admin-likes-modal__card">
-                <header className="admin-likes-modal__head">
-                  <div>
-                    <h4>{likesPanelRowName} likes</h4>
-                    <p>People who liked this profile. Click any card to view full details.</p>
-                  </div>
-                  <button type="button" onClick={() => setLikesPanelRowName(null)} aria-label="Close likes panel">
-                    ×
-                  </button>
-                </header>
-
-                <div className="admin-likes-modal__stats">
-                  <article>
-                    <span>Total Likes</span>
-                    <strong>{LIKER_PROFILES.length}</strong>
-                  </article>
-                  <article>
-                    <span>Verified</span>
-                    <strong>{LIKER_PROFILES.filter((liker) => liker.verified).length}</strong>
-                  </article>
-                  <article>
-                    <span>Platinum Mode</span>
-                    <strong>{LIKER_PROFILES.filter((liker) => liker.plan === 'Platinum').length}</strong>
-                  </article>
-                </div>
-
-                <div className="admin-likes-modal__toolbar">
-                  <input
-                    value={likesSearch}
-                    onChange={(event) => setLikesSearch(event.target.value)}
-                    placeholder="Search name or @handle"
-                  />
-                  <div className="admin-likes-modal__filters">
-                    <button
-                      type="button"
-                      className={likesFilter === 'all' ? 'is-active' : ''}
-                      onClick={() => setLikesFilter('all')}
-                    >
-                      All
-                    </button>
-                    <button
-                      type="button"
-                      className={likesFilter === 'verified' ? 'is-active' : ''}
-                      onClick={() => setLikesFilter('verified')}
-                    >
-                      Verified
-                    </button>
-                    <button
-                      type="button"
-                      className={likesFilter === 'female' ? 'is-active' : ''}
-                      onClick={() => setLikesFilter('female')}
-                    >
-                      Female
-                    </button>
-                    <button
-                      type="button"
-                      className={likesFilter === 'male' ? 'is-active' : ''}
-                      onClick={() => setLikesFilter('male')}
-                    >
-                      Male
-                    </button>
-                  </div>
-                </div>
-
-                <div className="admin-likes-modal__body">
-                  <aside className="admin-likes-modal__list">
-                    {filteredLikers.map((liker) => (
-                      <button
-                        key={liker.id}
-                        type="button"
-                        className={`admin-likes-modal__person ${selectedLiker?.id === liker.id ? 'is-active' : ''}`}
-                        onClick={() => setSelectedLiker(liker)}
-                      >
-                        <img
-                          src={liker.avatar ?? APP_IMAGES.logo}
-                          alt={`${liker.name} profile`}
-                          onError={(event) => {
-                            event.currentTarget.onerror = null;
-                            event.currentTarget.src = APP_IMAGES.logo;
-                          }}
-                        />
-                        <div>
-                          <strong>{liker.name}</strong>
-                          <span>{liker.handle} · {liker.lastActive}</span>
-                        </div>
-                        {liker.verified && <em>Verified</em>}
-                      </button>
-                    ))}
-                    {filteredLikers.length === 0 && <p className="admin-likes-modal__empty">No profiles found.</p>}
-                  </aside>
-
-                  <section className="admin-likes-modal__details">
-                    {selectedLiker ? (
-                      <>
-                        <div className="admin-likes-modal__profile-head">
-                          <img
-                            src={selectedLiker.avatar ?? APP_IMAGES.logo}
-                            alt={`${selectedLiker.name} profile`}
-                            onError={(event) => {
-                              event.currentTarget.onerror = null;
-                              event.currentTarget.src = APP_IMAGES.logo;
-                            }}
-                          />
-                          <div>
-                            <h5>{selectedLiker.name}</h5>
-                            <p>{selectedLiker.handle}</p>
-                          </div>
-                          {selectedLiker.verified && <span className="admin-likes-modal__verified-chip">Verified</span>}
-                        </div>
-                        <ul className="admin-likes-modal__info-grid">
-                          <li>
-                            <span>
-                              <i aria-hidden>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                  <rect x="4" y="5" width="16" height="15" rx="2" />
-                                  <path d="M8 3v4M16 3v4M4 10h16" />
-                                </svg>
-                              </i>
-                              Age
-                            </span>
-                            <strong>{selectedLiker.age}</strong>
-                          </li>
-                          <li>
-                            <span>
-                              <i aria-hidden>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                  <circle cx="10" cy="14" r="5" />
-                                  <path d="M14 10l6-6M15.5 4H20v4.5" />
-                                </svg>
-                              </i>
-                              Gender
-                            </span>
-                            <strong>{selectedLiker.gender}</strong>
-                          </li>
-                          <li>
-                            <span>
-                              <i aria-hidden>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                  <path d="M12 21s-6-5.4-6-10a6 6 0 1112 0c0 4.6-6 10-6 10z" />
-                                  <circle cx="12" cy="11" r="2.4" />
-                                </svg>
-                              </i>
-                              City
-                            </span>
-                            <strong>{selectedLiker.city}</strong>
-                          </li>
-                          <li>
-                            <span>
-                              <i aria-hidden>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                  <circle cx="12" cy="12" r="8" />
-                                  <path d="M12 7v5l3 2" />
-                                </svg>
-                              </i>
-                              Last Active
-                            </span>
-                            <strong>{selectedLiker.lastActive}</strong>
-                          </li>
-                          <li>
-                            <span>
-                              <i aria-hidden>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                  <path d="M12 3l5 4-5 14L7 7l5-4z" />
-                                </svg>
-                              </i>
-                              Mode
-                            </span>
-                            <strong>{selectedLiker.plan}</strong>
-                          </li>
-                          <li>
-                            <span>
-                              <i aria-hidden>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                  <rect x="7" y="3.5" width="10" height="17" rx="2" />
-                                  <path d="M10 6h4M11 17h2" />
-                                </svg>
-                              </i>
-                              Hours / Day
-                            </span>
-                            <strong>{Number(selectedLiker.hoursPerDay ?? 0).toFixed(1)}h</strong>
-                          </li>
-                        </ul>
-                        <p className="admin-likes-modal__about">{selectedLiker.about}</p>
-                        <div className="admin-likes-modal__detail-actions">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLikesPanelRowName(null);
-                              setSelectedFullProfile(selectedLiker);
-                            }}
-                          >
-                            View Full Profile
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCommsProfile(selectedLiker);
-                              setLikesPanelRowName(null);
-                              switchSection('comms');
-                            }}
-                          >
-                            Send Message
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <p>Select a profile to view details.</p>
-                    )}
-                  </section>
-                </div>
-              </div>
-            </div>
-          )}
-          {selectedFullProfile && (
-            <div className="admin-profile-preview-modal" role="dialog" aria-modal="true" aria-label="Full profile preview">
-              <button
-                type="button"
-                className="admin-profile-preview-modal__backdrop"
-                onClick={() => setSelectedFullProfile(null)}
-              />
-              <article className="admin-profile-preview-modal__card">
-                <button
-                  type="button"
-                  className="admin-profile-preview-modal__close"
-                  onClick={() => setSelectedFullProfile(null)}
-                  aria-label="Close profile preview"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-                    <path d="M6 6l12 12M18 6L6 18" />
-                  </svg>
-                </button>
-                <div className="admin-profile-preview-modal__hero">
-                  <img
-                    src={selectedFullProfile.avatar ?? APP_IMAGES.logo}
-                    alt={`${selectedFullProfile.name} profile`}
-                    onError={(event) => {
-                      event.currentTarget.onerror = null;
-                      event.currentTarget.src = APP_IMAGES.logo;
-                    }}
-                  />
-                </div>
-                <div className="admin-profile-preview-modal__body">
-                  <h4>{selectedFullProfile.name}</h4>
-                  <p>{selectedFullProfile.handle}</p>
-                  <div className="admin-profile-preview-modal__chips">
-                    <span>{selectedFullProfile.age}</span>
-                    <span>{selectedFullProfile.gender}</span>
-                    <span>{selectedFullProfile.city}</span>
-                    <span>{selectedFullProfile.plan}</span>
-                  </div>
-                  <p className="admin-profile-preview-modal__about">{selectedFullProfile.about}</p>
-                </div>
-              </article>
-            </div>
-          )}
-          {avatarFullView && (
-            <div
-              className="admin-avatar-fullview"
-              role="dialog"
-              aria-modal="true"
-              aria-label={`${avatarFullView.name} profile photo`}
-            >
-              <button
-                type="button"
-                className="admin-avatar-fullview__backdrop"
-                aria-label="Close full photo view"
-                onClick={() => setAvatarFullView(null)}
-              />
-              <figure className="admin-avatar-fullview__frame">
-                <button
-                  type="button"
-                  className="admin-avatar-fullview__close"
-                  aria-label="Close full photo view"
-                  onClick={() => setAvatarFullView(null)}
-                >
-                  ×
-                </button>
-                <img
-                  src={avatarFullView.src}
-                  alt={avatarFullView.name}
-                  onError={(event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.src = APP_IMAGES.logo;
-                  }}
-                />
-                <figcaption>{avatarFullView.name}</figcaption>
-              </figure>
-            </div>
-          )}
-          {selectedViewedUser && (
-            <div className="admin-user-view-modal" role="dialog" aria-modal="true" aria-label="User full information">
-              <button type="button" className="admin-user-view-modal__backdrop" onClick={() => setSelectedViewedUser(null)} />
-              <article className="admin-user-view-modal__card">
-                <button type="button" className="admin-user-view-modal__close" onClick={() => setSelectedViewedUser(null)} aria-label="Close user details">
-                  ×
-                </button>
-                <div className="admin-user-view-modal__cover" />
-                <div className="admin-user-view-modal__center-profile">
-                  <button
-                    type="button"
-                    className="admin-user-view-modal__avatar-btn"
-                    aria-label={`View ${selectedViewedUser.name} profile photo full size`}
-                    onClick={() =>
-                      setAvatarFullView({
-                        src: selectedViewedUser.avatarUrl ?? APP_IMAGES.logo,
-                        name: selectedViewedUser.name,
-                      })
-                    }
-                  >
-                    <img
-                      src={selectedViewedUser.avatarUrl ?? APP_IMAGES.logo}
-                      alt=""
-                      onError={(event) => {
-                        event.currentTarget.onerror = null;
-                        event.currentTarget.src = APP_IMAGES.logo;
-                      }}
-                    />
-                    <span className="admin-user-view-modal__avatar-btn-label">View full</span>
-                  </button>
-                  <h4>{selectedViewedUser.name}</h4>
-                  <p>{selectedViewedUser.handle}</p>
-                </div>
-                <div className="admin-user-view-modal__stats">
-                  <article className="admin-user-view-modal__stat">
-                    <strong>{selectedViewedUser.likes}</strong>
-                    <span>Likes</span>
-                  </article>
-                  <article className="admin-user-view-modal__stat">
-                    <strong>{selectedViewedUser.matches}</strong>
-                    <span>Matches</span>
-                  </article>
-                  <div className="admin-user-view-modal__actions">
-                  <button
-                    type="button"
-                    className="admin-user-view-modal__view-quiz admin-user-view-modal__view-quiz--posts"
-                    onClick={() => {
-                      setActivityModalTab('posts');
-                      setSelectedViewedUser(null);
-                      setActivityModalUser(selectedViewedUser);
-                    }}
-                  >
-                    View Posts
-                  </button>
-                  </div>
-                </div>
-                <div className="admin-user-view-modal__body">
-                  <section className="admin-user-view-modal__panel">
-                    <h5>Profile Information</h5>
-                    <ul>
-                      <li>
-                        <span>Plan</span>
-                        <strong>{selectedViewedUser.plan}</strong>
-                      </li>
-                      <li>
-                        <span>Age</span>
-                        <strong>{selectedViewedUser.age}</strong>
-                      </li>
-                      <li>
-                        <span>Gender</span>
-                        <strong>{selectedViewedUser.gender}</strong>
-                      </li>
-                      <li>
-                        <span>Total Matches</span>
-                        <strong>{selectedViewedUser.matches}</strong>
-                      </li>
-                      <li>
-                        <span>Last Seen</span>
-                        <strong>{selectedViewedUser.lastSeen}</strong>
-                      </li>
-                    </ul>
-                  </section>
-                  <section className="admin-user-view-modal__panel">
-                    <h5>Quiz Information</h5>
-                    <ul>
-                      <li>
-                        <span>Completion</span>
-                        <strong>{selectedViewedUser.quizCompletion}%</strong>
-                      </li>
-                      <li>
-                        <span>Interested In</span>
-                        <strong>{selectedViewedUser.gender === 'Female' ? 'Men' : 'Women'}</strong>
-                      </li>
-                      <li>
-                        <span>Age Preference</span>
-                        <strong>
-                          {selectedViewedUser.age != null
-                            ? `${Math.max(18, selectedViewedUser.age - 5)}-${selectedViewedUser.age + 5}`
-                            : '—'}
-                        </strong>
-                      </li>
-                      <li>
-                        <span>Relationship Goal</span>
-                        <strong>{selectedViewedUser.plan === 'Platinum' ? 'Serious dating' : 'Open to connect'}</strong>
-                      </li>
-                      <li>
-                        <span>Top Interests</span>
-                        <strong>{selectedViewedUser.plan === 'Platinum' ? 'Travel, Fitness, Music' : 'Movies, Coffee, Chat'}</strong>
-                      </li>
-                    </ul>
-                  </section>
-                </div>
-              </article>
-            </div>
-          )}
-          {selectedPlanUser && (
-            <div className="admin-plan-modal" role="dialog" aria-modal="true" aria-label="User subscription plan details">
-              <button type="button" className="admin-plan-modal__backdrop" onClick={() => setSelectedPlanUser(null)} />
-              <article className="admin-plan-modal__card">
-                <header className="admin-plan-modal__head">
-                  <div>
-                    <h4>{selectedPlanUser.name} subscription</h4>
-                    <p>Current plan: {selectedPlanUser.plan}</p>
-                  </div>
-                  <button type="button" onClick={() => setSelectedPlanUser(null)} aria-label="Close subscription details">
-                    ×
-                  </button>
-                </header>
-
-                {selectedPlanUser.plan === 'Platinum' ? (
-                  <>
-                    <section className="admin-plan-modal__plans">
-                      {PLATINUM_PLANS.map((plan) => (
-                        <article key={plan.id} className={plan.popular ? 'is-popular' : ''}>
-                          <strong>{plan.label}</strong>
-                          <p>
-                            {plan.price} <span>{plan.period}</span>
-                          </p>
-                          {plan.badge && <em>{plan.badge}</em>}
-                        </article>
-                      ))}
-                    </section>
-                    <ul className="admin-plan-modal__features">
-                      {PLATINUM_FEATURES.slice(0, 6).map((feature) => (
-                        <li key={feature.id}>{feature.title}</li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <section className="admin-plan-modal__free">
-                    <h5>Free mode package</h5>
-                    <ul>
-                      <li>Limited daily likes and swipes</li>
-                      <li>Basic profile visibility</li>
-                      <li>Standard matching queue</li>
-                      <li>Core messaging access</li>
-                      <li>Upgrade path to Platinum anytime</li>
-                    </ul>
-                  </section>
-                )}
-              </article>
-            </div>
-          )}
-          {quizModalUser && (
-            <div className="admin-quiz-modal" role="dialog" aria-modal="true" aria-label="Quiz answers">
-              <button type="button" className="admin-quiz-modal__backdrop" onClick={() => setQuizModalUser(null)} />
-              <article className="admin-quiz-modal__card">
-                <header>
-                  <h4>{quizModalUser.name} quiz answers</h4>
-                  <button type="button" onClick={() => setQuizModalUser(null)} aria-label="Close quiz answers">
-                    ×
-                  </button>
-                </header>
-                <ul>
-                  {quizModalUser.quizAnswers.map((item, index) => (
-                    <li key={item.question}>
-                      <p>
-                        <span>Q{index + 1}.</span> {item.question}
-                      </p>
-                      <strong>{item.answer}</strong>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            </div>
-          )}
-          {activityModalUser && (
-            <div className="admin-activity-modal" role="dialog" aria-modal="true" aria-label="Posts and meetings">
-              <button type="button" className="admin-activity-modal__backdrop" onClick={() => setActivityModalUser(null)} />
-              <article className="admin-activity-modal__card">
-                <header>
-                  <h4>{activityModalUser.name} activity</h4>
-                  <button type="button" onClick={() => setActivityModalUser(null)} aria-label="Close activity">
-                    ×
-                  </button>
-                </header>
-                <div className="admin-activity-modal__tabs">
-                  <button
-                    type="button"
-                    className={activityModalTab === 'posts' ? 'is-active' : ''}
-                    onClick={() => setActivityModalTab('posts')}
-                  >
-                    Posts
-                  </button>
-                  <button
-                    type="button"
-                    className={activityModalTab === 'meetings' ? 'is-active' : ''}
-                    onClick={() => setActivityModalTab('meetings')}
-                  >
-                    Meetings
-                  </button>
-                </div>
-                {activityModalTab === 'posts' ? (
-                  <section>
-                    <h5>Posts</h5>
-                    <div className="admin-activity-modal__posts-grid">
-                      {activityModalUser.posts.slice(0, 6).map((src, index) => (
-                        <article key={`${activityModalUser.id}-post-${index}`} className="admin-activity-modal__post-card">
-                          <img src={src} alt="" />
-                          <button
-                            type="button"
-                            className="admin-activity-modal__post-menu-trigger"
-                            onClick={() =>
-                              setActivePostMenuId((prev) =>
-                                prev === `${activityModalUser.id}-post-${index}` ? null : `${activityModalUser.id}-post-${index}`,
-                              )
-                            }
-                            aria-label="Post moderation options"
-                          >
-                            ⋯
-                          </button>
-                          {activePostMenuId === `${activityModalUser.id}-post-${index}` && (
-                            <div className="admin-activity-modal__post-menu">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPostModerationNotice('Warning sent to user for this post.');
-                                  setActivePostMenuId(null);
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                  <path d="M12 3l9 16H3L12 3z" />
-                                  <path d="M12 9v4M12 16h.01" />
-                                </svg>
-                                Warn user
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPostModerationNotice('Post removed by admin moderation.');
-                                  setActivePostMenuId(null);
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                  <path d="M4 7h16M9 7V5h6v2M8 7l1 12h6l1-12" />
-                                </svg>
-                                Delete post
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPostModerationNotice('Post hidden from public feed.');
-                                  setActivePostMenuId(null);
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
-                                  <path d="M4 20L20 4" />
-                                </svg>
-                                Hide from feed
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPostModerationNotice('Escalated to Trust & Safety queue.');
-                                  setActivePostMenuId(null);
-                                }}
-                              >
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                                  <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
-                                  <path d="M9 12l2 2 4-4" />
-                                </svg>
-                                Escalate review
-                              </button>
-                            </div>
-                          )}
-                        </article>
-                      ))}
-                    </div>
-                    {postModerationNotice && <p>{postModerationNotice}</p>}
-                  </section>
-                ) : (
-                  <section>
-                    <h5>Date Meetings</h5>
-                    {activityModalUser.meetings?.length ? (
-                      <div className="admin-activity-modal__meetings">
-                        {activityModalUser.meetings.map((meeting, index) => {
-                          const [title, timeLabel] = meeting.split(' - ');
-                          const date: OnlineDate = {
-                            id: `${activityModalUser.handle}-meeting-${index}`,
-                            title,
-                            topic: timeLabel ?? 'Scheduled meetup',
-                            hostName: activityModalUser.name,
-                            hostAvatar: activityModalUser.avatarUrl ?? APP_IMAGES.logo,
-                            status: 'scheduled',
-                            visibility: 'private',
-                            accessCode: `LVY${(index + 1).toString().padStart(3, '0')}`,
-                            participantCount: 2,
-                            maxParticipants: 2,
-                            startsInMinutes: 45 + index * 15,
-                            coverImage:
-                              index % 2 === 0
-                                ? pickMockFeedImage(2)
-                                : pickMockFeedImage(3),
-                            tags: ['dating', 'vibes'],
-                          };
-                          return (
-                            <div key={date.id} className="admin-activity-modal__meeting-admin-card">
-                              <OnlineDateCard
-                                date={date}
-                                isJoining={joiningMeetingId === date.id}
-                                onJoin={() => {
-                                  setJoiningMeetingId(date.id);
-                                  window.sessionStorage.setItem('lavey:adminTargetNav', 'rooms');
-                                  storePendingMeetupCode(date.accessCode);
-                                  onNavigate('/');
-                                }}
-                                onCopyCode={(code) => setCopiedMeetingCode(code)}
-                                onCopyLink={(link) => void navigator.clipboard?.writeText(link)}
-                              />
-                              <div className="admin-activity-modal__meeting-actions">
-                                <button
-                                  type="button"
-                                  onClick={() => setMeetingModerationNotice(`Meeting "${date.title}" opened for edit.`)}
-                                >
-                                  Edit meeting
-                                </button>
-                                <button
-                                  type="button"
-                                  className="is-danger"
-                                  onClick={() => setMeetingModerationNotice(`Meeting "${date.title}" deleted by admin.`)}
-                                >
-                                  Delete meeting
-                                </button>
-                                <button
-                                  type="button"
-                                  className="is-warning"
-                                  onClick={() => setMeetingModerationNotice(`Meeting "${date.title}" reported for review.`)}
-                                >
-                                  Report meeting
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p>No date meetings scheduled.</p>
-                    )}
-                    {copiedMeetingCode && <p>Copied room code: {copiedMeetingCode}</p>}
-                    {meetingModerationNotice && <p>{meetingModerationNotice}</p>}
-                  </section>
-                )}
-              </article>
-            </div>
-          )}
-        </section>
-      );
+    if (activeView === 'users') {
+      return <AdminUserManagement onOpenSupport={() => switchView('comms')} />;
     }
 
-    if (activeSection === 'comms') {
+    if (activeView === 'comms') {
       return <AdminSupportInbox />;
     }
 
-    if (activeSection === 'ai') {
+    if (activeView === 'ai') {
       return (
         <section className="admin-ai-overseer-shell">
           <AdminAlgorithmOverseer />
@@ -1724,7 +813,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       );
     }
 
-    if (activeSection === 'experiments') {
+    if (activeView === 'experiments') {
       return (
         <section className="admin-experiment-lab">
           <header className="admin-experiment-lab__head">
@@ -1735,11 +824,11 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
             <div className="admin-experiment-lab__head-stats">
               <article>
                 <span>Active users (30d)</span>
-                <strong>94,320</strong>
+                <strong>{experimentHead.activeUsers30d.toLocaleString()}</strong>
               </article>
               <article>
                 <span>Avg time on platform</span>
-                <strong>6.3h</strong>
+                <strong>{experimentHead.avgHours.toFixed(1)}h</strong>
               </article>
             </div>
           </header>
@@ -1749,339 +838,11 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       );
     }
 
-    if (activeSection === 'content') {
-      const queueStats = { ai: 86, human: 24, reports: 31, appeals: 9, fakeProfiles: 14 };
-
-      const reviewQueue = [
-        ...contentReviewUsers.flatMap((user) =>
-          user.posts.slice(0, 1).map((thumb, postIndex) => ({
-            id: `post-${user.id}-${postIndex}`,
-            type: 'posts' as const,
-            user: user.name,
-            handle: user.handle,
-            thumb,
-            preview: `${user.name} shared a new post`,
-            flags: user.subscribed ? ['subscribed member'] : ['member'],
-            aiScore: user.quizCompletion ?? 72,
-          })),
-        ),
-        ...contentReviewUsers
-          .filter((user) => user.avatarUrl)
-          .slice(0, 8)
-          .map((user) => ({
-            id: `photo-${user.id}`,
-            type: 'photos' as const,
-            user: user.name,
-            handle: user.handle,
-            thumb: user.avatarUrl ?? APP_IMAGES.logo,
-            preview: 'Profile photo update pending review',
-            flags: user.subscribed ? ['subscribed', 'needs review'] : ['needs review'],
-            aiScore: user.quizCompletion ?? 68,
-          })),
-      ];
-
-      const reportedItems = [
-        {
-          id: 'rep-1',
-          type: 'photos',
-          user: '@unknown_za_92',
-          reason: 'Explicit profile photo',
-          severity: 'critical',
-          reports: 17,
-          age: '12m ago',
-        },
-        {
-          id: 'rep-2',
-          type: 'messages',
-          user: '@bobjohnson',
-          reason: 'Harassment in chat after match',
-          severity: 'high',
-          reports: 9,
-          age: '34m ago',
-        },
-        {
-          id: 'rep-3',
-          type: 'bios',
-          user: '@scamwatch_alert',
-          reason: 'Bio asks for money / off-platform payment',
-          severity: 'high',
-          reports: 14,
-          age: '1h ago',
-        },
-        {
-          id: 'rep-4',
-          type: 'posts',
-          user: '@claragarcia',
-          reason: 'Misleading photos / catfish concern',
-          severity: 'medium',
-          reports: 6,
-          age: '2h ago',
-        },
-        {
-          id: 'rep-5',
-          type: 'meetings',
-          user: '@alicesmith',
-          reason: 'Unsafe behavior in video date room',
-          severity: 'critical',
-          reports: 11,
-          age: '22m ago',
-        },
-      ];
-
-      const typeLabel: Record<string, string> = {
-        photos: 'Profile photo',
-        posts: 'Post',
-        bios: 'Bio',
-        messages: 'Chat message',
-        meetings: 'Date meeting',
-      };
-
-      const filteredQueue = reviewQueue.filter((item) => {
-          if (!contentSearch.trim()) return true;
-          const q = contentSearch.toLowerCase();
-          return (
-            item.user.toLowerCase().includes(q) ||
-            item.handle.toLowerCase().includes(q) ||
-            item.preview.toLowerCase().includes(q)
-          );
-        });
-
-      const filteredReports = reportedItems.filter((item) => {
-          if (!contentSearch.trim()) return true;
-          const q = contentSearch.toLowerCase();
-          return item.user.toLowerCase().includes(q) || item.reason.toLowerCase().includes(q);
-        });
-
-      return (
-        <section className="admin-content-moderation">
-          <header className="admin-content-moderation__head">
-            <div>
-              <h3>Content Moderation</h3>
-              <p>
-                Review Lavey dating content — profile photos, posts, bios, chats, and date meetings — before it reaches
-                Discover.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setContentActionNotice('Moderation policy saved for Discover and profile review.')}
-            >
-              Save Moderation Policy
-            </button>
-          </header>
-
-          <div className="admin-content-moderation__stats">
-            <article>
-              <p>AI pre-screen queue</p>
-              <strong>{queueStats.ai}</strong>
-            </article>
-            <article>
-              <p>Human review queue</p>
-              <strong>{queueStats.human}</strong>
-            </article>
-            <article>
-              <p>User reports</p>
-              <strong>{queueStats.reports}</strong>
-            </article>
-            <article>
-              <p>Appeals waiting</p>
-              <strong>{queueStats.appeals}</strong>
-            </article>
-            <article>
-              <p>Suspected fake profiles</p>
-              <strong>{queueStats.fakeProfiles}</strong>
-            </article>
-          </div>
-
-          <div className="admin-content-moderation__toolbar">
-            <input
-              type="text"
-              placeholder="Search user, handle, report reason..."
-              value={contentSearch}
-              onChange={(e) => setContentSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="admin-content-moderation__grid">
-            <article className="admin-content-moderation__card admin-content-moderation__card--queue">
-              <h4>Review Queue</h4>
-              <div className="admin-content-moderation__queue-grid">
-                {filteredQueue.map((item) => (
-                  <div key={item.id} className="admin-content-moderation__queue-card">
-                    <div className="admin-content-moderation__thumb">
-                      <img
-                        src={item.thumb}
-                        alt=""
-                        onError={(event) => {
-                          event.currentTarget.onerror = null;
-                          event.currentTarget.src = APP_IMAGES.logo;
-                        }}
-                      />
-                      <span>{typeLabel[item.type]}</span>
-                    </div>
-                    <div className="admin-content-moderation__queue-body">
-                      <strong>
-                        {item.user} · {item.handle}
-                      </strong>
-                      <p>{item.preview}</p>
-                      <div className="admin-content-moderation__flags">
-                        {item.flags.map((flag) => (
-                          <span key={flag}>{flag}</span>
-                        ))}
-                        <span className="admin-content-moderation__score">AI score {item.aiScore}</span>
-                      </div>
-                      <div className="admin-content-moderation__queue-actions">
-                        <button
-                          type="button"
-                          onClick={() => setContentActionNotice(`Approved ${typeLabel[item.type]} for ${item.handle}`)}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="is-danger"
-                          onClick={() => setContentActionNotice(`Removed ${typeLabel[item.type]} for ${item.handle}`)}
-                        >
-                          Remove
-                        </button>
-                        <button
-                          type="button"
-                          className="admin-content-moderation__menu-btn"
-                          onClick={() =>
-                            setActiveContentMenuId((prev) => (prev === item.id ? null : item.id))
-                          }
-                        >
-                          More
-                        </button>
-                        {activeContentMenuId === item.id && (
-                          <div className="admin-content-moderation__menu">
-                            <button
-                              type="button"
-                              className="admin-content-moderation__menu-close"
-                              onClick={() => setActiveContentMenuId(null)}
-                              aria-label="Close menu"
-                            >
-                              ×
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setContentActionNotice(`Warning sent to ${item.handle}`);
-                                setActiveContentMenuId(null);
-                              }}
-                            >
-                              Warn user
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setContentActionNotice(`Hidden from Discover: ${item.handle}`);
-                                setActiveContentMenuId(null);
-                              }}
-                            >
-                              Hide from Discover
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setContentActionNotice(`Escalated ${item.handle} to Trust & Safety`);
-                                setActiveContentMenuId(null);
-                              }}
-                            >
-                              Escalate
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {!filteredQueue.length && (
-                  <p className="admin-content-moderation__empty">No items match your search.</p>
-                )}
-              </div>
-            </article>
-
-            <article className="admin-content-moderation__card">
-              <h4>Reported by Members</h4>
-              <ul className="admin-content-moderation__report-list">
-                {filteredReports.map((item) => (
-                  <li
-                    key={item.id}
-                    className={`admin-content-moderation__report admin-content-moderation__report--${item.severity}`}
-                  >
-                    <div>
-                      <strong>
-                        {typeLabel[item.type]} · {item.user}
-                      </strong>
-                      <span>{item.reason}</span>
-                    </div>
-                    <div className="admin-content-moderation__report-meta">
-                      <span
-                        className={`admin-content-moderation__severity admin-content-moderation__severity--${item.severity}`}
-                      >
-                        {item.severity}
-                      </span>
-                      <span>{item.reports} reports</span>
-                      <span>{item.age}</span>
-                    </div>
-                    <div className="admin-content-moderation__report-actions">
-                      <button
-                        type="button"
-                        onClick={() => setContentActionNotice(`Restricted messaging for ${item.user}`)}
-                      >
-                        Restrict chat
-                      </button>
-                      <button
-                        type="button"
-                        className="is-danger"
-                        onClick={() => setContentActionNotice(`Banned ${item.user}`)}
-                      >
-                        Ban account
-                      </button>
-                      <button type="button" onClick={() => setContentActionNotice(`Escalated report ${item.id}`)}>
-                        Escalate
-                      </button>
-                    </div>
-                  </li>
-                ))}
-                {!filteredReports.length && (
-                  <li className="admin-content-moderation__empty">No reports match your search.</li>
-                )}
-              </ul>
-            </article>
-
-            <article className="admin-content-moderation__card">
-              <h4>Enforcement Actions</h4>
-              <div className="admin-content-moderation__actions-grid">
-                <button type="button" onClick={() => setContentActionNotice('Post hidden from Discover feed.')}>
-                  Hide from Discover
-                </button>
-                <button type="button" onClick={() => setContentActionNotice('Profile hidden from matching.')}>
-                  Hide profile
-                </button>
-                <button type="button" onClick={() => setContentActionNotice('Chat restricted for 7 days.')}>
-                  Restrict chat
-                </button>
-                <button type="button" onClick={() => setContentActionNotice('Meeting room access suspended.')}>
-                  Suspend meetings
-                </button>
-                <button type="button" onClick={() => setContentActionNotice('Verification required before re-posting.')}>
-                  Require verification
-                </button>
-                <button type="button" className="is-danger" onClick={() => setContentActionNotice('Account banned.')}>
-                  Ban account
-                </button>
-              </div>
-            </article>
-          </div>
-
-          {contentActionNotice && <p className="admin-content-moderation__notice">{contentActionNotice}</p>}
-        </section>
-      );
+    if (activeView === 'content') {
+      return <AdminContentModeration />;
     }
 
-    if (activeSection === 'monetization') {
+    if (activeView === 'monetization') {
       const filteredWallets = monetizationWallets.filter((wallet) => {
         if (!monetizationSearch.trim()) return true;
         const q = monetizationSearch.toLowerCase();
@@ -2094,39 +855,52 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       const giftPanelUser = monetizationWallets.find((wallet) => wallet.id === giftPanelUserId) ?? null;
 
       const toggleWithdraw = (walletId: string) => {
-        setMonetizationWallets((prev) => {
-          const target = prev.find((wallet) => wallet.id === walletId);
-          if (target) {
-            setMonetizationNotice(
-              target.withdrawEnabled
-                ? `Withdraw disabled for ${target.name}.`
-                : `Withdraw enabled for ${target.name}.`,
-            );
-          }
-          return prev.map((wallet) =>
-            wallet.id === walletId ? { ...wallet, withdrawEnabled: !wallet.withdrawEnabled } : wallet,
+        const target = monetizationWallets.find((wallet) => wallet.id === walletId);
+        if (!target) return;
+        const next = !target.withdrawEnabled;
+        void adminOpsService.patchMonetizationWallet(walletId, { withdrawEnabled: next }).then((updated) => {
+          setMonetizationWallets((prev) =>
+            prev.map((wallet) =>
+              wallet.id === walletId
+                ? {
+                    ...wallet,
+                    withdrawEnabled: updated.withdrawEnabled,
+                  }
+                : wallet,
+            ),
           );
+          setMonetizationNotice(
+            next ? `Withdraw enabled for ${target.name}.` : `Withdraw disabled for ${target.name}.`,
+          );
+        }).catch((err) => {
+          setMonetizationNotice(err instanceof Error ? err.message : 'Could not update wallet.');
         });
       };
 
       const sendGift = () => {
         if (!giftPanelUser) return;
         const amount = Math.max(1, Number(giftAmount) || 0);
-        setMonetizationWallets((prev) =>
-          prev.map((wallet) =>
-            wallet.id === giftPanelUser.id
-              ? {
-                  ...wallet,
-                  giftBalance: wallet.giftBalance + amount,
-                  wasGifted: true,
-                  lastGiftAt: 'Just now',
-                }
-              : wallet,
-          ),
-        );
-        setMonetizationNotice(`Gift of R${amount.toLocaleString()} sent to ${giftPanelUser.name}. They have been marked as gifted.`);
-        setGiftPanelUserId(null);
-        setGiftAmount('100');
+        void adminOpsService.sendAdminGift(giftPanelUser.id, amount).then((updated) => {
+          setMonetizationWallets((prev) =>
+            prev.map((wallet) =>
+              wallet.id === giftPanelUser.id
+                ? {
+                    ...wallet,
+                    giftBalance: updated.giftBalance,
+                    wasGifted: updated.wasGifted,
+                    lastGiftAt: updated.lastGiftAt
+                      ? adminOpsService.formatActivityTime(updated.lastGiftAt)
+                      : 'Just now',
+                  }
+                : wallet,
+            ),
+          );
+          setMonetizationNotice(`Gift of R${amount.toLocaleString()} sent to ${giftPanelUser.name}.`);
+          setGiftPanelUserId(null);
+          setGiftAmount('100');
+        }).catch((err) => {
+          setMonetizationNotice(err instanceof Error ? err.message : 'Gift failed.');
+        });
       };
 
       return (
@@ -2210,7 +984,15 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                 </tr>
               </thead>
               <tbody>
-                {filteredWallets.map((wallet) => (
+                {monetizationLoading ? (
+                  <tr>
+                    <td colSpan={6} className="admin-monetization-lab__empty">
+                      Loading member wallets…
+                    </td>
+                  </tr>
+                ) : null}
+                {!monetizationLoading &&
+                  filteredWallets.map((wallet) => (
                   <tr key={wallet.id} className={wallet.wasGifted ? 'is-gifted' : ''}>
                     <td>
                       <div className="admin-monetization-lab__member">
@@ -2273,7 +1055,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                     </td>
                   </tr>
                 ))}
-                {!filteredWallets.length && (
+                {!monetizationLoading && !filteredWallets.length && (
                   <tr>
                     <td colSpan={6} className="admin-monetization-lab__empty">
                       No members match your search.
@@ -2289,6 +1071,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       );
     }
 
+    const activeModule = MODULES.find((m) => m.id === activeView) ?? MODULES[0];
     return (
       <div className="admin-dash-v2__panels">
         <div className="admin-dash-v2__panel admin-dash-v2__panel--big">
@@ -2315,27 +1098,70 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
   const renderSideRail = (side: 'left' | 'right') => (
     <aside
       className={`admin-dash-v2__rail admin-dash-v2__rail--${side}`}
-      aria-label={side === 'left' ? 'Admin navigation' : 'Admin quick navigation'}
+      aria-label={side === 'left' ? 'Admin navigation' : 'Admin quick tools'}
     >
-      <div className="admin-dash-v2__rail-brand">
-        <img src={APP_IMAGES.logo} alt="" />
-        <strong>Lavey</strong>
-      </div>
-      <nav className="admin-dash-v2__rail-nav">
-        {MODULES.map((item) => (
-          <button
-            key={`${side}-${item.id}`}
-            type="button"
-            className={`admin-dash-v2__rail-item ${activeSection === item.id ? 'admin-dash-v2__rail-item--active' : ''}`}
-            onClick={() => switchSection(item.id)}
-          >
-            <span className="admin-dash-v2__rail-icon" aria-hidden>
-              <MenuIcon kind={item.icon} />
-            </span>
-            <span className="admin-dash-v2__rail-label">{item.label}</span>
-          </button>
-        ))}
-      </nav>
+      {side === 'left' ? (
+        <div className="admin-dash-v2__rail-brand">
+          <img src={APP_IMAGES.logo} alt="" />
+          <strong>Lavey</strong>
+        </div>
+      ) : (
+        <div className="admin-dash-v2__rail-head">
+          <strong>Quick tools</strong>
+        </div>
+      )}
+      {side === 'right'
+        ? RIGHT_RAIL_GROUPS.map((group) => (
+            <div key={group.title} className="admin-dash-v2__rail-group">
+              <div className="admin-dash-v2__rail-group-head">
+                <strong>{group.title}</strong>
+                {group.subtitle ? <span>{group.subtitle}</span> : null}
+              </div>
+              <nav className="admin-dash-v2__rail-nav">
+                {group.items.map((item) => (
+                  <button
+                    key={`right-${item.id}`}
+                    type="button"
+                    className={`admin-dash-v2__rail-item ${activeView === item.id ? 'admin-dash-v2__rail-item--active' : ''}`}
+                    onClick={() => switchView(item.id)}
+                    title={item.sub}
+                  >
+                    <span className="admin-dash-v2__rail-icon" aria-hidden>
+                      <MenuIcon kind={item.icon} />
+                    </span>
+                    <span className="admin-dash-v2__rail-label">{item.label}</span>
+                    {item.id === 'notifications' && attentionCount > 0 ? (
+                      <span className="admin-dash-v2__rail-badge">{attentionCount > 9 ? '9+' : attentionCount}</span>
+                    ) : null}
+                    {item.id === 'leaves' && pendingHrLeaves > 0 ? (
+                      <span className="admin-dash-v2__rail-badge">{pendingHrLeaves > 9 ? '9+' : pendingHrLeaves}</span>
+                    ) : null}
+                    {item.id === 'claims' && pendingHrClaims > 0 ? (
+                      <span className="admin-dash-v2__rail-badge">{pendingHrClaims > 9 ? '9+' : pendingHrClaims}</span>
+                    ) : null}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          ))
+        : null}
+      {side === 'left' ? (
+        <nav className="admin-dash-v2__rail-nav">
+          {MODULES.map((item) => (
+            <button
+              key={`left-${item.id}`}
+              type="button"
+              className={`admin-dash-v2__rail-item ${activeView === item.id ? 'admin-dash-v2__rail-item--active' : ''}`}
+              onClick={() => switchView(item.id)}
+            >
+              <span className="admin-dash-v2__rail-icon" aria-hidden>
+                <MenuIcon kind={item.icon} />
+              </span>
+              <span className="admin-dash-v2__rail-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      ) : null}
       {side === 'right' && adminOperator ? (
         <div className="admin-dash-v2__rail-profile admin-dash-v2__rail-profile--right">
           <div className="admin-dash-v2__rail-profile-avatar" aria-hidden>
@@ -2349,7 +1175,12 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       ) : null}
       {side === 'left' ? (
         <div className="admin-dash-v2__rail-foot">
-          <button type="button" className="admin-dash-v2__rail-item" aria-label="Settings">
+          <button
+            type="button"
+            className={`admin-dash-v2__rail-item ${activeView === 'settings' ? 'admin-dash-v2__rail-item--active' : ''}`}
+            aria-label="Settings"
+            onClick={() => switchView('settings')}
+          >
             <span className="admin-dash-v2__rail-icon" aria-hidden>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="12" cy="12" r="3" />
@@ -2381,7 +1212,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
 
         <div className="admin-dash-v2__workspace">
           <header className="admin-dash-v2__topbar">
-            <p className="admin-dash-v2__topbar-title">{activeModule.label}</p>
+            <p className="admin-dash-v2__topbar-title">{pageMeta.label}</p>
             <div className="admin-dash-v2__topbar-actions">
               <button
                 type="button"
@@ -2397,9 +1228,14 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                   )}
                 </svg>
               </button>
-              <button type="button" className="admin-dash-v2__topbar-btn admin-dash-v2__topbar-btn--bell" aria-label="Notifications">
+              <button
+                type="button"
+                className={`admin-dash-v2__topbar-btn admin-dash-v2__topbar-btn--bell ${activeView === 'notifications' ? 'is-active' : ''}`}
+                aria-label="Notifications"
+                onClick={() => switchView('notifications')}
+              >
                 <MenuIcon kind="bell" />
-                <span className="admin-dash-v2__topbar-dot" aria-hidden />
+                {attentionCount > 0 ? <span className="admin-dash-v2__topbar-dot" aria-hidden /> : null}
               </button>
               <time className="admin-dash-v2__topbar-date" dateTime={new Date().toISOString()}>
                 {formatAdminHeaderDate()}
@@ -2410,15 +1246,10 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
           <div className="admin-dash-v2__content">
             <header className="admin-dash-v2__page-head">
               <div>
-                <p className="admin-dash-v2__breadcrumb">{sectionBreadcrumb(activeSection)}</p>
-                <h1>{activeModule.label}</h1>
-                <p className="admin-dash-v2__page-sub">{activeModule.summary}</p>
+                <p className="admin-dash-v2__breadcrumb">{pageMeta.breadcrumb}</p>
+                <h1>{pageMeta.label}</h1>
+                <p className="admin-dash-v2__page-sub">{pageMeta.summary}</p>
               </div>
-              {activeSection === 'users' && (
-                <button type="button" className="admin-dash-v2__primary-btn">
-                  + Add user
-                </button>
-              )}
             </header>
 
             <div className="admin-dash-v2__main-body">{renderSectionBody()}</div>

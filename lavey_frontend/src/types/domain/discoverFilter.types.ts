@@ -13,6 +13,6 @@ export const DEFAULT_DISCOVER_FILTERS: DiscoverFilters = {
   maxDistanceKm: 50,
   ageMin: 18,
   ageMax: 35,
-  genders: ['woman'],
+  genders: ['woman', 'man', 'nonbinary'],
   verifiedOnly: false,
 };

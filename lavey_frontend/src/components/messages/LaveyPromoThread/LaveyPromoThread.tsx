@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { PageScroller } from '@/components/layout/PageScroller';
 import { PlatinumUpgradeSheet } from '@/components/subscription/PlatinumUpgradeSheet';
 import { AppOverlay } from '@/components/ui/AppOverlay';
 import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
 import { LAVEY_OFFICIAL_PROMO } from '@/constants/laveyOfficial';
+import {
+  laveyOfficialInboxService,
+  type LaveyOfficialInboxMessage,
+} from '@/services/messages/laveyOfficialInboxService';
 import { markLaveyPromoRead } from '@/utils/messages/laveyOfficialConversation';
 import './LaveyPromoThread.css';
 
@@ -14,11 +18,31 @@ interface LaveyPromoThreadProps {
 
 export function LaveyPromoThread({ onBack, onRead }: LaveyPromoThreadProps) {
   const [platinumOpen, setPlatinumOpen] = useState(false);
+  const [adminMessages, setAdminMessages] = useState<LaveyOfficialInboxMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadInbox = useCallback(async () => {
+    setLoading(true);
+    try {
+      const inbox = await laveyOfficialInboxService.getInbox();
+      setAdminMessages(inbox.messages);
+      if (inbox.messages.length > 0) {
+        await laveyOfficialInboxService.markRead();
+      } else {
+        markLaveyPromoRead();
+      }
+      onRead?.();
+    } catch {
+      markLaveyPromoRead();
+      onRead?.();
+    } finally {
+      setLoading(false);
+    }
+  }, [onRead]);
 
   useEffect(() => {
-    markLaveyPromoRead();
-    onRead?.();
-  }, [onRead]);
+    void loadInbox();
+  }, [loadInbox]);
 
   return (
     <>
@@ -48,12 +72,34 @@ export function LaveyPromoThread({ onBack, onRead }: LaveyPromoThreadProps) {
                   <span className="lavey-promo-thread__name">{LAVEY_OFFICIAL_PROMO.name}</span>
                   <VerifiedBadge size="sm" title="Verified official account" />
                 </span>
-                <span className="lavey-promo-thread__meta">Official · Sponsored</span>
+                <span className="lavey-promo-thread__meta">Official · Verified</span>
               </span>
             </button>
           </header>
 
           <PageScroller className="lavey-promo-thread__scroll">
+            {loading && adminMessages.length === 0 ? (
+              <p className="lavey-promo-thread__loading">Loading messages…</p>
+            ) : null}
+
+            {adminMessages.length > 0 ? (
+              <div className="lavey-promo-thread__messages">
+                {adminMessages.map((message) => (
+                  <div key={message.id} className="lavey-promo-thread__message-wrap">
+                    <div className="lavey-promo-thread__message">
+                      <div className="lavey-promo-thread__message-head">
+                        <img src={LAVEY_OFFICIAL_PROMO.logoUrl} alt="" />
+                        <strong>{LAVEY_OFFICIAL_PROMO.name}</strong>
+                        <VerifiedBadge size="sm" title="Verified" />
+                      </div>
+                      <p>{message.body}</p>
+                      <span>{message.sentAtLabel}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <article className="lavey-promo-thread__card">
               <div className="lavey-promo-thread__card-head">
                 <span className="lavey-promo-thread__card-avatar" aria-hidden>

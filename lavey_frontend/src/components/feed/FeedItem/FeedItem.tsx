@@ -15,10 +15,10 @@ const DEFAULT_CLIP_SECONDS = 10;
 export function FeedItem({
   profile,
   liked,
-  likedPost: _likedPost,
+  likedPost: likedPost,
   iCrushSent,
   onLike,
-  onPostLike: _onPostLike,
+  onPostLike,
   onICrush,
   onProfileClick,
   showSwipeHint = false,
@@ -50,7 +50,7 @@ export function FeedItem({
 
   const triggerHeart = () => {
     setHeartBurst(true);
-    if (!liked) onLike();
+    if (firstPost?.id && !likedPost) onPostLike();
     setTimeout(() => setHeartBurst(false), 900);
   };
 
