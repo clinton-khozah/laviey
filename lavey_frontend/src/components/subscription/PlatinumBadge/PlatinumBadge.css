@@ -1,0 +1,198 @@
+.platinum-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: #ecfdf5;
+  background:
+    linear-gradient(165deg, rgba(187, 247, 208, 0.22) 0%, transparent 42%),
+    linear-gradient(145deg, #14532d 0%, #0f3d24 48%, #052e16 100%);
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+    0 1px 0 rgba(187, 247, 208, 0.18) inset,
+    0 6px 18px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(34, 197, 94, 0.22);
+  backdrop-filter: blur(14px);
+  font: inherit;
+  padding: 0;
+}
+
+button.platinum-badge {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.platinum-badge--interactive:active {
+  transform: scale(0.96);
+}
+
+.platinum-badge::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    rgba(187, 247, 208, 0.18) 0%,
+    transparent 38%,
+    transparent 62%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+}
+
+.platinum-badge__crest {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(187, 247, 208, 0.35), transparent 58%),
+    linear-gradient(160deg, rgba(22, 101, 52, 0.95), rgba(5, 46, 22, 0.98));
+  box-shadow:
+    0 0 0 1px rgba(134, 239, 172, 0.2) inset,
+    0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.platinum-badge__icon {
+  display: block;
+  filter: drop-shadow(0 1px 3px rgba(5, 46, 22, 0.55));
+}
+
+.platinum-badge__label {
+  position: relative;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding-right: 3px;
+  color: #d1fae5;
+  font-variant: small-caps;
+}
+
+.platinum-badge--icon-only {
+  padding: 0;
+  width: 34px;
+  height: 34px;
+  justify-content: center;
+  border-radius: 50%;
+  background:
+    linear-gradient(165deg, rgba(187, 247, 208, 0.2) 0%, transparent 45%),
+    linear-gradient(145deg, #166534 0%, #14532d 55%, #052e16 100%);
+  border-color: rgba(74, 222, 128, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.3) inset,
+    0 1px 0 rgba(187, 247, 208, 0.15) inset,
+    0 4px 14px rgba(0, 0, 0, 0.25),
+    0 0 18px rgba(34, 197, 94, 0.28);
+}
+
+.platinum-badge--icon-only .platinum-badge__crest {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  box-shadow: none;
+}
+
+.platinum-badge--icon-only .platinum-badge__icon {
+  width: 22px;
+  height: 22px;
+}
+
+.platinum-badge--sm:not(.platinum-badge--icon-only) {
+  padding: 4px 9px 4px 5px;
+}
+
+.platinum-badge--sm:not(.platinum-badge--icon-only) .platinum-badge__crest {
+  width: 20px;
+  height: 20px;
+}
+
+.platinum-badge--sm:not(.platinum-badge--icon-only) .platinum-badge__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.platinum-badge--md {
+  padding: 6px 12px 6px 7px;
+}
+
+.platinum-badge--md .platinum-badge__crest {
+  width: 26px;
+  height: 26px;
+}
+
+.platinum-badge--md .platinum-badge__icon {
+  width: 22px;
+  height: 22px;
+}
+
+.platinum-badge--md .platinum-badge__label {
+  font-size: 10px;
+  padding-right: 5px;
+}
+
+.platinum-badge--lg {
+  padding: 8px 16px 8px 9px;
+}
+
+.platinum-badge--lg .platinum-badge__crest {
+  width: 30px;
+  height: 30px;
+}
+
+.platinum-badge--lg .platinum-badge__icon {
+  width: 26px;
+  height: 26px;
+}
+
+.platinum-badge--lg .platinum-badge__label {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+}
+
+[data-theme='light'] .platinum-badge {
+  color: #14532d;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(236, 253, 245, 0.98) 100%);
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 4px 14px rgba(21, 128, 61, 0.12),
+    0 0 0 1px rgba(134, 239, 172, 0.35);
+}
+
+[data-theme='light'] .platinum-badge__crest {
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), transparent 58%),
+    linear-gradient(160deg, #ecfdf5, #bbf7d0);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset,
+    0 2px 6px rgba(21, 128, 61, 0.1);
+}
+
+[data-theme='light'] .platinum-badge--icon-only {
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(220, 252, 231, 0.98) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 4px 12px rgba(21, 128, 61, 0.14),
+    0 0 14px rgba(34, 197, 94, 0.15);
+}
+
+[data-theme='light'] .platinum-badge--icon-only .platinum-badge__crest {
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme='light'] .platinum-badge__label {
+  color: #166534;
+}

@@ -122,17 +122,19 @@ export function ProfileMenuSheet({
           <div className="profile-menu-popover__divider" aria-hidden />
 
           <div className="profile-menu-popover__group">
-            <ProfileMenuItem
-              icon={
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z" />
-                </svg>
-              }
-              label="Upgrade to Platinum"
-              description="Unlimited flames, AI review & spotlight"
-              variant="premium"
-              onClick={() => pick('platinum')}
-            />
+            {!profile.isPremium ? (
+              <ProfileMenuItem
+                icon={
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6-6.3 4.6 2.3-7-6-4.6h7.6z" />
+                  </svg>
+                }
+                label="Upgrade to Platinum"
+                description="Unlimited flames, AI review & spotlight"
+                variant="premium"
+                onClick={() => pick('platinum')}
+              />
+            ) : null}
             <ProfileMenuItem
               icon={
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

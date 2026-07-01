@@ -29,6 +29,10 @@ export type { MatchGreetingRequest, MatchGreetingResult } from './domain/matchGr
 export type { FlameQuota } from './domain/subscription.types';
 export type { PlatinumCatalog, PlatinumPlan, PlatinumFeature } from './domain/platinum.types';
 export type {
+  PlatinumSubscriptionStatus,
+  PlatinumCancelResult,
+} from './domain/platinumSubscription.types';
+export type {
   AuthUser,
   AuthSession,
   EmailSignInRequest,

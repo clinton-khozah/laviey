@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { userProfileService } from '@/services';
 import type { UserProfile } from '@/types';
 import { getUserFacingErrorMessage } from '@/utils/errors/userFacingErrorMessage';
+import { PLATINUM_UPDATED_EVENT } from '@/utils/subscription/platinumUpdatedEvent';
 
 let cachedProfile: UserProfile | null = null;
 
@@ -28,6 +29,15 @@ export function useUserProfile() {
 
   useEffect(() => {
     void fetch();
+  }, [fetch]);
+
+  useEffect(() => {
+    const onPlatinumUpdated = () => {
+      cachedProfile = null;
+      void fetch();
+    };
+    window.addEventListener(PLATINUM_UPDATED_EVENT, onPlatinumUpdated);
+    return () => window.removeEventListener(PLATINUM_UPDATED_EVENT, onPlatinumUpdated);
   }, [fetch]);
 
   return { profile, isLoading, error, refetch: fetch };

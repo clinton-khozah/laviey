@@ -7,6 +7,7 @@ import {
   OnboardingQuizPage,
 } from "@/features/auth";
 import { ErrorPage } from "@/features/errors";
+import { SubscriptionResultPage } from "@/features/subscription";
 import { AdminDashboardPage, AdminLoginPage } from "@/features/admin";
 import { adminAuthService } from "@/services/admin/adminAuthService";
 import { useAuth } from "@/hooks";
@@ -110,6 +111,10 @@ function App() {
         onNavigate={navigateTo}
       />
     );
+  } else if (path === "/subscription/success") {
+    content = <SubscriptionResultPage variant="success" onNavigate={navigateTo} />;
+  } else if (path === "/subscription/cancel") {
+    content = <SubscriptionResultPage variant="cancel" onNavigate={navigateTo} />;
   } else if (path === "/auth/callback" || hasOAuthReturnParams()) {
     content = <AuthCallbackPage />;
   } else if (isAdminRoute) {

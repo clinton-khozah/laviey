@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DiscoverFilterSheet } from '@/components/discover/DiscoverFilterSheet';
-import { ForYouIntelligenceBanner } from '@/components/discover/ForYouIntelligenceBanner';
 import { DiscoverProfileSetupGate } from '@/components/discover/DiscoverProfileSetupGate';
 import { ReceivedLikesSheet } from '@/components/feed/ReceivedLikesSheet';
 import { TopBar } from '@/components/layout/TopBar';
 import { PlatinumUpgradeSheet } from '@/components/subscription/PlatinumUpgradeSheet';
+import { PlatinumManageSheet } from '@/components/subscription/PlatinumManageSheet';
+import { PlatinumWelcomeSheet } from '@/components/subscription/PlatinumWelcomeSheet';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage';
 import { DiscoverFeedContainer } from '@/features/discover/containers/DiscoverFeedContainer';
+import { FeedProfileOptionsSheet, type FeedProfileOptionAction } from '@/components/feed/FeedProfileOptionsSheet';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { messageService } from '@/services';
@@ -24,12 +26,16 @@ import {
   useUserProfile,
 } from '@/hooks';
 import { userProfileService } from '@/services/users/userProfileService';
+import { privacyService } from '@/services/privacy/privacyService';
+import { reportsService } from '@/services/reports/reportsService';
 import { subscribeAlgorithmChange } from '@/features/admin/algorithm/algorithmConfig';
 import type { Profile } from '@/types';
 import { hasPremiumAccess } from '@/config/features';
 import { navigateAppTo, openChatWithProfile } from '@/utils/navigation/appNav';
 import { applyForYouFeedFilters } from '@/utils/discover/applyDiscoverFilters';
 import { resolveForYouFeedProfiles } from '@/utils/discover/forYouFeedProfiles';
+import { PLATINUM_UPDATED_EVENT } from '@/utils/subscription/platinumUpdatedEvent';
+import { consumePlatinumWelcomePending } from '@/utils/subscription/platinumWelcomeStorage';
 import './DiscoverPage.css';
 
 /**
@@ -38,7 +44,7 @@ import './DiscoverPage.css';
 export function DiscoverPage() {
   const { needsOnboardingQuiz } = useAuth();
   const { filters, setFilters, resetFilters, hasActiveFilters } = useDiscoverFilters();
-  const { profiles, feedPool, isFeedRecycling, myLikedProfileIds, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed, feedAlgorithm, tasteInsight } =
+  const { profiles, feedPool, isFeedRecycling, myLikedProfileIds, isLoading, error, filter, setFilter, refetch, onNearEndOfFeed } =
     useDiscoverFeed('for-you', filters);
   const { quota, isLoading: isQuotaLoading } = useFlameQuota();
   const {
@@ -59,17 +65,27 @@ export function DiscoverPage() {
   const [profileModal, setProfileModal] = useState<Profile | null>(null);
   const [likesOpen, setLikesOpen] = useState(false);
   const [platinumOpen, setPlatinumOpen] = useState(false);
+  const [platinumManageOpen, setPlatinumManageOpen] = useState(false);
+  const [platinumWelcomeOpen, setPlatinumWelcomeOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersUpdatedPulse, setFiltersUpdatedPulse] = useState(false);
   const filtersPulseTimerRef = useRef<number | null>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [findProfile, setFindProfile] = useState<Profile | null>(null);
+  const [feedOptionsProfile, setFeedOptionsProfile] = useState<Profile | null>(null);
+  const [hiddenFeedProfileIds, setHiddenFeedProfileIds] = useState<Set<string>>(() => new Set());
+  const [feedActionToast, setFeedActionToast] = useState<string | null>(null);
   const { location, requestLocation } = useLiveUserLocation();
   const lastSyncedLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const lastSyncedPlaceRef = useRef('');
   const lastSyncAtRef = useRef<number>(0);
   const { profiles: receivedLikers, count: likeCount } = useProfilesWhoLikedYou();
-  const isPremium = hasPremiumAccess(userProfile?.isPremium);
+  const isPlatinumMember = Boolean(userProfile?.isPremium);
+  const isPremium = hasPremiumAccess(isPlatinumMember);
+  const platinumCountry = useMemo(
+    () => userProfile?.country?.trim() || location?.country?.trim() || undefined,
+    [location?.country, userProfile?.country],
+  );
 
   const pulseFilterIcon = () => {
     setFiltersUpdatedPulse(true);
@@ -81,6 +97,33 @@ export function DiscoverPage() {
       filtersPulseTimerRef.current = null;
     }, 2200);
   };
+
+  useEffect(() => {
+    const onPlatinumUpdated = () => {
+      void refetchUserProfile();
+      if (consumePlatinumWelcomePending()) {
+        setPlatinumWelcomeOpen(true);
+      }
+    };
+    window.addEventListener(PLATINUM_UPDATED_EVENT, onPlatinumUpdated);
+    return () => window.removeEventListener(PLATINUM_UPDATED_EVENT, onPlatinumUpdated);
+  }, [refetchUserProfile]);
+
+  useEffect(() => {
+    if (isPlatinumMember && consumePlatinumWelcomePending()) {
+      setPlatinumWelcomeOpen(true);
+    }
+  }, [isPlatinumMember]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void refetchUserProfile();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refetchUserProfile]);
 
   useEffect(() => {
     return () => {
@@ -105,10 +148,49 @@ export function DiscoverPage() {
   }, [likedIds, myLikedProfileIds, filter, isFeedRecycling, forYouPool]);
 
   const forYouDisplayProfiles = useMemo(() => {
-    if (filter !== 'for-you') return profiles;
+    if (filter !== 'for-you') {
+      return profiles.filter((profile) => !hiddenFeedProfileIds.has(profile.id));
+    }
     const { profiles: resolved } = resolveForYouFeedProfiles(forYouPool, mergedLikedIds);
-    return resolved.length > 0 ? resolved : forYouPool;
-  }, [filter, forYouPool, profiles, mergedLikedIds]);
+    const base = resolved.length > 0 ? resolved : forYouPool;
+    return base.filter((profile) => !hiddenFeedProfileIds.has(profile.id));
+  }, [filter, forYouPool, profiles, mergedLikedIds, hiddenFeedProfileIds]);
+
+  const showFeedActionToast = (text: string) => {
+    setFeedActionToast(text);
+    window.setTimeout(() => setFeedActionToast(null), 2600);
+  };
+
+  const handleFeedProfileOption = async (
+    action: FeedProfileOptionAction,
+    profile: Profile,
+    meta?: { reportReason?: string },
+  ) => {
+    if (action === 'view-profile') {
+      setProfileModal(profile);
+      return;
+    }
+
+    if (action === 'report') {
+      const reason = meta?.reportReason?.trim();
+      if (!reason) return;
+
+      await reportsService.submit({
+        subjectUserId: profile.id,
+        contentType: 'profile_photo',
+        reason,
+      });
+      setHiddenFeedProfileIds((prev) => new Set(prev).add(profile.id));
+      showFeedActionToast(`Report submitted for ${profile.name}`);
+      void refetch();
+      return;
+    }
+
+    await privacyService.blockUser(profile.id);
+    setHiddenFeedProfileIds((prev) => new Set(prev).add(profile.id));
+    showFeedActionToast(`${profile.name} blocked`);
+    void refetch();
+  };
 
   const {
     profiles: findProfiles,
@@ -263,15 +345,10 @@ export function DiscoverPage() {
           hasActiveDiscoveryFilters={hasActiveFilters}
           filtersUpdatedPulse={filtersUpdatedPulse}
           isPremium={isPremium}
+          isPlatinumMember={isPlatinumMember}
           onUpgrade={() => setPlatinumOpen(true)}
+          onPlatinumManage={() => setPlatinumManageOpen(true)}
           onFindClick={() => setFindOpen(true)}
-        />
-      ) : null}
-      {showDiscoverChrome && !findOpen && filter === 'for-you' ? (
-        <ForYouIntelligenceBanner
-          algorithm={feedAlgorithm}
-          tasteInsight={tasteInsight}
-          visible={!isLoading || forYouDisplayProfiles.length > 0}
         />
       ) : null}
       <DiscoverFilterSheet
@@ -302,6 +379,7 @@ export function DiscoverPage() {
         onPostLike={handlePostLike}
         onRetry={() => void refetch()}
         onProfileClick={setProfileModal}
+        onMoreOptions={setFeedOptionsProfile}
         onDismissMatchToast={dismissMatchToast}
         onMatchGreeting={handleMatchGreeting}
       />
@@ -321,9 +399,30 @@ export function DiscoverPage() {
         }}
       />
 
+      <FeedProfileOptionsSheet
+        open={feedOptionsProfile !== null}
+        profile={feedOptionsProfile}
+        onClose={() => setFeedOptionsProfile(null)}
+        onAction={handleFeedProfileOption}
+      />
+
       <PlatinumUpgradeSheet
         open={platinumOpen}
         onClose={() => setPlatinumOpen(false)}
+        country={platinumCountry}
+      />
+
+      <PlatinumManageSheet
+        open={platinumManageOpen}
+        onClose={() => setPlatinumManageOpen(false)}
+        onSubscriptionChanged={() => void refetchUserProfile()}
+        country={platinumCountry}
+        isPremiumMember={isPremium}
+      />
+
+      <PlatinumWelcomeSheet
+        open={platinumWelcomeOpen}
+        onClose={() => setPlatinumWelcomeOpen(false)}
       />
 
       <MatchProfileModal
@@ -380,6 +479,12 @@ export function DiscoverPage() {
         }
       />
         </>
+      ) : null}
+
+      {feedActionToast ? (
+        <div className="discover-page__toast" role="status">
+          {feedActionToast}
+        </div>
       ) : null}
     </div>
   );

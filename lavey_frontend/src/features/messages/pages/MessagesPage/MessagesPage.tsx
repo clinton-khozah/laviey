@@ -157,6 +157,10 @@ export function MessagesPage() {
     refetch: refetchFind,
   } = useMessagesFindSuggestions(findOpen, discoverFilters);
 
+  const handleLaveyPromoRead = useCallback(() => {
+    void refetch(true);
+  }, [refetch]);
+
   const unreadTotal = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   const filterCounts = useMemo(
@@ -539,8 +543,9 @@ export function MessagesPage() {
             if (item.actorUserId) setNotificationProfileId(item.actorUserId);
           }}
         />
-      ) : activeConversation && isLaveyOfficialConversation(activeConversation.id) ? (
-        <LaveyPromoThread onBack={() => setActiveId(null)} onRead={() => void refetch(true)} />
+      ) : activeId === LAVEY_OFFICIAL_CONVERSATION_ID ||
+        (activeConversation && isLaveyOfficialConversation(activeConversation.id)) ? (
+        <LaveyPromoThread onBack={() => setActiveId(null)} onRead={handleLaveyPromoRead} />
       ) : isICrushActive && activeConversation ? (
         <ICrushThread
           conversation={activeConversation}

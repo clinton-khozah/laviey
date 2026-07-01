@@ -21,6 +21,9 @@ export interface PlatinumCatalog {
   defaultPlanId: string;
   oneTimeFinePrint: string;
   recurringFinePrint: string;
+  displayCurrency: string;
+  billingCurrency: string;
+  pricingNote?: string | null;
   plans: PlatinumPlan[];
   features: PlatinumFeature[];
 }

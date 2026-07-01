@@ -1,0 +1,1 @@
+export { PlatinumFeatureIcon } from './PlatinumFeatureIcon';

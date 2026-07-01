@@ -29,6 +29,10 @@ export const API_ENDPOINTS = {
   subscription: {
     flameQuota: '/subscription/flame-quota',
     platinum: '/subscription/platinum',
+    platinumCheckout: '/subscription/platinum/checkout',
+    platinumStatus: '/subscription/platinum/status',
+    platinumConfirmReturn: '/subscription/platinum/confirm-return',
+    platinumCancel: '/subscription/platinum/cancel',
   },
   messages: {
     conversations: '/messages/conversations',

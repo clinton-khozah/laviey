@@ -17,6 +17,7 @@ export interface DiscoverFeedContainerProps {
   onPostLike: (profile: Profile) => void;
   onRetry: () => void;
   onProfileClick: (profile: Profile) => void;
+  onMoreOptions: (profile: Profile) => void;
   onDismissMatchToast: () => void;
   onMatchGreeting: (text: string) => void;
   onNearEndOfFeed?: () => void;
@@ -36,6 +37,7 @@ export function DiscoverFeedContainer({
   onPostLike,
   onRetry,
   onProfileClick,
+  onMoreOptions,
   onDismissMatchToast,
   onMatchGreeting,
   onNearEndOfFeed,
@@ -64,6 +66,7 @@ export function DiscoverFeedContainer({
         onICrush={onICrush}
         onPostLike={onPostLike}
         onProfileClick={onProfileClick}
+        onMoreOptions={onMoreOptions}
         isLocked={Boolean(matchToast)}
         infiniteLoop={infiniteLoop}
         onNearEndOfFeed={onNearEndOfFeed}

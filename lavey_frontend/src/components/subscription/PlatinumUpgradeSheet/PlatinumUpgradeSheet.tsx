@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
+import { SignInRequiredPrompt } from '@/components/auth/SignInRequiredPrompt';
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import { SheetSaveSuccess } from '@/components/profile/SheetSaveSuccess';
 import { usePlatinumCatalog } from '@/hooks/subscription/usePlatinumCatalog';
+import { platinumService } from '@/services/subscription/platinumService';
 import type { PlatinumPlan } from '@/types';
 import { applyPriceDiscount } from '@/utils/subscription/platinumPricing';
+import { submitPayfastCheckout } from '@/utils/subscription/payfastCheckout';
+import { isSignInRequiredMessage } from '@/utils/errors/userFacingErrorMessage';
 import './PlatinumUpgradeSheet.css';
 
 interface PlatinumUpgradeSheetProps {
   open: boolean;
   onClose: () => void;
   onSubscribe?: () => void;
+  /** User country for localized pricing display */
+  country?: string | null;
   /** When set, show an Apply button before discounted prices appear (e.g. Lavey promo). */
   promoDiscountPercent?: number;
 }
@@ -109,13 +115,15 @@ function FeatureIcon({ id }: { id: string }) {
 export function PlatinumUpgradeSheet({
   open,
   onClose,
-  onSubscribe,
+  onSubscribe: _onSubscribe,
+  country,
   promoDiscountPercent,
 }: PlatinumUpgradeSheetProps) {
-  const { catalog, isLoading, error, reload } = usePlatinumCatalog(open);
+  const { catalog, isLoading, error, reload } = usePlatinumCatalog(open, country);
   const [planId, setPlanId] = useState<string | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [discountApplied, setDiscountApplied] = useState(false);
 
   const hasPromo = Boolean(promoDiscountPercent && promoDiscountPercent > 0);
@@ -125,6 +133,7 @@ export function PlatinumUpgradeSheet({
     if (!open) {
       setIsSubscribing(false);
       setSubscribeSuccess(false);
+      setCheckoutError(null);
       setPlanId(null);
       setDiscountApplied(false);
     }
@@ -149,13 +158,19 @@ export function PlatinumUpgradeSheet({
     return discountedPlanPrice(plan, promoDiscountPercent);
   }, [plan, promoDiscountPercent, showDiscountedPrices]);
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
+    if (!plan) return;
+    setCheckoutError(null);
     setIsSubscribing(true);
-    window.setTimeout(() => {
+    try {
+      const checkout = await platinumService.startCheckout(plan.id);
+      submitPayfastCheckout(checkout);
+    } catch (err) {
       setIsSubscribing(false);
-      setSubscribeSuccess(true);
-      if (onSubscribe) onSubscribe();
-    }, 650);
+      setCheckoutError(
+        err instanceof Error ? err.message : 'Could not start PayFast checkout. Try again.',
+      );
+    }
   };
 
   const handleSuccessDone = () => {
@@ -176,12 +191,16 @@ export function PlatinumUpgradeSheet({
       ) : isLoading && !catalog ? (
         <p className="platinum-upgrade__status">Loading Platinum offers…</p>
       ) : error && !catalog ? (
-        <div className="platinum-upgrade__status">
-          <p>{error}</p>
-          <button type="button" className="profile-sheet__btn profile-sheet__btn--secondary" onClick={() => void reload()}>
-            Try again
-          </button>
-        </div>
+        isSignInRequiredMessage(error) ? (
+          <SignInRequiredPrompt message={error} className="sign-in-required--inline" onBeforeSignIn={onClose} />
+        ) : (
+          <div className="platinum-upgrade__status">
+            <p>{error}</p>
+            <button type="button" className="profile-sheet__btn profile-sheet__btn--secondary" onClick={() => void reload()}>
+              Try again
+            </button>
+          </div>
+        )
       ) : catalog && plan ? (
         <div className="platinum-upgrade platinum-upgrade--compact">
           <div className="platinum-upgrade__hero">
@@ -268,15 +287,33 @@ export function PlatinumUpgradeSheet({
             type="button"
             className="platinum-upgrade__cta"
             disabled={isSubscribing}
-            onClick={handleSubscribe}
+            onClick={() => void handleSubscribe()}
           >
             {isSubscribing
-              ? 'Processing…'
+              ? 'Redirecting to PayFast…'
               : `Start Platinum — ${selectedPrice}${plan.id === 'day' ? '' : plan.period}`}
           </button>
+          {checkoutError ? (
+            isSignInRequiredMessage(checkoutError) ? (
+              <SignInRequiredPrompt
+                message={checkoutError}
+                className="sign-in-required--inline"
+                onBeforeSignIn={onClose}
+              />
+            ) : (
+              <p className="platinum-upgrade__status" role="alert">
+                {checkoutError}
+              </p>
+            )
+          ) : null}
           <p className="platinum-upgrade__fine-print">
             {plan.id === 'day' ? catalog.oneTimeFinePrint : catalog.recurringFinePrint}
           </p>
+          {catalog.pricingNote ? (
+            <p className="platinum-upgrade__fine-print platinum-upgrade__fine-print--currency">
+              {catalog.pricingNote}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </ProfileSheet>

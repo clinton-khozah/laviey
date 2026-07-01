@@ -46,6 +46,7 @@ export function VerticalFeed({
   onPostLike,
   onICrush,
   onProfileClick,
+  onMoreOptions,
   isLocked = false,
   infiniteLoop = false,
   onNearEndOfFeed,
@@ -330,6 +331,7 @@ export function VerticalFeed({
           onPostLike={() => onPostLike(entry.profile)}
           onICrush={() => onICrush?.(entry.profile.id)}
           onProfileClick={() => onProfileClick(entry.profile)}
+          onMoreOptions={() => onMoreOptions(entry.profile)}
           showSwipeHint={index === swipeHintIndex && showSwipeHint}
         />
       ))}

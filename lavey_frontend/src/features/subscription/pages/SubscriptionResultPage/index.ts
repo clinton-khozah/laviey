@@ -1,0 +1,1 @@
+export { SubscriptionResultPage } from './SubscriptionResultPage';

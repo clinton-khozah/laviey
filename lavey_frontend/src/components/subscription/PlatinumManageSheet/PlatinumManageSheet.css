@@ -1,0 +1,291 @@
+.platinum-manage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+/* Scrollable platinum sheet (do not use meetup-top-sheet — it sets max-height: none) */
+.profile-sheet--from-top:has(.platinum-manage) {
+  top: calc(var(--safe-top) + 8px);
+  left: 16px;
+  right: 16px;
+  bottom: auto;
+  width: auto;
+  max-height: min(88vh, calc(100dvh - var(--safe-top) - 16px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.profile-sheet--from-top:has(.platinum-manage) .profile-sheet__header {
+  flex-shrink: 0;
+  padding: 10px 12px 4px;
+}
+
+.profile-sheet--from-top:has(.platinum-manage) .profile-sheet__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.profile-sheet--from-top:has(.platinum-manage) .profile-sheet__close {
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  border-radius: 8px;
+}
+
+.profile-sheet--from-top:has(.platinum-manage) .profile-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 12px calc(var(--safe-bottom) + 16px);
+}
+
+.platinum-manage__current {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 4px 4px 2px;
+}
+
+.platinum-manage__current-card {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(22, 101, 52, 0.18), rgba(5, 46, 22, 0.12));
+  border: 1px solid rgba(74, 222, 128, 0.28);
+}
+
+.platinum-manage__current-kicker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4ade80;
+}
+
+.platinum-manage__plan-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.platinum-manage__plan-price {
+  margin: 4px 0 6px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.platinum-manage__plan-period {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.platinum-manage__muted {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.platinum-manage__tagline {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.platinum-manage__feedback {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+}
+
+.platinum-manage__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.platinum-manage__section-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.platinum-manage__switch-btn {
+  margin-top: 4px;
+}
+
+.platinum-manage__switch-btn.platinum-upgrade__cta {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  margin-inline: auto;
+  display: block;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: 0 4px 14px rgba(255, 77, 109, 0.22);
+}
+
+.platinum-manage__fine-print {
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+.platinum-manage__fine-print.platinum-upgrade__fine-print--currency {
+  margin-top: 8px;
+}
+
+.platinum-manage__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.platinum-manage__section--perks {
+  margin-top: 6px;
+  padding-top: 4px;
+}
+
+.platinum-manage__features {
+  margin: 0;
+}
+
+.platinum-manage__plan-tag {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.18);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.platinum-upgrade__plan.platinum-manage__plan--current {
+  position: relative;
+  padding-top: 18px;
+}
+
+.platinum-manage__switch-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background: var(--chip-bg);
+  border: 1px solid var(--border-subtle);
+}
+
+.platinum-manage__switch-note strong {
+  color: var(--text-primary);
+}
+
+.platinum-manage__plan--current {
+  border-color: rgba(34, 197, 94, 0.45) !important;
+}
+
+.platinum-upgrade__plan.platinum-manage__plan--current:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.platinum-manage__section--cancel {
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.platinum-manage__cancel-btn {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.platinum-manage__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.platinum-manage__confirm-copy {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.platinum-manage__confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.platinum-manage__confirm-no,
+.platinum-manage__confirm-yes {
+  flex: 1;
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--border-subtle);
+}
+
+.platinum-manage__confirm-no {
+  color: var(--text-primary);
+  background: var(--surface-muted);
+}
+
+.platinum-manage__confirm-yes {
+  color: #fff;
+  background: #b91c1c;
+  border-color: transparent;
+}

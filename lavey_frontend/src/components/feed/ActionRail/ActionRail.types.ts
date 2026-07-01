@@ -7,4 +7,5 @@ export interface ActionRailProps {
   onLike: () => void;
   onICrush: () => void;
   onProfileClick: () => void;
+  onMoreOptions: () => void;
 }

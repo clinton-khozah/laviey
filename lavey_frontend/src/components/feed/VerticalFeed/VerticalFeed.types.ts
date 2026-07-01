@@ -9,6 +9,7 @@ export interface VerticalFeedProps {
   onPostLike: (profile: Profile) => void;
   onICrush?: (profileId: string) => void;
   onProfileClick: (profile: Profile) => void;
+  onMoreOptions: (profile: Profile) => void;
   isLocked?: boolean;
   /** Seamless up/down looping for short For You pools */
   infiniteLoop?: boolean;

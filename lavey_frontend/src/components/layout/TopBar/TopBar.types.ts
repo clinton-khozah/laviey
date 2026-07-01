@@ -11,7 +11,11 @@ export interface TopBarProps {
   hasActiveDiscoveryFilters?: boolean;
   /** Brief highlight after filters are applied or reset */
   filtersUpdatedPulse?: boolean;
+  /** Unlimited crushes / premium feature access */
   isPremium?: boolean;
+  /** Active paid Platinum subscription — controls badge vs upgrade CTA */
+  isPlatinumMember?: boolean;
   onUpgrade?: () => void;
+  onPlatinumManage?: () => void;
   onFindClick?: () => void;
 }

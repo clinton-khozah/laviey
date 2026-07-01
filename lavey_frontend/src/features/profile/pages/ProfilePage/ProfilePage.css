@@ -60,6 +60,19 @@
   flex-shrink: 0;
 }
 
+.profile-page__platinum-corner {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 16px;
+  z-index: 2;
+}
+
+.profile-page__premium-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
 .profile-page__upgrade {
   position: absolute;
   top: calc(var(--safe-top) + 10px);

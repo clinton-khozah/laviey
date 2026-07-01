@@ -21,6 +21,7 @@ export function FeedItem({
   onPostLike,
   onICrush,
   onProfileClick,
+  onMoreOptions,
   showSwipeHint = false,
 }: FeedItemProps) {
   const firstPost = profile.posts?.[0];
@@ -156,6 +157,7 @@ export function FeedItem({
         onLike={onLike}
         onICrush={onICrush}
         onProfileClick={onProfileClick}
+        onMoreOptions={onMoreOptions}
       />
 
       <AnimatePresence>

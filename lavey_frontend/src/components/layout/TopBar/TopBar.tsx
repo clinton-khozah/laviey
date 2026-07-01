@@ -1,4 +1,5 @@
 import type { TopBarProps } from './TopBar.types';
+import { PlatinumBadge } from '@/components/subscription/PlatinumBadge';
 import './TopBar.css';
 
 export function TopBar({
@@ -12,12 +13,14 @@ export function TopBar({
   hasActiveDiscoveryFilters = false,
   filtersUpdatedPulse = false,
   isPremium = false,
+  isPlatinumMember = false,
   onUpgrade,
+  onPlatinumManage,
   onFindClick,
 }: TopBarProps) {
   const remaining = quota?.remaining ?? '—';
   const max = quota?.max ?? '—';
-  const showUpgrade = !isPremium && onUpgrade;
+  const showUpgrade = !isPlatinumMember && onUpgrade;
 
   const flameQuota = (
     <div
@@ -67,8 +70,11 @@ export function TopBar({
 
   return (
     <header className="top-bar">
-      <div className="top-bar__brand">
-        {showUpgrade ? (
+      <div className="top-bar__start">
+        {discoveryFilterButton}
+        {isPlatinumMember ? (
+          <PlatinumBadge size="sm" onClick={onPlatinumManage} />
+        ) : showUpgrade ? (
           <button
             type="button"
             className="top-bar__upgrade"
@@ -81,17 +87,13 @@ export function TopBar({
             Upgrade
           </button>
         ) : (
-          discoveryFilterButton ?? (
+          !discoveryFilterButton ? (
             <span className="top-bar__logo" aria-hidden>
               L
             </span>
-          )
+          ) : null
         )}
       </div>
-
-      {showUpgrade && discoveryFilterButton ? (
-        <div className="top-bar__filter-slot">{discoveryFilterButton}</div>
-      ) : null}
 
       <nav className="top-bar__tabs" aria-label="Feed filter">
         <button

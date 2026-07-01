@@ -16,6 +16,7 @@ export function ActionRail({
   onLike,
   onICrush,
   onProfileClick,
+  onMoreOptions,
 }: ActionRailProps) {
   const [crushyConfirmOpen, setCrushyConfirmOpen] = useState(false);
   const isMutual = liked && profile.likedYou;
@@ -99,7 +100,12 @@ export function ActionRail({
         </span>
       </motion.button>
 
-      <button type="button" className="action-rail__btn action-rail__btn--more" aria-label="More options">
+      <button
+        type="button"
+        className="action-rail__btn action-rail__btn--more"
+        aria-label="More options"
+        onClick={onMoreOptions}
+      >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <circle cx="12" cy="5" r="2" />
           <circle cx="12" cy="12" r="2" />

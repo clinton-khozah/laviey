@@ -10,12 +10,12 @@ export const FALLBACK_PLATINUM_CATALOG: PlatinumCatalog = {
   oneTimeFinePrint: 'One-time access for 24 hours. No auto-renew in demo.',
   recurringFinePrint: 'Recurring billing. Cancel anytime in Settings. Free trial not available in demo.',
   plans: [
-    { id: 'day', label: '1 day', price: '$2.99', period: 'one-time' },
-    { id: 'week', label: 'Weekly', price: '$6.99', period: '/ week', badge: 'Try it' },
+    { id: 'day', label: '1 day', price: 'R11.99', period: 'one-time' },
+    { id: 'week', label: 'Weekly', price: 'R49.99', period: '/ week', badge: 'Try it' },
     {
       id: 'month',
       label: 'Monthly',
-      price: '$14.99',
+      price: 'R149.99',
       period: '/ month',
       badge: 'Most popular',
       popular: true,
@@ -63,6 +63,9 @@ export const FALLBACK_PLATINUM_CATALOG: PlatinumCatalog = {
       description: 'Accidentally skipped someone? Bring them back with one tap.',
     },
   ],
+  displayCurrency: 'ZAR',
+  billingCurrency: 'ZAR',
+  pricingNote: null,
 };
 
 /** @deprecated Use platinumService.getCatalog() — admin-only convenience */

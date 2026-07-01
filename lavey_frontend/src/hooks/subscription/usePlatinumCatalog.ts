@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
+import { FALLBACK_PLATINUM_CATALOG } from '@/constants/platinum';
 import { platinumService } from '@/services/subscription/platinumService';
 import type { PlatinumCatalog } from '@/types';
+import {
+  getUserFacingErrorMessage,
+  isSignInRequiredError,
+  isSignInRequiredMessage,
+} from '@/utils/errors/userFacingErrorMessage';
 
-export function usePlatinumCatalog(open: boolean) {
+export function usePlatinumCatalog(open: boolean, country?: string | null) {
   const [catalog, setCatalog] = useState<PlatinumCatalog | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -11,14 +17,26 @@ export function usePlatinumCatalog(open: boolean) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await platinumService.getCatalog();
-      setCatalog(data);
+      const data = await platinumService.getCatalog({
+        country: country?.trim() || undefined,
+      });
+      setCatalog({
+        ...data,
+        features:
+          data.features.length > 0 ? data.features : FALLBACK_PLATINUM_CATALOG.features,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load Platinum offers.');
+      const message = getUserFacingErrorMessage(err, 'Could not load Platinum offers.');
+      setError(message);
+      setCatalog(
+        isSignInRequiredError(err) || isSignInRequiredMessage(message)
+          ? null
+          : FALLBACK_PLATINUM_CATALOG,
+      );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [country]);
 
   useEffect(() => {
     if (!open) return;

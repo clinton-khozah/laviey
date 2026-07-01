@@ -6,7 +6,6 @@ import type { Conversation, DeleteConversationScope } from "@/types";
 import { NOTIFICATIONS_CONVERSATION_ID } from "@/constants/notifications";
 import { LAVEY_OFFICIAL_CONVERSATION_ID } from "@/constants/laveyOfficial";
 import { buildLaveyOfficialConversation } from "@/utils/messages/laveyOfficialConversation";
-import { laveyOfficialInboxService } from "@/services/messages/laveyOfficialInboxService";
 
 async function mergeConversations(
   matchRows: Conversation[],
@@ -17,13 +16,7 @@ async function mergeConversations(
       row.id !== LAVEY_OFFICIAL_CONVERSATION_ID,
   );
 
-  let laveyOfficial = buildLaveyOfficialConversation();
-  try {
-    const inbox = await laveyOfficialInboxService.getInbox();
-    laveyOfficial = buildLaveyOfficialConversation(inbox);
-  } catch {
-    laveyOfficial = buildLaveyOfficialConversation();
-  }
+  const laveyOfficial = buildLaveyOfficialConversation();
 
   try {
     const summary = await notificationService.getSummary();

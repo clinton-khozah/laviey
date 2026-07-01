@@ -28,6 +28,27 @@ export function isAuthTokenMessage(message: string): boolean {
   );
 }
 
+export function isSignInRequiredMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('please sign in') ||
+    lower.includes('sign in again') ||
+    lower.includes('sign in to continue') ||
+    lower.includes('session has expired') ||
+    lower.includes('unauthorized')
+  );
+}
+
+export function isSignInRequiredError(error: unknown): boolean {
+  if (ApiError.isApiError(error)) {
+    return error.status === 401 || error.code === 'UNAUTHORIZED' || error.code === 'SESSION_EXPIRED';
+  }
+  if (error instanceof Error) {
+    return isSignInRequiredMessage(error.message);
+  }
+  return false;
+}
+
 export function sanitizeAuthErrorMessage(message: string): string {
   if (isSessionExpiredMessage(message)) {
     return SESSION_EXPIRED_MESSAGE;

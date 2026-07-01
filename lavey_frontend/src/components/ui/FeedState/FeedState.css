@@ -27,3 +27,11 @@
   color: white;
   box-shadow: var(--shadow-glow);
 }
+
+.feed-state__sign-in {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 5;
+}

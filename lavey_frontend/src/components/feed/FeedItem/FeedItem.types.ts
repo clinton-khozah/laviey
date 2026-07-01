@@ -9,5 +9,6 @@ export interface FeedItemProps {
   onPostLike: () => void;
   onICrush: () => void;
   onProfileClick: () => void;
+  onMoreOptions: () => void;
   showSwipeHint?: boolean;
 }

@@ -15,6 +15,7 @@ import {
 import { FeedState } from "@/components/ui/FeedState";
 import { PageTransitionSplash } from "@/components/ui/PageTransitionSplash/PageTransitionSplash";
 import { LogoLoader } from "@/components/ui/LogoLoader";
+import { hasPremiumAccess } from "@/config/features";
 import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
 import { ProfileLikesPanel } from "@/components/profile/ProfileLikesPanel";
 import {
@@ -26,6 +27,8 @@ import { ProfilePostsGrid } from "@/components/profile/ProfilePostsGrid";
 import { GiftEarningsSheet } from "@/components/profile/GiftEarningsSheet";
 import { ProfileSheet } from "@/components/profile/ProfileSheet";
 import { PlatinumUpgradeSheet } from "@/components/subscription/PlatinumUpgradeSheet";
+import { PlatinumManageSheet } from "@/components/subscription/PlatinumManageSheet";
+import { PlatinumBadge } from "@/components/subscription/PlatinumBadge";
 import { SettingsSheet } from "@/components/profile/SettingsSheet";
 import { BlockedUsersSheet } from "@/components/profile/BlockedUsersSheet";
 import { SafetyPrivacySheet } from "@/components/profile/SafetyPrivacySheet";
@@ -86,6 +89,7 @@ export function ProfilePage() {
   } = useProfilesWhoLikedYou();
   const [tab, setTab] = useState<ProfileTab>("posts");
   const [sheet, setSheet] = useState<ProfileSheetId>(null);
+  const [platinumManageOpen, setPlatinumManageOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [viewingPostId, setViewingPostId] = useState<string | null>(null);
   const [profilePosts, setProfilePosts] = useState<ProfilePost[] | null>(null);
@@ -366,7 +370,11 @@ export function ProfilePage() {
 
       {profile && (
         <div className="profile-page__content">
-          {!profile.isPremium ? (
+          {profile.isPremium ? (
+            <div className="profile-page__platinum-corner">
+              <PlatinumBadge size="sm" onClick={() => setPlatinumManageOpen(true)} />
+            </div>
+          ) : (
             <button
               type="button"
               className="profile-page__upgrade"
@@ -383,7 +391,7 @@ export function ProfilePage() {
               </svg>
               Upgrade
             </button>
-          ) : null}
+          )}
           <button
             ref={menuTriggerRef}
             type="button"
@@ -471,7 +479,9 @@ export function ProfilePage() {
               ) : null}
               <h2 className="profile-page__name">{profile.displayName}</h2>
               {profile.isPremium ? (
-                <span className="profile-page__premium">Platinum member</span>
+                <div className="profile-page__premium-row">
+                  <PlatinumBadge size="md" onClick={() => setPlatinumManageOpen(true)} />
+                </div>
               ) : null}
               <p className="profile-page__bio">{profile.bio}</p>
               <div className="profile-page__interests" aria-label="Interests">
@@ -776,7 +786,15 @@ export function ProfilePage() {
         )}
       </ProfileSheet>
 
-      <PlatinumUpgradeSheet open={sheet === "platinum"} onClose={closeSheet} />
+      <PlatinumUpgradeSheet open={sheet === "platinum"} onClose={closeSheet} country={profile?.country} />
+
+      <PlatinumManageSheet
+        open={platinumManageOpen}
+        onClose={() => setPlatinumManageOpen(false)}
+        onSubscriptionChanged={() => void refetch()}
+        country={profile?.country}
+        isPremiumMember={hasPremiumAccess(profile?.isPremium)}
+      />
 
       <SafetyPrivacySheet
         open={sheet === "safety"}

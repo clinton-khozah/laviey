@@ -27,6 +27,8 @@ import { discoverFiltersFromOnboarding } from "@/utils/discover/discoverFiltersF
 import { clearDiscoverFiltersManual, saveDiscoverFilters } from "@/utils/discover/discoverFilterStorage";
 import { resetDiscoverSetupState } from "@/utils/discover/discoverSetupStorage";
 
+const VERIFICATION_RESEND_COOLDOWN_SEC = 15;
+
 export interface AuthContextValue {
   user: AuthSession["user"] | null;
   isAuthenticated: boolean;
@@ -138,10 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSubmitting(true);
     try {
       await authService.resendVerificationEmail(normalizedEmail);
-      setResendCooldownSec(60);
+      setResendCooldownSec(VERIFICATION_RESEND_COOLDOWN_SEC);
       setVerificationStatus("Verification code sent. Check your inbox.");
     } catch (err) {
       if (ApiError.isApiError(err) && err.code === "EMAIL_RATE_LIMIT") {
+        setResendCooldownSec(VERIFICATION_RESEND_COOLDOWN_SEC);
         setVerificationStatus(
           "Enter the code from your latest email if you have one.",
         );
@@ -258,7 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             result.needsEmailVerification
           ) {
             setPendingVerificationEmail(result.email);
-            setResendCooldownSec(60);
+            setResendCooldownSec(VERIFICATION_RESEND_COOLDOWN_SEC);
             setVerificationStatus("Verification code sent. Check your inbox.");
             return;
           }
@@ -266,6 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           if (ApiError.isApiError(err) && err.code === "EMAIL_RATE_LIMIT") {
             setPendingVerificationEmail(payload.email.trim().toLowerCase());
+            setResendCooldownSec(VERIFICATION_RESEND_COOLDOWN_SEC);
             setVerificationStatus(
               "Enter the code from your latest email if you have one.",
             );
