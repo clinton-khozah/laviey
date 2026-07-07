@@ -173,6 +173,10 @@ export function PlatinumUpgradeSheet({
     }
   };
 
+  const handleApplyDiscount = () => {
+    setDiscountApplied(true);
+  };
+
   const handleSuccessDone = () => {
     setSubscribeSuccess(false);
     onClose();
@@ -230,16 +234,26 @@ export function PlatinumUpgradeSheet({
             <button
               type="button"
               className="platinum-upgrade__apply-discount"
-              onClick={() => setDiscountApplied(true)}
+              onClick={handleApplyDiscount}
             >
               Apply {promoDiscountPercent}% off
             </button>
           ) : null}
 
           {showDiscountedPrices ? (
-            <p className="platinum-upgrade__discount-applied" role="status">
-              {promoDiscountPercent}% off applied
-            </p>
+            <div className="platinum-upgrade__discount-applied" role="status">
+              <span className="platinum-upgrade__reward-orbit" aria-hidden>
+                <span />
+                <span />
+                <span />
+              </span>
+              <span className="platinum-upgrade__reward-badge">Unlocked</span>
+              <strong>{promoDiscountPercent}% off is yours</strong>
+              <span>Prices refreshed. Pick your Platinum pass and keep the glow going.</span>
+              <span className="platinum-upgrade__reward-meter" aria-hidden>
+                <i />
+              </span>
+            </div>
           ) : null}
 
           <div className="platinum-upgrade__plans" role="radiogroup" aria-label="Choose a plan">

@@ -72,3 +72,15 @@ Pushes to `main` deploy production. `testing` and `development` get branch deplo
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 See `lavey_frontend/ARCHITECTURE.md` for code layout.
+
+## Android app (Google Play)
+
+The frontend can be packaged as a native Android app with Capacitor. See **`lavey_frontend/MOBILE_ANDROID.md`** for Android Studio setup, signed release builds, and Play Store upload steps.
+
+Quick start:
+
+```bash
+cd lavey_frontend
+npm run cap:sync
+npm run cap:open
+```

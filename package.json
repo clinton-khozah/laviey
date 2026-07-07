@@ -6,6 +6,7 @@
     "dev": "npm run dev --prefix lavey_frontend",
     "build": "npm run build --prefix lavey_frontend",
     "lint": "npm run lint --prefix lavey_frontend",
-    "preview": "npm run preview --prefix lavey_frontend"
+    "mobile:sync": "npm run cap:sync --prefix lavey_frontend",
+    "mobile:open": "npm run cap:open --prefix lavey_frontend"
   }
 }
