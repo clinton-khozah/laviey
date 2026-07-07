@@ -4,6 +4,8 @@ import { contentService } from '@/services/content/contentService';
 import { FOR_YOU_TASTE_UPDATED_EVENT } from '@/types/discoverIntelligence';
 import type { MatchToastProfile } from '@/types';
 import { playMatchCelebrationSound, primeMatchAudio } from '@/utils/audio/playMatchCelebrationSound';
+import { playLikeFeedbackSound } from '@/utils/audio/playLikeFeedbackSound';
+import { areLikeFeedbackSoundsEnabled } from '@/utils/settings/userSettingsStorage';
 
 const LIKED_PROFILE_IDS_KEY = 'lavey:liked-profile-ids';
 
@@ -76,6 +78,8 @@ export function useMatchActionsState(): UseMatchActionsResult {
             avatar: result.profileAvatar,
             myAvatar: result.myAvatar,
           });
+        } else if (areLikeFeedbackSoundsEnabled()) {
+          playLikeFeedbackSound();
         }
       } finally {
         setIsSubmitting(false);

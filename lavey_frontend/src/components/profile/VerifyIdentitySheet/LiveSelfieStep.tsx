@@ -68,6 +68,27 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
     }
   }, []);
 
+  const captureCurrentFrame = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    setCapturedUrl(dataUrl);
+    setLiveness({
+      phase: 'ready',
+      message: 'Photo captured. Continue to verification.',
+      progress: 1,
+    });
+    onCapture(dataUrl);
+  }, [onCapture]);
+
   const requestCameraAndVerify = useCallback(async () => {
     if (!window.isSecureContext) {
       setCameraPhase('error');
@@ -127,8 +148,7 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
       <p className="verify-camera-step__step-label">Step 2 of 2</p>
       <h3 className="verify-camera-step__title">Live selfie check</h3>
       <p className="verify-camera-step__hint">
-        Look straight at the camera — we compare your live selfie to your reference photo on this
-        device.
+        Tap the capture button when you&apos;re ready. We compare your live selfie to your reference photo on this device.
       </p>
 
       <div className={`verify-camera-step__frame ${useLightFrame ? 'verify-camera-step__frame--light' : ''}`}>
@@ -143,6 +163,15 @@ export function LiveSelfieStep({ onBack, onCapture }: LiveSelfieStepProps) {
               muted
               hidden={!showLiveFeed}
             />
+            {showLiveFeed ? (
+              <button
+                type="button"
+                className="verify-camera-step__capture-btn"
+                onClick={() => captureCurrentFrame()}
+              >
+                Capture photo
+              </button>
+            ) : null}
             {showConsent ? (
               <div className="verify-camera-step__consent">
                 <span className="verify-camera-step__consent-icon" aria-hidden>

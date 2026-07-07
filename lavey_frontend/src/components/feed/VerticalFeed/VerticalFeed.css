@@ -5,9 +5,9 @@
   overflow-y: scroll;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
-  scroll-behavior: auto;
+  scroll-behavior: smooth;
   overscroll-behavior-y: contain;
-  touch-action: pan-y;
+  touch-action: none;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }

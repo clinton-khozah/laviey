@@ -3,11 +3,13 @@
   max-height: none;
 }
 
-.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options) .profile-sheet__header {
+.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options)
+  .profile-sheet__header {
   padding: 6px 12px 2px;
 }
 
-.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options) .profile-sheet__title {
+.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options)
+  .profile-sheet__title {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -15,14 +17,16 @@
   color: var(--text-muted);
 }
 
-.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options) .profile-sheet__close {
+.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options)
+  .profile-sheet__close {
   width: 24px;
   height: 24px;
   font-size: 16px;
   border-radius: 8px;
 }
 
-.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options) .profile-sheet__body {
+.profile-sheet--compact.profile-sheet--menu:has(.feed-profile-options)
+  .profile-sheet__body {
   padding: 4px 12px calc(var(--safe-bottom) + 8px);
 }
 
@@ -177,7 +181,9 @@
   color: var(--text-primary);
   background: var(--surface-muted);
   border: 1px solid var(--border-subtle);
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .feed-profile-options__reason--selected {

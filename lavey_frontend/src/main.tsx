@@ -6,10 +6,12 @@ import { ChatTypingStyleProvider } from "@/app/providers/ChatTypingStyleProvider
 import App from "@/app/App";
 import { initTheme } from "@/utils/theme/initTheme";
 import { initChatTypingStyle } from "@/utils/chat/initChatTypingStyle";
+import { initCapacitor } from "@/mobile/initCapacitor";
 import "./index.css";
 
 initTheme();
 initChatTypingStyle();
+void initCapacitor();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

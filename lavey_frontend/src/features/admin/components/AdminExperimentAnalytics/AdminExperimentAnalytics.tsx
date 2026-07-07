@@ -1,29 +1,49 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { adminOpsService, type AnalyticsSummary } from '@/services/admin/adminOpsService';
-import {
-  ANALYTICS_CURRENT_MONTH,
-  ANALYTICS_YEARS,
-  ENGAGEMENT_BY_YEAR,
-  REGISTRATIONS_BY_YEAR,
-  REVENUE_BY_YEAR,
-  newUsersByDay,
-  newUsersMonthTotal,
-  newUsersPeakDay,
-  yearlyRevenueTotal,
-  type AnalyticsPeriod,
-  type AnalyticsYear,
-} from './adminExperimentAnalytics.data';
 import './AdminExperimentAnalytics.css';
 
 const CHART_WIDTH = 720;
 const CHART_HEIGHT = 280;
 const PAD = { top: 18, right: 52, bottom: 36, left: 48 };
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+type AnalyticsPeriod = 'monthly-revenue' | 'active-users' | 'new-users';
 
 const PERIOD_OPTIONS: { id: AnalyticsPeriod; label: string }[] = [
   { id: 'monthly-revenue', label: 'Monthly revenue' },
   { id: 'active-users', label: 'Active users' },
   { id: 'new-users', label: 'New users' },
 ];
+
+function emptySummary(year: number): AnalyticsSummary {
+  const now = new Date();
+  const monthIndex = year === now.getFullYear() ? now.getMonth() : 0;
+  const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+
+  return {
+    year,
+    activeUsers30d: 0,
+    avgHoursOnPlatform: 0,
+    newMembersThisMonth: 0,
+    newUsersMonth: MONTHS[monthIndex]!,
+    platinumMembers: 0,
+    monthlyRegistrations: MONTHS.map((month) => ({ month, men: 0, women: 0, other: 0 })),
+    monthlyRevenue: MONTHS.map((month) => ({ month, amount: 0 })),
+    monthlyEngagement: MONTHS.map((month) => ({ month, activeUsers: 0, avgHours: 0 })),
+    dailyNewUsers: Array.from({ length: daysInMonth }, (_, index) => ({
+      day: index + 1,
+      users: 0,
+    })),
+  };
+}
+
+function normalizeMonthlyRows<T extends { month: string }>(
+  rows: T[],
+  buildEmpty: (month: string) => T,
+): T[] {
+  const byMonth = new Map(rows.map((row) => [row.month, row]));
+  return MONTHS.map((month) => byMonth.get(month) ?? buildEmpty(month));
+}
 
 function formatUsers(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
@@ -66,7 +86,9 @@ function ChartPanel({
 }
 
 export function AdminExperimentAnalytics() {
-  const [year, setYear] = useState<AnalyticsYear>(new Date().getFullYear() as AnalyticsYear);
+  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(() => [currentYear, currentYear - 1, currentYear - 2], [currentYear]);
+  const [year, setYear] = useState<number>(currentYear);
   const [period, setPeriod] = useState<AnalyticsPeriod>('monthly-revenue');
   const [liveSummary, setLiveSummary] = useState<AnalyticsSummary | null>(null);
 
@@ -78,64 +100,58 @@ export function AdminExperimentAnalytics() {
         if (!cancelled) setLiveSummary(summary);
       })
       .catch(() => {
-        if (!cancelled) setLiveSummary(null);
+        if (!cancelled) setLiveSummary(emptySummary(year));
       });
     return () => {
       cancelled = true;
     };
   }, [year]);
 
-  const registrations = useMemo(() => {
-    if (liveSummary?.year === year) {
-      return liveSummary.monthlyRegistrations.map((row) => ({
-        month: row.month,
-        men: row.men,
-        women: row.women,
-      }));
-    }
-    return REGISTRATIONS_BY_YEAR[year];
-  }, [liveSummary, year]);
+  const summary = useMemo(
+    () => (liveSummary?.year === year ? liveSummary : emptySummary(year)),
+    [liveSummary, year],
+  );
 
-  const engagement = useMemo(() => {
-    if (liveSummary?.year === year) {
-      return liveSummary.monthlyEngagement.map((row) => ({
-        month: row.month,
-        activeUsers: row.activeUsers,
-        avgHours: row.avgHours,
-      }));
-    }
-    return ENGAGEMENT_BY_YEAR[year];
-  }, [liveSummary, year]);
+  const registrations = useMemo(
+    () =>
+      normalizeMonthlyRows(summary.monthlyRegistrations, (month) => ({
+        month,
+        men: 0,
+        women: 0,
+        other: 0,
+      })),
+    [summary],
+  );
 
-  const revenue = useMemo(() => {
-    if (liveSummary?.year === year) {
-      return liveSummary.monthlyRevenue.map((row) => ({
-        month: row.month,
-        revenue: row.amount,
-      }));
-    }
-    return REVENUE_BY_YEAR[year];
-  }, [liveSummary, year]);
+  const engagement = useMemo(
+    () =>
+      normalizeMonthlyRows(summary.monthlyEngagement, (month) => ({
+        month,
+        activeUsers: 0,
+        avgHours: 0,
+      })),
+    [summary],
+  );
 
-  const thisMonthRegistration = registrations.find((row) => row.month === ANALYTICS_CURRENT_MONTH) ?? registrations[4];
-  const thisMonthEngagement = engagement.find((row) => row.month === ANALYTICS_CURRENT_MONTH) ?? engagement[4];
-  const thisMonthRevenue = revenue.find((row) => row.month === ANALYTICS_CURRENT_MONTH) ?? revenue[4];
+  const revenue = useMemo(
+    () =>
+      normalizeMonthlyRows(
+        summary.monthlyRevenue.map((row) => ({
+          month: row.month,
+          revenue: row.amount,
+        })),
+        (month) => ({ month, revenue: 0 }),
+      ),
+    [summary],
+  );
+
+  const focusMonth = summary.newUsersMonth || MONTHS[new Date().getMonth()]!;
+  const thisMonthEngagement = engagement.find((row) => row.month === focusMonth) ?? engagement[0]!;
+  const thisMonthRevenue = revenue.find((row) => row.month === focusMonth) ?? revenue[0]!;
 
   const dailyNewUsers = useMemo(() => {
-    if (liveSummary?.year === year && liveSummary.newMembersThisMonth > 0) {
-      const daysInMonth = new Date(year, new Date().getMonth() + 1, 0).getDate();
-      const total = liveSummary.newMembersThisMonth;
-      const base = Math.floor(total / daysInMonth);
-      let remainder = total - base * daysInMonth;
-      return Array.from({ length: daysInMonth }, (_, index) => {
-        const day = index + 1;
-        const extra = remainder > 0 ? 1 : 0;
-        if (extra) remainder -= 1;
-        return { day, users: base + extra };
-      });
-    }
-    return newUsersByDay(year);
-  }, [liveSummary, year]);
+    return summary.dailyNewUsers.length > 0 ? summary.dailyNewUsers : emptySummary(year).dailyNewUsers;
+  }, [summary, year]);
 
   const plotWidth = CHART_WIDTH - PAD.left - PAD.right;
   const plotHeight = CHART_HEIGHT - PAD.top - PAD.bottom;
@@ -172,11 +188,11 @@ export function AdminExperimentAnalytics() {
       return {
         month: row.month,
         centerX,
-        isCurrent: row.month === ANALYTICS_CURRENT_MONTH,
+        isCurrent: row.month === focusMonth,
         bar: { x: centerX - barWidth / 2, y: baseY - height, width: barWidth, height, value: row.revenue },
       };
     });
-  }, [revenue, revenueMax, plotHeight]);
+  }, [revenue, revenueMax, plotHeight, focusMonth]);
 
   const dailyNewUserBars = useMemo(() => {
     const groupWidth = buildGroupWidth(dailyNewUsers.length);
@@ -233,17 +249,20 @@ export function AdminExperimentAnalytics() {
     if (period === 'active-users') {
       const peakActive = Math.max(...engagement.map((row) => row.activeUsers), 0);
       return [
-        { label: `${ANALYTICS_CURRENT_MONTH} ${year} active`, value: thisMonthEngagement.activeUsers.toLocaleString() },
+        { label: `${focusMonth} ${year} active`, value: thisMonthEngagement.activeUsers.toLocaleString() },
         { label: 'Peak month', value: peakActive.toLocaleString() },
         { label: 'Avg time on platform', value: formatHours(thisMonthEngagement.avgHours) },
       ];
     }
     if (period === 'new-users') {
-      const total = newUsersMonthTotal(year);
-      const peak = newUsersPeakDay(year);
-      const dailyAvg = Math.round(total / dailyNewUsers.length);
+      const total = dailyNewUsers.reduce((sum, row) => sum + row.users, 0);
+      const peak = dailyNewUsers.reduce(
+        (best, row) => (row.users > best.users ? row : best),
+        dailyNewUsers[0] ?? { day: 1, users: 0 },
+      );
+      const dailyAvg = dailyNewUsers.length > 0 ? Math.round(total / dailyNewUsers.length) : 0;
       return [
-        { label: `${ANALYTICS_CURRENT_MONTH} ${year} total`, value: total.toLocaleString() },
+        { label: `${focusMonth} ${year} total`, value: total.toLocaleString() },
         { label: 'Daily average', value: dailyAvg.toLocaleString() },
         { label: 'Peak day', value: `Day ${peak.day} · ${peak.users.toLocaleString()}` },
       ];
@@ -251,7 +270,7 @@ export function AdminExperimentAnalytics() {
     const yearRevenue = revenue.reduce((sum, row) => sum + row.revenue, 0);
     return [
       { label: `${year} revenue`, value: formatRevenue(yearRevenue) },
-      { label: `${ANALYTICS_CURRENT_MONTH} revenue`, value: formatRevenue(thisMonthRevenue.revenue) },
+      { label: `${focusMonth} revenue`, value: formatRevenue(thisMonthRevenue.revenue) },
       {
         label: 'YTD registrations',
         value: registrations
@@ -259,7 +278,7 @@ export function AdminExperimentAnalytics() {
           .toLocaleString(),
       },
     ];
-  }, [period, year, engagement, thisMonthEngagement, thisMonthRevenue, thisMonthRegistration, dailyNewUsers.length, registrations, revenue]);
+  }, [period, year, engagement, thisMonthEngagement, thisMonthRevenue, dailyNewUsers, registrations, revenue, focusMonth]);
 
   const yTicksFor = (max: number, formatter: (v: number) => string) =>
     [0, 0.25, 0.5, 0.75, 1].map((t) => ({
@@ -294,9 +313,9 @@ export function AdminExperimentAnalytics() {
             id="analytics-year"
             className="admin-experiment-analytics__year-select"
             value={year}
-            onChange={(event) => setYear(Number(event.target.value) as AnalyticsYear)}
+            onChange={(event) => setYear(Number(event.target.value))}
           >
-            {ANALYTICS_YEARS.map((option) => (
+            {yearOptions.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
@@ -378,7 +397,7 @@ export function AdminExperimentAnalytics() {
         {period === 'active-users' && (
           <ChartPanel
             title="Active users"
-            description={`Monthly active members in ${year}; ${ANALYTICS_CURRENT_MONTH} highlighted (bars + avg hours line).`}
+            description={`Monthly active members in ${year}; ${focusMonth} highlighted (bars + avg hours line).`}
             legend={
               <div className="admin-experiment-analytics__legend">
                 <span className="admin-experiment-analytics__legend-item admin-experiment-analytics__legend-item--active">
@@ -437,7 +456,7 @@ export function AdminExperimentAnalytics() {
                     height={point.barHeight}
                     rx={4}
                     fill="url(#admin-eng-active)"
-                    opacity={point.month === ANALYTICS_CURRENT_MONTH ? 1 : 0.85}
+                    opacity={point.month === focusMonth ? 1 : 0.85}
                   >
                     <title>{`${point.month} — ${point.activeUsers.toLocaleString()} active users`}</title>
                   </rect>
@@ -453,7 +472,7 @@ export function AdminExperimentAnalytics() {
                         key={`dot-${point.month}`}
                         cx={point.x}
                         cy={point.lineY}
-                        r={point.month === ANALYTICS_CURRENT_MONTH ? 5 : 4}
+                        r={point.month === focusMonth ? 5 : 4}
                         className="admin-experiment-analytics__line-dot"
                       >
                         <title>{`${point.month} — ${point.avgHours.toFixed(1)}h avg`}</title>
@@ -467,7 +486,7 @@ export function AdminExperimentAnalytics() {
                   x={point.x}
                   y={CHART_HEIGHT - 12}
                   className={`admin-experiment-analytics__month-label ${
-                    point.month === ANALYTICS_CURRENT_MONTH
+                    point.month === focusMonth
                       ? 'admin-experiment-analytics__month-label--current'
                       : ''
                   }`}
@@ -482,14 +501,14 @@ export function AdminExperimentAnalytics() {
         {period === 'new-users' && (
           <ChartPanel
             title="New users"
-            description={`Daily sign-ups in ${ANALYTICS_CURRENT_MONTH} ${year} (one bar per day).`}
+            description={`Daily sign-ups in ${focusMonth} ${year} (one bar per day).`}
           >
             <svg
               className="admin-experiment-analytics__chart admin-experiment-analytics__chart--new-users"
               viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
               preserveAspectRatio="xMidYMid meet"
               role="img"
-              aria-label={`Daily new users for ${ANALYTICS_CURRENT_MONTH} ${year}`}
+              aria-label={`Daily new users for ${focusMonth} ${year}`}
             >
               <defs>
                 <linearGradient id="admin-new-users-bar" x1="0" y1="0" x2="0" y2="1">

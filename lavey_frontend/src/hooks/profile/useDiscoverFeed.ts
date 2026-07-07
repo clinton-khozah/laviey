@@ -152,6 +152,7 @@ export function useDiscoverFeed(
           ageMin: activeFilters.ageMin,
           ageMax: activeFilters.ageMax,
           verifiedOnly: activeFilters.verifiedOnly,
+          hasProfilePhoto: activeFilters.hasProfilePhoto,
           genders: activeFilters.genders,
         });
 
@@ -289,7 +290,7 @@ export function useDiscoverFeed(
 
   useEffect(() => {
     void resetAndLoad();
-  }, [filters.ageMin, filters.ageMax, filters.maxDistanceKm, filters.verifiedOnly, genderFilterKey, resetAndLoad]);
+  }, [filters.ageMin, filters.ageMax, filters.maxDistanceKm, filters.verifiedOnly, filters.hasProfilePhoto, genderFilterKey, resetAndLoad]);
 
   const onNearEndOfFeed = useCallback(() => {
     if (isFetchingRef.current) return;

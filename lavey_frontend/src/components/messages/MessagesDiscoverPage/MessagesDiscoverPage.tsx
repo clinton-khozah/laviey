@@ -94,6 +94,7 @@ export function MessagesDiscoverPage({
               onICrush={onICrush}
               onPostLike={onPostLike}
               onProfileClick={onProfileClick}
+              onMoreOptions={() => {}}
               isLocked={Boolean(matchToast)}
             />
           ) : null}

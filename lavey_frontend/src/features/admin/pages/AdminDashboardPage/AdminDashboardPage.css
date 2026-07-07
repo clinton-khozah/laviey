@@ -871,12 +871,29 @@
 .admin-stat-card {
   display: flex;
   align-items: center;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   gap: 14px;
   padding: 16px 18px;
   border-radius: var(--admin-radius);
   background: var(--admin-surface);
   border: 1px solid var(--admin-border);
   box-shadow: var(--admin-shadow);
+}
+
+.admin-stat-card--clickable {
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-stat-card--clickable:hover,
+.admin-stat-card--clickable:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  outline: none;
 }
 
 .admin-stat-card__icon {

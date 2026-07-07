@@ -13,6 +13,7 @@ export function buildFindFeedFilters(base: DiscoverFilters): DiscoverFilters {
     ageMax: Math.min(ABSOLUTE_AGE_MAX, base.ageMax + FIND_AGE_EXTENSION),
     genders: base.genders,
     verifiedOnly: base.verifiedOnly,
+    hasProfilePhoto: base.hasProfilePhoto,
   };
 }
 

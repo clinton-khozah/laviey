@@ -18,6 +18,7 @@ export type HrTab = 'employees' | 'roles' | 'leaves' | 'claims';
 
 interface AdminHrHubProps {
   initialTab: HrTab;
+  openExpenseUpload?: boolean;
   onPendingCountsChange?: (counts: { leaves: number; claims: number }) => void;
   onOpenSupport?: () => void;
   onOpenModeration?: () => void;
@@ -239,7 +240,7 @@ function applyDocumentExtraction(analysis: HrDocumentAnalysis, current: ClaimFor
   };
 }
 
-export function AdminHrHub({ initialTab, onPendingCountsChange }: AdminHrHubProps) {
+export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCountsChange }: AdminHrHubProps) {
   const [tab, setTab] = useState<HrTab>(initialTab);
   const [overview, setOverview] = useState<HrOverview | null>(null);
   const [roles, setRoles] = useState<EmployeeRole[]>([]);
@@ -500,6 +501,18 @@ export function AdminHrHub({ initialTab, onPendingCountsChange }: AdminHrHubProp
     setClaimDocumentAnalysis(null);
     setClaimDocumentLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!openExpenseUpload) return;
+    setTab('claims');
+    setShowAddLeave(false);
+    setShowAddClaim(true);
+    resetClaimDocument();
+    setClaimForm((current) => ({
+      ...emptyExpenseForm(),
+      employeeId: employees[0]?.id ?? current.employeeId,
+    }));
+  }, [openExpenseUpload, employees, resetClaimDocument]);
 
   const analyzeClaimFile = useCallback(async (file: File, claimType: ClaimType) => {
     setClaimDocumentLoading(true);

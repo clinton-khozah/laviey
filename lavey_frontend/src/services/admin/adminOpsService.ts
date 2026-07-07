@@ -60,10 +60,12 @@ export interface AnalyticsSummary {
   activeUsers30d: number;
   avgHoursOnPlatform: number;
   newMembersThisMonth: number;
+  newUsersMonth: string;
   platinumMembers: number;
   monthlyRegistrations: Array<{ month: string; men: number; women: number; other: number }>;
   monthlyRevenue: Array<{ month: string; amount: number }>;
   monthlyEngagement: Array<{ month: string; activeUsers: number; avgHours: number }>;
+  dailyNewUsers: Array<{ day: number; users: number }>;
 }
 
 function adminHeaders(): HeadersInit {

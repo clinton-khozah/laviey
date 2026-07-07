@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks";
 import { getApiConfigurationError } from "@/utils/api/apiConfiguration";
 import { usesBackendAuth } from "@/config/env";
 import { getGoogleSignInBlockedMessage } from "@/utils/google/googleEnvironment";
+import { isNativeMobileApp } from "@/utils/mobile/isNativeMobileApp";
 import "./AuthPage.css";
 
 export function AuthPage() {
@@ -28,6 +29,7 @@ export function AuthPage() {
   } = useAuth();
   const [emailMode, setEmailMode] = useState<EmailAuthMode>("sign-in");
   const webViewWarning = getGoogleSignInBlockedMessage();
+  const isNativeApp = isNativeMobileApp();
   const apiConfigWarning = usesBackendAuth()
     ? getApiConfigurationError()
     : null;
@@ -69,6 +71,12 @@ export function AuthPage() {
               <a href={window.location.href} target="_blank" rel="noreferrer">
                 Open in browser
               </a>
+            </p>
+          )}
+
+          {isNativeApp && !webViewWarning && (
+            <p className="auth-page__hint" role="status">
+              Sign in with email or Google — your account works the same as on the website.
             </p>
           )}
 

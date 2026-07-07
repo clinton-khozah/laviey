@@ -25,6 +25,7 @@ interface SettingsDraft {
   chatTypingStyle: ChatTypingStyle;
   language: MeetingLanguageCode;
   pushNotificationsEnabled: boolean;
+  likeFeedbackSoundEnabled: boolean;
   email: string;
   canChangePassword: boolean;
 }
@@ -99,6 +100,7 @@ export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetPro
             chatTypingStyle: data.chatTypingStyle,
             language: data.language,
             pushNotificationsEnabled: data.pushNotificationsEnabled,
+            likeFeedbackSoundEnabled: data.likeFeedbackSoundEnabled,
             email: data.email,
             canChangePassword: data.canChangePassword,
           });
@@ -136,6 +138,7 @@ export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetPro
         chatTypingStyle: draft.chatTypingStyle,
         language: draft.language,
         pushNotificationsEnabled: draft.pushNotificationsEnabled,
+        likeFeedbackSoundEnabled: draft.likeFeedbackSoundEnabled,
       });
 
       markThemeExplicitlyChosen();
@@ -146,6 +149,7 @@ export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetPro
           chatTypingStyle: saved.chatTypingStyle,
           language: saved.language,
           pushNotificationsEnabled: saved.pushNotificationsEnabled,
+          likeFeedbackSoundEnabled: saved.likeFeedbackSoundEnabled,
         },
         { setTheme, setChatTypingStyle, setLanguage },
       );
@@ -155,6 +159,7 @@ export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetPro
         chatTypingStyle: saved.chatTypingStyle,
         language: saved.language,
         pushNotificationsEnabled: saved.pushNotificationsEnabled,
+        likeFeedbackSoundEnabled: saved.likeFeedbackSoundEnabled,
         email: saved.email,
         canChangePassword: saved.canChangePassword,
       });
@@ -210,6 +215,15 @@ export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetPro
                 disabled={isBusy}
                 onToggle={() =>
                   patchDraft({ pushNotificationsEnabled: !draft.pushNotificationsEnabled })
+                }
+              />
+              <ToggleRow
+                label="Like feedback sound"
+                hint="Plays a soft chime when you like someone on For You"
+                pressed={draft.likeFeedbackSoundEnabled}
+                disabled={isBusy}
+                onToggle={() =>
+                  patchDraft({ likeFeedbackSoundEnabled: !draft.likeFeedbackSoundEnabled })
                 }
               />
             </section>

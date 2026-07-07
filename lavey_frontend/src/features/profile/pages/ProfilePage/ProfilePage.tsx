@@ -93,6 +93,7 @@ export function ProfilePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [viewingPostId, setViewingPostId] = useState<string | null>(null);
   const [profilePosts, setProfilePosts] = useState<ProfilePost[] | null>(null);
+  const [avatarViewerOpen, setAvatarViewerOpen] = useState(false);
   const [verified, setVerified] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -146,6 +147,63 @@ export function ProfilePage() {
   const displayPosts = profilePosts ?? profile?.posts ?? [];
   const photoCount = displayPosts.length;
   const atPostLimit = photoCount >= MAX_PROFILE_POSTS;
+  const avatarSrc = avatarOverride ?? profile?.avatarUrl ?? defaultAvatar;
+  const hasAvatar =
+    Boolean(avatarOverride || profile?.avatarUrl) &&
+    avatarSrc !== defaultAvatar;
+  const hasDisplayName = Boolean(profile?.displayName?.trim());
+  const hasBio = Boolean(
+    profile?.bio?.trim() && profile.bio.trim().length >= 20,
+  );
+  const hasInterests = (profile?.interests?.length ?? 0) > 0;
+  const hasPhotos = photoCount > 0;
+  const completionChecks = [
+    {
+      key: "photo",
+      label: "Add a clear profile photo",
+      done: hasAvatar,
+      actionLabel: "Add photo",
+      onAction: () => setSheet("photos"),
+    },
+    {
+      key: "verification",
+      label: "Verify your identity",
+      done: verified,
+      actionLabel: "Verify",
+      onAction: () => setSheet("verify"),
+    },
+    {
+      key: "details",
+      label: "Complete your bio and interests",
+      done: hasDisplayName && hasBio && hasInterests,
+      actionLabel: "Edit profile",
+      onAction: () => {
+        if (!profile) return;
+        setEditDisplayName(profile.displayName);
+        setEditBio(profile.bio);
+        setEditInterestKeys(profile.interests.map((item) => item.key));
+        setEditError(null);
+        void onboardingService.listInterestOptions().then(setInterestOptions);
+        setSheet("edit");
+      },
+    },
+    {
+      key: "gallery",
+      label: "Add more photos to your gallery",
+      done: hasPhotos,
+      actionLabel: "Add photos",
+      onAction: () => setSheet("photos"),
+    },
+  ];
+  const completedCount = completionChecks.filter((item) => item.done).length;
+  const completionPercent = Math.round(
+    (completedCount / completionChecks.length) * 100,
+  );
+  const missingCompletionItems = completionChecks.filter((item) => !item.done);
+  const completionSummary =
+    completionPercent < 100
+      ? "Finish a few quick steps to look more trustworthy and get more matches."
+      : "Your profile is ready for discovery.";
 
   const removePostFromGrid = (postId: string) => {
     setProfilePosts((prev) => {
@@ -172,8 +230,10 @@ export function ProfilePage() {
     await refetch();
   };
 
-  const avatarSrc = avatarOverride ?? profile?.avatarUrl ?? defaultAvatar;
-  const profilePhotoReference = resolveProfilePhotoReferenceUrl(profile?.id, avatarSrc);
+  const profilePhotoReference = resolveProfilePhotoReferenceUrl(
+    profile?.id,
+    avatarSrc,
+  );
 
   const handleAvatarFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -372,7 +432,10 @@ export function ProfilePage() {
         <div className="profile-page__content">
           {profile.isPremium ? (
             <div className="profile-page__platinum-corner">
-              <PlatinumBadge size="sm" onClick={() => setPlatinumManageOpen(true)} />
+              <PlatinumBadge
+                size="sm"
+                onClick={() => setPlatinumManageOpen(true)}
+              />
             </div>
           ) : (
             <button
@@ -416,34 +479,43 @@ export function ProfilePage() {
                 onChange={handleAvatarFile}
               />
               <div className="profile-page__avatar-wrap">
-                <button
-                  type="button"
-                  className="profile-page__avatar-btn"
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={isUploadingAvatar}
-                  aria-label="Edit profile photo"
+                <div
+                  className={`profile-page__avatar-progress-ring ${completionPercent < 100 ? "profile-page__avatar-progress-ring--active" : ""}`}
+                  style={{ ["--avatar-progress" as string]: `${completionPercent}%` }}
                 >
-                  <span
-                    className="profile-page__avatar"
-                    style={{ backgroundImage: `url("${avatarSrc}")` }}
-                    role="img"
-                    aria-label={profile.displayName}
-                  />
-                  {isUploadingAvatar ? (
-                    <span className="profile-page__avatar-loading" aria-hidden>
-                      <LogoLoader size="sm" label="Uploading photo" />
+                  <button
+                    type="button"
+                    className="profile-page__avatar-btn"
+                    onClick={() => setAvatarViewerOpen(true)}
+                    disabled={isUploadingAvatar}
+                    aria-label="View profile photo"
+                  >
+                    <span
+                      className="profile-page__avatar"
+                      style={{ backgroundImage: `url("${avatarSrc}")` }}
+                      role="img"
+                      aria-label={profile.displayName}
+                    />
+                    {isUploadingAvatar ? (
+                      <span className="profile-page__avatar-loading" aria-hidden>
+                        <LogoLoader size="sm" label="Uploading photo" />
+                      </span>
+                    ) : null}
+                    {verified && (
+                      <VerifiedBadge
+                        size="lg"
+                        ring
+                        className="profile-page__avatar-verified"
+                        title="Verified identity"
+                      />
+                    )}
+                  </button>
+                  {completionPercent < 100 ? (
+                    <span className="profile-page__avatar-progress-badge">
+                      {completionPercent}%
                     </span>
                   ) : null}
-                  <span className="profile-page__edit-badge">Edit</span>
-                  {verified && (
-                    <VerifiedBadge
-                      size="lg"
-                      ring
-                      className="profile-page__avatar-verified"
-                      title="Verified identity"
-                    />
-                  )}
-                </button>
+                </div>
                 {!verified && (
                   <button
                     type="button"
@@ -480,7 +552,10 @@ export function ProfilePage() {
               <h2 className="profile-page__name">{profile.displayName}</h2>
               {profile.isPremium ? (
                 <div className="profile-page__premium-row">
-                  <PlatinumBadge size="md" onClick={() => setPlatinumManageOpen(true)} />
+                  <PlatinumBadge
+                    size="md"
+                    onClick={() => setPlatinumManageOpen(true)}
+                  />
                 </div>
               ) : null}
               <p className="profile-page__bio">{profile.bio}</p>
@@ -528,6 +603,55 @@ export function ProfilePage() {
                 <span className="profile-page__stat-label">Views</span>
               </div>
             </div>
+
+            {completionPercent < 100 ? (
+              <div
+                className="profile-page__completion-card"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="profile-page__completion-head">
+                  <div>
+                    <p className="profile-page__completion-eyebrow">
+                      Profile progress
+                    </p>
+                    <h3 className="profile-page__completion-title">
+                      Your profile is {completionPercent}% complete
+                    </h3>
+                    <p className="profile-page__completion-copy">
+                      {completionSummary}
+                    </p>
+                  </div>
+                  <div className="profile-page__completion-score">
+                    {completionPercent}%
+                  </div>
+                </div>
+                <div className="profile-page__completion-bar" aria-hidden>
+                  <span style={{ width: `${completionPercent}%` }} />
+                </div>
+                <div className="profile-page__completion-list">
+                  {missingCompletionItems.map((item) => (
+                    <div
+                      key={item.key}
+                      className="profile-page__completion-item"
+                    >
+                      <div className="profile-page__completion-item-copy">
+                        <span className="profile-page__completion-item-label">
+                          {item.label}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="profile-page__completion-action"
+                        onClick={item.onAction}
+                      >
+                        {item.actionLabel}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div
               className="profile-page__tabs"
@@ -594,6 +718,29 @@ export function ProfilePage() {
           </div>
         </div>
       )}
+
+      {avatarViewerOpen && profile ? (
+        <div
+          className="profile-page__avatar-viewer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Profile photo"
+        >
+          <button
+            type="button"
+            className="profile-page__avatar-viewer-close"
+            onClick={() => setAvatarViewerOpen(false)}
+            aria-label="Close profile photo"
+          >
+            ×
+          </button>
+          <img
+            src={avatarSrc}
+            alt={`${profile.displayName} profile photo`}
+            className="profile-page__avatar-viewer-image"
+          />
+        </div>
+      ) : null}
 
       {profile && (
         <ProfilePostViewer
@@ -786,7 +933,11 @@ export function ProfilePage() {
         )}
       </ProfileSheet>
 
-      <PlatinumUpgradeSheet open={sheet === "platinum"} onClose={closeSheet} country={profile?.country} />
+      <PlatinumUpgradeSheet
+        open={sheet === "platinum"}
+        onClose={closeSheet}
+        country={profile?.country}
+      />
 
       <PlatinumManageSheet
         open={platinumManageOpen}

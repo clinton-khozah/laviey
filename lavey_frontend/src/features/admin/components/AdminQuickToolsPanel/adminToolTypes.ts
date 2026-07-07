@@ -8,15 +8,16 @@ export type QuickToolId =
   | 'employees'
   | 'roles-pay'
   | 'leaves'
+  | 'invoices'
   | 'claims';
 
-export type HrQuickToolId = 'employees' | 'roles-pay' | 'leaves' | 'claims';
+export type HrQuickToolId = 'employees' | 'roles-pay' | 'leaves' | 'invoices' | 'claims';
 
 export type OpsToolId = Exclude<QuickToolId, HrQuickToolId>;
 
 const OPS_TOOL_IDS: OpsToolId[] = ['notifications', 'activity', 'alerts', 'broadcast', 'export', 'help'];
 
-const HR_TOOL_IDS: HrQuickToolId[] = ['employees', 'roles-pay', 'leaves', 'claims'];
+const HR_TOOL_IDS: HrQuickToolId[] = ['employees', 'roles-pay', 'leaves', 'invoices', 'claims'];
 
 export function isQuickToolView(id: string): id is QuickToolId {
   return (OPS_TOOL_IDS as string[]).includes(id) || (HR_TOOL_IDS as string[]).includes(id);
@@ -33,6 +34,7 @@ export function isOpsQuickTool(id: string): id is OpsToolId {
 export function hrTabFromTool(id: HrQuickToolId): 'employees' | 'roles' | 'leaves' | 'claims' {
   if (id === 'roles-pay') return 'roles';
   if (id === 'leaves') return 'leaves';
+  if (id === 'invoices') return 'claims';
   if (id === 'claims') return 'claims';
   return 'employees';
 }
@@ -120,11 +122,19 @@ export const TOOL_PAGE_META: ToolPageMeta[] = [
     breadcrumb: 'Admin / HR / Leave',
   },
   {
+    id: 'invoices',
+    label: 'Invoices',
+    sub: 'Tax & supporting docs',
+    icon: 'download',
+    summary: 'Upload invoice, receipt, and supporting documents for SARS, reimbursements, or company records.',
+    breadcrumb: 'Admin / HR / Invoices',
+  },
+  {
     id: 'claims',
     label: 'Claims',
-    sub: 'Expenses & reimbursements',
+    sub: 'Expenses & approvals',
     icon: 'clipboard',
-    summary: 'Employee expense claims, equipment, training costs, and company-wide spend.',
+    summary: 'Review employee expense claims, equipment, training costs, and company-wide spend.',
     breadcrumb: 'Admin / HR / Claims',
   },
 ];

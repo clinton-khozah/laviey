@@ -1,9 +1,17 @@
 import { apiConfig } from "@/config/api.config";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { emitSessionExpired } from "@/utils/auth/authSessionEvents";
-import { toApiNetworkError } from "@/utils/api/networkError";
+import {
+  createTimeoutSignal,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  mergeAbortSignals,
+  toApiNetworkError,
+} from "@/utils/api/networkError";
 import { maybeNavigateToErrorPage } from "@/utils/navigation/errorNavigation";
-import { sanitizeAuthErrorMessage } from "@/utils/errors/userFacingErrorMessage";
+import {
+  sanitizeAuthErrorMessage,
+  sanitizeInfrastructureErrorMessage,
+} from "@/utils/errors/userFacingErrorMessage";
 import type { ApiErrorBody } from "@/types";
 import { ApiError } from "./apiError";
 
@@ -52,6 +60,8 @@ async function parseErrorResponse(response: Response): Promise<ApiError> {
     /* non-JSON error body */
   }
 
+  message = sanitizeInfrastructureErrorMessage(message);
+
   if (response.status === 401 || code === "SESSION_EXPIRED") {
     message = sanitizeAuthErrorMessage(message);
     if (code === "UNAUTHORIZED" && message.includes("expired")) {
@@ -87,17 +97,24 @@ async function request<T>(
   }
 
   let response: Response;
+  const timeout = createTimeoutSignal(DEFAULT_REQUEST_TIMEOUT_MS);
+  const signal = config.signal
+    ? mergeAbortSignals([config.signal, timeout.signal])
+    : timeout.signal;
+
   try {
     response = await fetch(buildUrl(path, config.params), {
       method,
       headers,
       body: config.body !== undefined ? JSON.stringify(config.body) : undefined,
-      signal: config.signal,
+      signal,
     });
   } catch (err) {
     const networkError = toApiNetworkError(err);
     if (networkError) throw networkError;
     throw err;
+  } finally {
+    timeout.clear();
   }
 
   if (!response.ok) {
@@ -169,17 +186,24 @@ async function postForm<T>(
   }
 
   let response: Response;
+  const timeout = createTimeoutSignal(DEFAULT_REQUEST_TIMEOUT_MS);
+  const signal = options?.signal
+    ? mergeAbortSignals([options.signal, timeout.signal])
+    : timeout.signal;
+
   try {
     response = await fetch(buildUrl(path), {
       method: "POST",
       headers,
       body: formData,
-      signal: options?.signal,
+      signal,
     });
   } catch (err) {
     const networkError = toApiNetworkError(err);
     if (networkError) throw networkError;
     throw err;
+  } finally {
+    timeout.clear();
   }
 
   if (!response.ok) {

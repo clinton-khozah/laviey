@@ -1,27 +1,31 @@
-import { usesBackendApi } from '@/config/env';
-import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { getAppliedAlgorithm } from '@/features/admin/algorithm/algorithmConfig';
-import type { AlgorithmId } from '@/features/admin/components/AdminAlgorithmOverseer/adminAlgorithmOverseer.data';
-import { httpClient } from '@/services/api/httpClient';
-import { MOCK_PROFILES } from '@/services/mocks/profile.mock';
-import type { ApiResponse } from '@/types';
-import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
+import { usesBackendApi } from "@/config/env";
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { getAppliedAlgorithm } from "@/features/admin/algorithm/algorithmConfig";
+import type { AlgorithmId } from "@/features/admin/components/AdminAlgorithmOverseer/adminAlgorithmOverseer.data";
+import { httpClient } from "@/services/api/httpClient";
+import { MOCK_PROFILES } from "@/services/mocks/profile.mock";
+import type { ApiResponse } from "@/types";
+import type { DiscoverFilters, FeedFilter, Profile } from "@/types";
+import type { DiscoverGender } from "@/types";
 import type {
   DiscoverFeedAlgorithm,
   ForYouTasteInsight,
-} from '@/types/discoverIntelligence';
+} from "@/types/discoverIntelligence";
 import {
   defaultNearbyDistanceTier,
   filterProfilesByDistanceCap,
   nextNearbyDistanceTier,
   resolveDistanceCapKm,
   sortProfilesByDistance,
-} from '@/utils/discover/discoverDistanceTiers';
-import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
-import { buildFindFeedFilters } from '@/utils/discover/findFeedFilters';
-import { applyVibeMatchToProfiles } from '@/utils/discover/vibeMatchScore';
-import { normalizeProfile, normalizeProfiles } from '@/utils/profile/normalizeProfile';
-import { sleep } from '@/utils/sleep';
+} from "@/utils/discover/discoverDistanceTiers";
+import { applyDiscoverDemographicFilters } from "@/utils/discover/applyDiscoverFilters";
+import { buildFindFeedFilters } from "@/utils/discover/findFeedFilters";
+import { applyVibeMatchToProfiles } from "@/utils/discover/vibeMatchScore";
+import {
+  normalizeProfile,
+  normalizeProfiles,
+} from "@/utils/profile/normalizeProfile";
+import { sleep } from "@/utils/sleep";
 
 interface DiscoverFeedApiPayload {
   profiles: Profile[];
@@ -45,6 +49,7 @@ export interface DiscoverFeedRequest {
   ageMin?: number;
   ageMax?: number;
   verifiedOnly?: boolean;
+  hasProfilePhoto?: boolean;
   genders?: string[];
   limit?: number;
 }
@@ -62,43 +67,58 @@ export interface DiscoverFeedResponse {
   myLikedProfileIds: string[];
 }
 
-function sortMockProfilesByAlgorithm(profiles: Profile[], algorithmId: AlgorithmId): Profile[] {
+function sortMockProfilesByAlgorithm(
+  profiles: Profile[],
+  algorithmId: AlgorithmId,
+): Profile[] {
   const list = [...profiles];
-  if (algorithmId === 'swipe-index') {
+  if (algorithmId === "swipe-index") {
     return list.sort((a, b) => (b.vibeScore ?? 0) - (a.vibeScore ?? 0));
   }
-  if (algorithmId === 'affinity-proximity') {
+  if (algorithmId === "affinity-proximity") {
     return list.sort((a, b) => {
-      const scoreA = (a.verified ? 20 : 0) + (a.vibeScore ?? 0) * 0.6 + (a.age % 5);
-      const scoreB = (b.verified ? 20 : 0) + (b.vibeScore ?? 0) * 0.6 + (b.age % 5);
+      const scoreA =
+        (a.verified ? 20 : 0) + (a.vibeScore ?? 0) * 0.6 + (a.age % 5);
+      const scoreB =
+        (b.verified ? 20 : 0) + (b.vibeScore ?? 0) * 0.6 + (b.age % 5);
       return scoreB - scoreA;
     });
   }
   return list.sort((a, b) => {
-    const warmA = (a.likedYou ? 30 : 0) + (a.verified ? 10 : 0) + (a.vibeScore ?? 0) * 0.3;
-    const warmB = (b.likedYou ? 30 : 0) + (b.verified ? 10 : 0) + (b.vibeScore ?? 0) * 0.3;
+    const warmA =
+      (a.likedYou ? 30 : 0) + (a.verified ? 10 : 0) + (a.vibeScore ?? 0) * 0.3;
+    const warmB =
+      (b.likedYou ? 30 : 0) + (b.verified ? 10 : 0) + (b.vibeScore ?? 0) * 0.3;
     return warmB - warmA;
   });
 }
 
-function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedResponse {
-  const filter = request.filter ?? 'for-you';
+function buildMockDiscoverFeed(
+  request: DiscoverFeedRequest,
+): DiscoverFeedResponse {
+  const filter = request.filter ?? "for-you";
   const maxDistanceKm = request.maxDistanceKm ?? 50;
   const expandedDistance = request.expandDistance === true;
   const distanceTierKm = expandedDistance
     ? null
-    : filter === 'nearby'
+    : filter === "nearby"
       ? request.distanceTierKm
         ? Number(request.distanceTierKm)
         : defaultNearbyDistanceTier(maxDistanceKm)
       : null;
 
+  const requestedGenders = (request.genders ?? []).filter(
+    (gender): gender is DiscoverGender =>
+      ["woman", "man", "nonbinary"].includes(gender),
+  );
+
   const filters: DiscoverFilters = {
     maxDistanceKm,
     ageMin: request.ageMin ?? 18,
     ageMax: request.ageMax ?? 35,
-    genders: [],
+    genders: requestedGenders,
     verifiedOnly: request.verifiedOnly === true,
+    hasProfilePhoto: request.hasProfilePhoto !== false,
   };
 
   let profiles = [...MOCK_PROFILES];
@@ -116,17 +136,17 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
     maxDistanceKm,
   });
   profiles = filterProfilesByDistanceCap(profiles, maxKm);
-  if (filter === 'nearby') {
+  if (filter === "nearby") {
     profiles = sortProfilesByDistance(profiles);
   }
 
   const nextDistanceTierKm =
-    !expandedDistance && filter === 'nearby'
+    !expandedDistance && filter === "nearby"
       ? nextNearbyDistanceTier(distanceTierKm, maxDistanceKm)
       : null;
 
   const canExpandDistance =
-    !expandedDistance && (filter === 'for-you' || nextDistanceTierKm === null);
+    !expandedDistance && (filter === "for-you" || nextDistanceTierKm === null);
 
   profiles = applyVibeMatchToProfiles(profiles);
 
@@ -139,7 +159,7 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
           slug: applied.id,
           name: applied.name,
           code: applied.codename,
-          description: '',
+          description: "",
           feedBanner: applied.feedBanner,
         }
       : null,
@@ -158,8 +178,10 @@ function buildMockDiscoverFeed(request: DiscoverFeedRequest): DiscoverFeedRespon
  * Set VITE_USE_MOCK_API=true only for offline UI demos.
  */
 export const profileService = {
-  async getDiscoverFeed(request: DiscoverFeedRequest = {}): Promise<DiscoverFeedResponse> {
-    const filter = request.filter ?? 'for-you';
+  async getDiscoverFeed(
+    request: DiscoverFeedRequest = {},
+  ): Promise<DiscoverFeedResponse> {
+    const filter = request.filter ?? "for-you";
 
     if (!usesBackendApi()) {
       await sleep(350);
@@ -174,12 +196,20 @@ export const profileService = {
           cursor: request.cursor,
           limit: request.limit ?? 18,
           distanceTierKm: request.distanceTierKm,
-          expandDistance: request.expandDistance ? 'true' : undefined,
+          expandDistance: request.expandDistance ? "true" : undefined,
           maxDistanceKm: request.maxDistanceKm,
           ageMin: request.ageMin,
           ageMax: request.ageMax,
-          verifiedOnly: request.verifiedOnly ? 'true' : undefined,
-          genders: request.genders?.length ? request.genders.join(',') : undefined,
+          verifiedOnly: request.verifiedOnly ? "true" : undefined,
+          hasProfilePhoto:
+            request.hasProfilePhoto === undefined
+              ? undefined
+              : request.hasProfilePhoto
+                ? "true"
+                : "false",
+          genders: request.genders?.length
+            ? request.genders.join(",")
+            : undefined,
         },
       },
     );
@@ -242,7 +272,7 @@ export const profileService = {
     if (!usesBackendApi()) {
       await sleep(200);
       const profile = MOCK_PROFILES[0];
-      if (!profile) throw new Error('Profile not found');
+      if (!profile) throw new Error("Profile not found");
       return applyVibeMatchToProfiles([profile])[0]!;
     }
 
@@ -261,7 +291,7 @@ export const profileService = {
     }
 
     const { profiles } = await this.getDiscoverFeed({
-      filter: 'for-you',
+      filter: "for-you",
       maxDistanceKm: 500,
       expandDistance: true,
       ageMin: 18,
@@ -274,7 +304,7 @@ export const profileService = {
   /** Suggested people from Messages — any distance, ranked by For You algorithm. */
   async getMessagesDiscoverSuggestions(): Promise<Profile[]> {
     const request: DiscoverFeedRequest = {
-      filter: 'for-you',
+      filter: "for-you",
       expandDistance: true,
       maxDistanceKm: 500,
       ageMin: 18,
@@ -292,10 +322,12 @@ export const profileService = {
   },
 
   /** Find from Messages — gender + widened age only, no distance cap. */
-  async getMessagesFindSuggestions(baseFilters: DiscoverFilters): Promise<Profile[]> {
+  async getMessagesFindSuggestions(
+    baseFilters: DiscoverFilters,
+  ): Promise<Profile[]> {
     const filters = buildFindFeedFilters(baseFilters);
     const request: DiscoverFeedRequest = {
-      filter: 'for-you',
+      filter: "for-you",
       expandDistance: true,
       maxDistanceKm: 500,
       ageMin: filters.ageMin,

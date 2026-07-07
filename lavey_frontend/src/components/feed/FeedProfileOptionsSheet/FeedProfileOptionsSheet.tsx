@@ -1,29 +1,29 @@
-import { useEffect, useState } from 'react';
-import { FeedProfileAvatar } from '@/components/feed/FeedProfileAvatar';
-import { ProfileSheet } from '@/components/profile/ProfileSheet';
-import { VerifiedBadge } from '@/components/ui/VerifiedBadge';
-import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
-import type { Profile } from '@/types';
-import './FeedProfileOptionsSheet.css';
+import { useEffect, useState } from "react";
+import { FeedProfileAvatar } from "@/components/feed/FeedProfileAvatar";
+import { ProfileSheet } from "@/components/profile/ProfileSheet";
+import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
+import { hasCustomProfileAvatar } from "@/utils/discover/discoverProfileReady";
+import type { Profile } from "@/types";
+import "./FeedProfileOptionsSheet.css";
 
-export type FeedProfileOptionAction = 'view-profile' | 'report' | 'block';
+export type FeedProfileOptionAction = "view-profile" | "report" | "block";
 
 export interface FeedProfileActionMeta {
   reportReason?: string;
 }
 
 const REPORT_REASONS = [
-  'Inappropriate photos',
-  'Inappropriate bio or profile',
-  'Harassment or hate speech',
-  'Fake profile or scam',
-  'Spam or advertising',
-  'Underage concern',
-  'Other',
+  "Inappropriate photos",
+  "Inappropriate bio or profile",
+  "Harassment or hate speech",
+  "Fake profile or scam",
+  "Spam or advertising",
+  "Underage concern",
+  "Other",
 ] as const;
 
 type ReportReason = (typeof REPORT_REASONS)[number];
-type SheetStep = 'menu' | 'report' | 'report-confirm' | 'block-confirm';
+type SheetStep = "menu" | "report" | "report-confirm" | "block-confirm";
 
 interface FeedProfileOptionsSheetProps {
   open: boolean;
@@ -38,14 +38,14 @@ interface FeedProfileOptionsSheetProps {
 
 function sheetTitle(step: SheetStep): string {
   switch (step) {
-    case 'menu':
-      return 'Options';
-    case 'report':
-      return 'Report';
-    case 'report-confirm':
-      return 'Report?';
-    case 'block-confirm':
-      return 'Block?';
+    case "menu":
+      return "Options";
+    case "report":
+      return "Report";
+    case "report-confirm":
+      return "Report?";
+    case "block-confirm":
+      return "Block?";
   }
 }
 
@@ -55,30 +55,37 @@ export function FeedProfileOptionsSheet({
   onClose,
   onAction,
 }: FeedProfileOptionsSheetProps) {
-  const [busyAction, setBusyAction] = useState<FeedProfileOptionAction | null>(null);
-  const [step, setStep] = useState<SheetStep>('menu');
-  const [reportReason, setReportReason] = useState<ReportReason | ''>('');
-  const [reportDetails, setReportDetails] = useState('');
+  const [busyAction, setBusyAction] = useState<FeedProfileOptionAction | null>(
+    null,
+  );
+  const [step, setStep] = useState<SheetStep>("menu");
+  const [reportReason, setReportReason] = useState<ReportReason | "">("");
+  const [reportDetails, setReportDetails] = useState("");
 
   useEffect(() => {
     if (!open) {
-      setStep('menu');
-      setReportReason('');
-      setReportDetails('');
+      setStep("menu");
+      setReportReason("");
+      setReportDetails("");
       setBusyAction(null);
     }
   }, [open]);
 
   if (!profile) return null;
 
-  const avatarSrc = hasCustomProfileAvatar(profile.avatar) ? profile.avatar : undefined;
+  const avatarSrc = hasCustomProfileAvatar(profile.avatar)
+    ? profile.avatar
+    : undefined;
 
   const handleClose = () => {
     if (busyAction) return;
     onClose();
   };
 
-  const runAction = async (action: FeedProfileOptionAction, meta?: FeedProfileActionMeta) => {
+  const runAction = async (
+    action: FeedProfileOptionAction,
+    meta?: FeedProfileActionMeta,
+  ) => {
     if (busyAction) return;
     setBusyAction(action);
     try {
@@ -90,22 +97,32 @@ export function FeedProfileOptionsSheet({
   };
 
   const resolvedReportReason =
-    reportReason === 'Other' ? reportDetails.trim() : reportReason;
+    reportReason === "Other" ? reportDetails.trim() : reportReason;
 
   const canContinueReport = Boolean(
-    reportReason && (reportReason !== 'Other' || reportDetails.trim().length >= 3),
+    reportReason &&
+    (reportReason !== "Other" || reportDetails.trim().length >= 3),
   );
 
   const renderIntro = () => (
     <div className="feed-profile-options__intro">
-      <FeedProfileAvatar name={profile.name} src={avatarSrc} className="feed-profile-options__avatar" size="sm" />
+      <FeedProfileAvatar
+        name={profile.name}
+        src={avatarSrc}
+        className="feed-profile-options__avatar"
+        size="sm"
+      />
       <div className="feed-profile-options__intro-text">
         <p className="feed-profile-options__name-row">
           <strong>{profile.name}</strong>
-          {profile.verified ? <VerifiedBadge size="sm" title="Verified" /> : null}
+          {profile.verified ? (
+            <VerifiedBadge size="sm" title="Verified" />
+          ) : null}
         </p>
         <p className="feed-profile-options__meta">
-          {profile.vibeScore ? `${profile.vibeScore}% vibe match` : 'For You profile'}
+          {profile.vibeScore
+            ? `${profile.vibeScore}% vibe match`
+            : "For You profile"}
         </p>
       </div>
     </div>
@@ -119,10 +136,15 @@ export function FeedProfileOptionsSheet({
         type="button"
         className="feed-profile-options__action"
         disabled={Boolean(busyAction)}
-        onClick={() => void runAction('view-profile')}
+        onClick={() => void runAction("view-profile")}
       >
         <span className="feed-profile-options__icon" aria-hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
@@ -137,10 +159,18 @@ export function FeedProfileOptionsSheet({
         type="button"
         className="feed-profile-options__action"
         disabled={Boolean(busyAction)}
-        onClick={() => setStep('report')}
+        onClick={() => setStep("report")}
       >
-        <span className="feed-profile-options__icon feed-profile-options__icon--warn" aria-hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <span
+          className="feed-profile-options__icon feed-profile-options__icon--warn"
+          aria-hidden
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             <path d="M12 9v4M12 17h.01" />
           </svg>
@@ -155,10 +185,18 @@ export function FeedProfileOptionsSheet({
         type="button"
         className="feed-profile-options__action feed-profile-options__action--danger"
         disabled={Boolean(busyAction)}
-        onClick={() => setStep('block-confirm')}
+        onClick={() => setStep("block-confirm")}
       >
-        <span className="feed-profile-options__icon feed-profile-options__icon--danger" aria-hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <span
+          className="feed-profile-options__icon feed-profile-options__icon--danger"
+          aria-hidden
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <circle cx="12" cy="12" r="10" />
             <path d="M4.93 4.93l14.14 14.14" />
           </svg>
@@ -169,7 +207,11 @@ export function FeedProfileOptionsSheet({
         </span>
       </button>
 
-      <button type="button" className="feed-profile-options__cancel" onClick={handleClose}>
+      <button
+        type="button"
+        className="feed-profile-options__cancel"
+        onClick={handleClose}
+      >
         Cancel
       </button>
     </>
@@ -181,14 +223,18 @@ export function FeedProfileOptionsSheet({
         Why are you reporting <strong>{profile.name}</strong>?
       </p>
 
-      <div className="feed-profile-options__reasons" role="radiogroup" aria-label="Report reason">
+      <div
+        className="feed-profile-options__reasons"
+        role="radiogroup"
+        aria-label="Report reason"
+      >
         {REPORT_REASONS.map((reason) => (
           <button
             key={reason}
             type="button"
             role="radio"
             aria-checked={reportReason === reason}
-            className={`feed-profile-options__reason${reportReason === reason ? ' feed-profile-options__reason--selected' : ''}`}
+            className={`feed-profile-options__reason${reportReason === reason ? " feed-profile-options__reason--selected" : ""}`}
             onClick={() => setReportReason(reason)}
           >
             {reason}
@@ -196,7 +242,7 @@ export function FeedProfileOptionsSheet({
         ))}
       </div>
 
-      {reportReason === 'Other' ? (
+      {reportReason === "Other" ? (
         <label className="feed-profile-options__details-label">
           <span>Describe the issue</span>
           <textarea
@@ -211,14 +257,18 @@ export function FeedProfileOptionsSheet({
       ) : null}
 
       <div className="feed-profile-options__step-actions">
-        <button type="button" className="feed-profile-options__back" onClick={() => setStep('menu')}>
+        <button
+          type="button"
+          className="feed-profile-options__back"
+          onClick={() => setStep("menu")}
+        >
           Back
         </button>
         <button
           type="button"
           className="feed-profile-options__primary feed-profile-options__primary--warn"
           disabled={!canContinueReport}
-          onClick={() => setStep('report-confirm')}
+          onClick={() => setStep("report-confirm")}
         >
           Continue
         </button>
@@ -235,25 +285,28 @@ export function FeedProfileOptionsSheet({
         Reason: <span>{resolvedReportReason}</span>
       </p>
       <p className="feed-profile-options__confirm-note">
-        Our team will review this report. This profile will be hidden from your For You feed.
+        Our team will review this report. This profile will be hidden from your
+        For You feed.
       </p>
 
       <div className="feed-profile-options__step-actions">
         <button
           type="button"
           className="feed-profile-options__back"
-          disabled={busyAction === 'report'}
-          onClick={() => setStep('report')}
+          disabled={busyAction === "report"}
+          onClick={() => setStep("report")}
         >
           Back
         </button>
         <button
           type="button"
           className="feed-profile-options__primary feed-profile-options__primary--warn"
-          disabled={busyAction === 'report'}
-          onClick={() => void runAction('report', { reportReason: resolvedReportReason })}
+          disabled={busyAction === "report"}
+          onClick={() =>
+            void runAction("report", { reportReason: resolvedReportReason })
+          }
         >
-          {busyAction === 'report' ? 'Submitting…' : 'Yes, report'}
+          {busyAction === "report" ? "Submitting…" : "Yes, report"}
         </button>
       </div>
     </>
@@ -265,38 +318,44 @@ export function FeedProfileOptionsSheet({
         Are you sure you want to block <strong>{profile.name}</strong>?
       </p>
       <p className="feed-profile-options__confirm-note">
-        They won&apos;t appear on your For You feed and can&apos;t message you. You can unblock them
-        later in Settings.
+        They won&apos;t appear on your For You feed and can&apos;t message you.
+        You can unblock them later in Settings.
       </p>
 
       <div className="feed-profile-options__step-actions">
         <button
           type="button"
           className="feed-profile-options__back"
-          disabled={busyAction === 'block'}
-          onClick={() => setStep('menu')}
+          disabled={busyAction === "block"}
+          onClick={() => setStep("menu")}
         >
           Back
         </button>
         <button
           type="button"
           className="feed-profile-options__primary feed-profile-options__primary--danger"
-          disabled={busyAction === 'block'}
-          onClick={() => void runAction('block')}
+          disabled={busyAction === "block"}
+          onClick={() => void runAction("block")}
         >
-          {busyAction === 'block' ? 'Blocking…' : 'Yes, block'}
+          {busyAction === "block" ? "Blocking…" : "Yes, block"}
         </button>
       </div>
     </>
   );
 
   return (
-    <ProfileSheet open={open} title={sheetTitle(step)} onClose={handleClose} compact menu>
+    <ProfileSheet
+      open={open}
+      title={sheetTitle(step)}
+      onClose={handleClose}
+      compact
+      menu
+    >
       <div className="feed-profile-options">
-        {step === 'menu' ? renderMenu() : null}
-        {step === 'report' ? renderReportReasons() : null}
-        {step === 'report-confirm' ? renderReportConfirm() : null}
-        {step === 'block-confirm' ? renderBlockConfirm() : null}
+        {step === "menu" ? renderMenu() : null}
+        {step === "report" ? renderReportReasons() : null}
+        {step === "report-confirm" ? renderReportConfirm() : null}
+        {step === "block-confirm" ? renderBlockConfirm() : null}
       </div>
     </ProfileSheet>
   );

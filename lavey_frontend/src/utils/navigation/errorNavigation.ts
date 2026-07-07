@@ -1,5 +1,6 @@
 import { resolveErrorPageCode, type ErrorPageCode } from '@/features/errors';
 import { ApiError } from '@/services/api/apiError';
+import { sanitizeInfrastructureErrorMessage } from '@/utils/errors/userFacingErrorMessage';
 
 const ERROR_PATH_PREFIX = '/error';
 
@@ -39,8 +40,9 @@ export function parseErrorPageSearch(search: string): {
 } {
   const params = new URLSearchParams(search);
   const statusRaw = params.get('status');
+  const message = params.get('message') ?? undefined;
   return {
-    message: params.get('message') ?? undefined,
+    message: message ? sanitizeInfrastructureErrorMessage(message) : undefined,
     apiCode: params.get('apiCode') ?? undefined,
     status: statusRaw ? Number(statusRaw) : undefined,
   };
@@ -98,7 +100,7 @@ export function maybeNavigateToErrorPage(error: ApiError): void {
 
   navigateToErrorPage({
     code: resolveErrorPageCode(error.status, error.code),
-    message: error.message,
+    message: sanitizeInfrastructureErrorMessage(error.message),
     apiCode: error.code,
     status: error.status,
   });

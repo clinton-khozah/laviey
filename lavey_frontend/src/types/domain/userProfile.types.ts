@@ -26,6 +26,8 @@ export interface UserProfile {
   isPremium: boolean;
   /** Photo / identity verified — shown on profile for trust */
   verified: boolean;
+  /** ISO country code or name — used for localized Platinum pricing */
+  country?: string;
   stats: UserProfileStats;
   posts: ProfilePost[];
 }

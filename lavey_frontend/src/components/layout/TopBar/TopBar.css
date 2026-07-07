@@ -28,40 +28,41 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 6px 3px 5px;
+  padding: 6px 10px 6px 8px;
   border-radius: 999px;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   line-height: 1;
-  color: #e9d5ff;
-  background: linear-gradient(
-    135deg,
-    rgba(124, 58, 237, 0.35) 0%,
-    rgba(236, 72, 153, 0.22) 100%
-  );
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  box-shadow: 0 1px 6px rgba(124, 58, 237, 0.18);
-  transition: transform 0.15s ease;
+  white-space: nowrap;
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .top-bar__upgrade-crown {
   width: 9px;
   height: 9px;
   flex-shrink: 0;
-  color: #fbbf24;
-  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.65));
+  color: #f59e0b;
+  filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.35));
+}
+
+.top-bar__upgrade:hover {
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
 }
 
 .top-bar__upgrade:active {
   transform: scale(0.96);
 }
 
-[data-theme='light'] .top-bar__upgrade {
-  color: #6d28d9;
-  background: rgba(124, 58, 237, 0.12);
-  border-color: rgba(124, 58, 237, 0.35);
+[data-theme="light"] .top-bar__upgrade {
+  color: #111827;
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.12);
 }
 
 .top-bar__logo {

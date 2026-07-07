@@ -6,11 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:mobile": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "postinstall": "node scripts/copy-face-models.mjs"
+    "postinstall": "node scripts/copy-face-models.mjs",
+    "cap:sync": "npm run build:mobile && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:run": "npm run cap:sync && npx cap run android",
+    "build:android:dev": "node scripts/use-android-dev-env.mjs && npm run cap:sync"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/app": "^7.0.2",
+    "@capacitor/core": "^7.4.2",
+    "@capacitor/splash-screen": "^7.0.2",
+    "@capacitor/status-bar": "^7.0.2",
     "@supabase/supabase-js": "^2.107.0",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
@@ -24,6 +34,7 @@
     "world-atlas": "^2.0.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.2",
     "@eslint/js": "^10.0.1",
     "@types/d3-geo": "^3.1.0",
     "@types/geojson": "^7946.0.16",

@@ -20,7 +20,7 @@ export function primeMatchAudio(): void {
   }
 }
 
-function getContext(): AudioContext | null {
+export function getSharedAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   primeMatchAudio();
   return sharedContext;
@@ -39,7 +39,7 @@ type ToneSpec = {
  * Short “spark + rise” jingle: two bright pings and a warm major lift.
  */
 export function playMatchCelebrationSound(): void {
-  const ctx = getContext();
+  const ctx = getSharedAudioContext();
   if (!ctx) return;
 
   const master = ctx.createGain();

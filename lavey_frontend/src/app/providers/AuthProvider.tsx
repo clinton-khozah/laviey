@@ -26,8 +26,10 @@ import { clearPendingOnboardingQuiz, consumePendingOnboardingQuiz } from "@/util
 import { discoverFiltersFromOnboarding } from "@/utils/discover/discoverFiltersFromOnboarding";
 import { clearDiscoverFiltersManual, saveDiscoverFilters } from "@/utils/discover/discoverFilterStorage";
 import { resetDiscoverSetupState } from "@/utils/discover/discoverSetupStorage";
+import { sleep } from "@/utils/sleep";
 
 const VERIFICATION_RESEND_COOLDOWN_SEC = 15;
+const AUTH_BOOTSTRAP_TIMEOUT_MS = 12_000;
 
 export interface AuthContextValue {
   user: AuthSession["user"] | null;
@@ -105,15 +107,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const onOAuthCallback = window.location.pathname === "/auth/callback";
 
       try {
-        const restored = await authService.restoreSession();
-        if (!cancelled && !onOAuthCallback && restored) {
-          setSession(restored);
+        await Promise.race([
+          (async () => {
+            const restored = await authService.restoreSession();
+            if (!cancelled && !onOAuthCallback && restored) {
+              setSession(restored);
 
-          const needsQuiz = await resolveNeedsOnboardingQuiz(restored.user.id);
-          if (!cancelled) {
-            setNeedsOnboardingQuiz(needsQuiz);
-          }
-        }
+              const needsQuiz = await resolveNeedsOnboardingQuiz(restored.user.id);
+              if (!cancelled) {
+                setNeedsOnboardingQuiz(needsQuiz);
+              }
+            }
+          })(),
+          sleep(AUTH_BOOTSTRAP_TIMEOUT_MS),
+        ]);
       } finally {
         if (!cancelled) {
           setIsLoading(false);

@@ -53,7 +53,9 @@ export function FaceMatchStep({ referenceUrl, liveUrl, onMatch, onFail }: FaceMa
   return (
     <div className="verify-face-match">
       <LogoLoader size="md" label="Verifying faces" />
-      <p className="verify-face-match__hint">This runs on your device — photos aren&apos;t sent for matching.</p>
+      <p className="verify-face-match__hint">
+        This usually takes about 5 minutes. We&apos;ll close this and notify you when it&apos;s done. This runs on your device — photos aren&apos;t sent for matching.
+      </p>
     </div>
   );
 }

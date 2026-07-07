@@ -32,6 +32,7 @@ export function UserSettingsSync() {
             chatTypingStyle: data.chatTypingStyle,
             language: data.language,
             pushNotificationsEnabled: data.pushNotificationsEnabled,
+            likeFeedbackSoundEnabled: data.likeFeedbackSoundEnabled,
           },
           { setTheme, setChatTypingStyle, setLanguage },
         );

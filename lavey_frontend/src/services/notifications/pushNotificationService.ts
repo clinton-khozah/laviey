@@ -31,12 +31,16 @@ function isPushSupported(): boolean {
   );
 }
 
-async function fetchVapidPublicKey(): Promise<string> {
-  const res = await httpClient.get<ApiResponse<{ publicKey: string }>>(
-    API_ENDPOINTS.users.pushVapidPublicKey,
-    { skipErrorPage: true },
-  );
-  return res.data.publicKey;
+async function fetchVapidPublicKey(): Promise<string | null> {
+  try {
+    const res = await httpClient.get<ApiResponse<{ publicKey: string }>>(
+      API_ENDPOINTS.users.pushVapidPublicKey,
+      { skipErrorPage: true },
+    );
+    return res.data.publicKey;
+  } catch {
+    return null;
+  }
 }
 
 async function saveSubscriptionToBackend(
@@ -117,6 +121,8 @@ export const pushNotificationService = {
 
     try {
       const publicKey = await fetchVapidPublicKey();
+      if (!publicKey) return false;
+
       const registration = await ensureServiceWorker();
       const subscription = await subscribeWithCurrentVapid(
         registration,
@@ -127,7 +133,7 @@ export const pushNotificationService = {
       return true;
     } catch (err) {
       if (import.meta.env.DEV) {
-        console.warn("[push] sync failed", err);
+        console.debug("[push] sync failed", err);
       }
       return false;
     }

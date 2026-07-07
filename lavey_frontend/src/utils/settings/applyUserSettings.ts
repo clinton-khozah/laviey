@@ -37,6 +37,7 @@ export function getLocalUserSettings(): UserSettings {
     chatTypingStyle: loadChatTypingStyle(),
     language: readStoredLanguage(),
     pushNotificationsEnabled: cached.pushNotificationsEnabled,
+    likeFeedbackSoundEnabled: cached.likeFeedbackSoundEnabled,
   };
 }
 

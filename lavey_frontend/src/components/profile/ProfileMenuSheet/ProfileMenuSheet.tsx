@@ -164,7 +164,7 @@ export function ProfileMenuSheet({
               }
               label="Your gifts"
               value={`$${profile.stats.giftEarnings.toFixed(2)}`}
-              description="From gifts on meetups"
+              description="From gifts and admin credits"
               variant="earnings"
               onClick={() => pick('earnings')}
             />

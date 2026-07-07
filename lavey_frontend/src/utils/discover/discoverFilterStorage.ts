@@ -33,6 +33,7 @@ function parseStoredFilters(raw: string): DiscoverFilters | null {
       ...parsed,
       genders: parsed.genders.length > 0 ? parsed.genders : DEFAULT_DISCOVER_FILTERS.genders,
       verifiedOnly: parsed.verifiedOnly === true,
+      hasProfilePhoto: parsed.hasProfilePhoto !== false,
     };
   } catch {
     return null;

@@ -1,16 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { MatchActionsProvider } from '@/app/providers/MatchActionsProvider';
 import { UserSettingsSync } from '@/app/components/UserSettingsSync';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
-import { DiscoverPage } from '@/features/discover';
-import { MessagesPage } from '@/features/messages';
-import { ZoomPage } from '@/features/rooms';
-import { ProfilePage } from '@/features/profile';
-import { PostPage } from '@/features/post';
 import { useConversations, usePushNotifications } from '@/hooks';
 import { PushNotificationPrompt } from '@/components/notifications/PushNotificationPrompt';
 import type { NavItemId } from '@/constants/navigation';
+
+const DiscoverPage = lazy(() =>
+  import('@/features/discover').then((module) => ({ default: module.DiscoverPage })),
+);
+const ZoomPage = lazy(() =>
+  import('@/features/rooms').then((module) => ({ default: module.ZoomPage })),
+);
+const PostPage = lazy(() =>
+  import('@/features/post').then((module) => ({ default: module.PostPage })),
+);
+const MessagesPage = lazy(() =>
+  import('@/features/messages').then((module) => ({ default: module.MessagesPage })),
+);
+const ProfilePage = lazy(() =>
+  import('@/features/profile').then((module) => ({ default: module.ProfilePage })),
+);
 
 type NavigateEventDetail = { nav: NavItemId };
 
@@ -97,7 +108,7 @@ export function MainApp() {
         messageBadgeCount={messageBadgeCount}
         onNavigate={handleNavigate}
       >
-        {page}
+        <Suspense fallback={<PageTransitionSplash />}>{page}</Suspense>
         {isTransitioning && <PageTransitionSplash />}
       </AppShell>
       <PushNotificationPrompt

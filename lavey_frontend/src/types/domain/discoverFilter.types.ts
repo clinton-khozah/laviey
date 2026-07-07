@@ -7,6 +7,8 @@ export interface DiscoverFilters {
   genders: DiscoverGender[];
   /** When true, only show identity-verified profiles. */
   verifiedOnly: boolean;
+  /** When true, hide profiles without a profile photo. */
+  hasProfilePhoto: boolean;
 }
 
 export const DEFAULT_DISCOVER_FILTERS: DiscoverFilters = {
@@ -15,4 +17,5 @@ export const DEFAULT_DISCOVER_FILTERS: DiscoverFilters = {
   ageMax: 35,
   genders: ['woman', 'man', 'nonbinary'],
   verifiedOnly: false,
+  hasProfilePhoto: true,
 };

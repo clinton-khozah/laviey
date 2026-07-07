@@ -82,6 +82,9 @@ export function AuthCallbackPage() {
         );
         backendCallback.searchParams.set("code", code);
         backendCallback.searchParams.set("frontend", frontendOrigin);
+        if (stored.client) {
+          backendCallback.searchParams.set("client", stored.client);
+        }
         window.location.replace(backendCallback.toString());
         return;
       }

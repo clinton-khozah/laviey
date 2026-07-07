@@ -280,14 +280,14 @@ export function GiftEarningsSheet({ open, onClose, onRefresh }: GiftEarningsShee
                   </svg>
                 </button>
               </div>
-              <p className="gift-earnings-sheet__sub">From gifts on meetups</p>
+              <p className="gift-earnings-sheet__sub">From gifts and admin credits</p>
               {pending > 0 && (
                 <p className="gift-earnings-sheet__pending">${pending.toFixed(2)} processing</p>
               )}
             </div>
 
             <p className="gift-earnings-sheet__note">
-              Gifts sent during video meetups land here. Withdraw to your bank when you&apos;re ready.
+              Gifts and admin credits land here. Withdraw to your bank when you&apos;re ready.
             </p>
 
             {wallet?.payoutAccount && !showBankForm && (

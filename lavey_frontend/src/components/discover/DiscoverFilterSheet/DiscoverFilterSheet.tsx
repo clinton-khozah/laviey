@@ -122,6 +122,27 @@ export function DiscoverFilterSheet({
         <section className="discover-filter-sheet__section discover-filter-sheet__section--toggle">
           <div className="discover-filter-sheet__toggle-row">
             <div className="discover-filter-sheet__toggle-text">
+              <span className="discover-filter-sheet__label">Only with profile photos</span>
+              <span className="discover-filter-sheet__toggle-hint">
+                Hide profiles that do not have a profile photo
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draft.hasProfilePhoto}
+              aria-label="Only with profile photos"
+              className={`discover-filter-sheet__toggle profile-sheet__toggle ${draft.hasProfilePhoto ? 'profile-sheet__toggle--on discover-filter-sheet__toggle--on' : ''}`}
+              onClick={() =>
+                setDraft((prev) => ({ ...prev, hasProfilePhoto: !prev.hasProfilePhoto }))
+              }
+            />
+          </div>
+        </section>
+
+        <section className="discover-filter-sheet__section discover-filter-sheet__section--toggle">
+          <div className="discover-filter-sheet__toggle-row">
+            <div className="discover-filter-sheet__toggle-text">
               <span className="discover-filter-sheet__label">Verified only</span>
               <span className="discover-filter-sheet__toggle-hint">
                 Show people with the blue verified badge

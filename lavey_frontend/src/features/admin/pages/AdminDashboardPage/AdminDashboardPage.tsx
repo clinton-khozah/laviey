@@ -152,10 +152,10 @@ const API_ENDPOINTS = [
 ];
 
 const COMMAND_KPIS_FALLBACK = [
-  { label: 'Total members', value: '—', delta: 'Loading live data…', trend: 'up' as const, tone: 'blue' as const },
-  { label: 'Swipes today', value: '—', delta: 'Discover activity', trend: 'up' as const, tone: 'red' as const },
-  { label: 'Platinum members', value: '—', delta: 'Active subscriptions', trend: 'up' as const, tone: 'green' as const },
-  { label: 'Needs attention', value: '—', delta: 'Moderation + support + HR', trend: 'down' as const, tone: 'amber' as const },
+  { label: 'Total members', value: '—', delta: 'Loading live data…', trend: 'up' as const, tone: 'blue' as const, target: 'users' as const },
+  { label: 'Swipes today', value: '—', delta: 'Discover activity', trend: 'up' as const, tone: 'red' as const, target: 'ai' as const },
+  { label: 'Platinum members', value: '—', delta: 'Active subscriptions', trend: 'up' as const, tone: 'green' as const, target: 'monetization' as const },
+  { label: 'Needs attention', value: '—', delta: 'Moderation + support + HR', trend: 'down' as const, tone: 'amber' as const, target: 'notifications' as const },
 ];
 
 function commandKpisFromOverview(overview: CommandOverview | null) {
@@ -168,6 +168,7 @@ function commandKpisFromOverview(overview: CommandOverview | null) {
       delta: `${overview.platinumMembers.toLocaleString()} Platinum`,
       trend: 'up' as const,
       tone: 'blue' as const,
+      target: 'users' as const,
     },
     {
       label: 'Swipes today',
@@ -175,6 +176,7 @@ function commandKpisFromOverview(overview: CommandOverview | null) {
       delta: overview.activeAlgorithm ? `Live: ${overview.activeAlgorithm}` : 'No live algorithm',
       trend: 'up' as const,
       tone: 'red' as const,
+      target: 'ai' as const,
     },
     {
       label: 'Platinum members',
@@ -182,6 +184,7 @@ function commandKpisFromOverview(overview: CommandOverview | null) {
       delta: `Revenue 30d: ${overview.revenueAttributed30d}`,
       trend: 'up' as const,
       tone: 'green' as const,
+      target: 'monetization' as const,
     },
     {
       label: 'Needs attention',
@@ -189,6 +192,7 @@ function commandKpisFromOverview(overview: CommandOverview | null) {
       delta: `${overview.moderationQueue} mod · ${overview.openSupportTickets} support · ${overview.pendingHrItems} HR`,
       trend: attention > 0 ? ('down' as const) : ('up' as const),
       tone: 'amber' as const,
+      target: overview.moderationQueue > 0 ? ('content' as const) : overview.openSupportTickets > 0 ? ('comms' as const) : overview.pendingHrItems > 0 ? ('employees' as const) : ('notifications' as const),
     },
   ];
 }
@@ -279,6 +283,7 @@ const TOOL_PATHS: Record<QuickToolId, string> = {
   employees: `${ADMIN_BASE}/hr/employees`,
   'roles-pay': `${ADMIN_BASE}/hr/roles`,
   leaves: `${ADMIN_BASE}/hr/leaves`,
+  invoices: `${ADMIN_BASE}/hr/invoices`,
   claims: `${ADMIN_BASE}/hr/claims`,
 };
 
@@ -521,6 +526,10 @@ interface MonetizationWalletRow {
   lastGiftAt?: string;
 }
 
+function formatGiftUsd(value: number): string {
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDashboardPageProps) {
   const [activeView, setActiveView] = useState<AdminViewId>(() => viewFromPath(adminPath));
   const [maximized, setMaximized] = useState(false);
@@ -683,6 +692,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       return (
         <AdminHrHub
           initialTab={hrTabFromTool(activeView)}
+          openExpenseUpload={activeView === 'invoices'}
           onPendingCountsChange={({ leaves, claims }) => {
             setPendingHrLeaves(leaves);
             setPendingHrClaims(claims);
@@ -773,7 +783,12 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
         <section className="admin-overview">
           <div className="admin-stat-grid admin-stat-grid--4">
             {commandKpis.map((kpi) => (
-              <article key={kpi.label} className={`admin-stat-card admin-stat-card--${kpi.tone}`}>
+              <button
+                key={kpi.label}
+                type="button"
+                className={`admin-stat-card admin-stat-card--${kpi.tone} admin-stat-card--clickable`}
+                onClick={() => switchView(kpi.target)}
+              >
                 <div className="admin-stat-card__icon" aria-hidden>
                   <KpiStatIcon tone={kpi.tone} />
                 </div>
@@ -782,7 +797,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                   <p>{kpi.label}</p>
                   <span className={`admin-stat-card__meta admin-stat-card__meta--${kpi.trend}`}>{kpi.delta}</span>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
 
@@ -895,7 +910,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                 : wallet,
             ),
           );
-          setMonetizationNotice(`Gift of R${amount.toLocaleString()} sent to ${giftPanelUser.name}.`);
+          setMonetizationNotice(`Gift of ${formatGiftUsd(amount)} sent to ${giftPanelUser.name}.`);
           setGiftPanelUserId(null);
           setGiftAmount('100');
         }).catch((err) => {
@@ -915,7 +930,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
           <div className="admin-monetization-lab__stats">
             <article>
               <p>Total gift balance</p>
-              <strong>R{totalGiftBalance.toLocaleString()}</strong>
+              <strong>{formatGiftUsd(totalGiftBalance)}</strong>
             </article>
             <article>
               <p>Withdraw enabled</p>
@@ -956,7 +971,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
               <p>Member will receive the gift and see a gifted status on their wallet.</p>
               <div className="admin-monetization-lab__gift-panel-row">
                 <label>
-                  Gift amount (R)
+                  Gift amount (USD)
                   <input
                     type="number"
                     min={1}
@@ -1016,7 +1031,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
                       </span>
                     </td>
                     <td>
-                      <strong className="admin-monetization-lab__balance">R{wallet.giftBalance.toLocaleString()}</strong>
+                      <strong className="admin-monetization-lab__balance">{formatGiftUsd(wallet.giftBalance)}</strong>
                     </td>
                     <td>
                       {wallet.wasGifted ? (

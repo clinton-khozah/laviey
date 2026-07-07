@@ -363,6 +363,22 @@
   transform: translateY(-1px);
 }
 
+.verify-camera-step__capture-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--gradient-flame);
+  box-shadow: 0 8px 24px rgba(255, 77, 109, 0.28);
+  z-index: 2;
+}
+
 .verify-camera-step__upload-btn {
   padding: 10px 16px;
   border-radius: 12px;

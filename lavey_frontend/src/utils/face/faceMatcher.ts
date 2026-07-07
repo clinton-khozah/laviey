@@ -81,6 +81,18 @@ function loadImageSource(src: string): Promise<HTMLImageElement> {
     : loadImageFromUrl(src);
 }
 
+function isCanvasAccessBlocked(error: unknown): boolean {
+  if (error instanceof DOMException) {
+    return error.name === "SecurityError";
+  }
+
+  if (error instanceof Error) {
+    return /tainted|cross-origin|security|getImageData/i.test(error.message);
+  }
+
+  return false;
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -97,17 +109,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
       );
     reader.readAsDataURL(file);
   });
-}
-
-function imageToDataUrl(img: HTMLImageElement): string {
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth || img.width;
-  canvas.height = img.naturalHeight || img.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx)
-    throw new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image.");
-  ctx.drawImage(img, 0, 0);
-  return canvas.toDataURL("image/jpeg", 0.92);
 }
 
 export interface FaceValidationOptions {
@@ -276,44 +277,43 @@ async function detectSingleFaceDescriptor(
 }
 
 export async function extractFaceDescriptor(
-  dataUrl: string,
+  src: string,
 ): Promise<Float32Array> {
   await loadFaceModels();
-  const img = await loadImageFromDataUrl(dataUrl);
+  const img = await loadImageSource(src);
   return detectSingleFaceDescriptor(img);
 }
 
-function loadThumb(dataUrl: string): Promise<Uint8ClampedArray> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 48;
-      canvas.height = 48;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(
-          new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image."),
-        );
-        return;
-      }
-      ctx.drawImage(img, 0, 0, 48, 48);
-      resolve(ctx.getImageData(0, 0, 48, 48).data);
-    };
-    img.onerror = () =>
-      reject(
-        new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image."),
+async function loadThumb(src: string): Promise<Uint8ClampedArray> {
+  const img = await loadImageSource(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = 48;
+  canvas.height = 48;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image.");
+  }
+
+  try {
+    ctx.drawImage(img, 0, 0, 48, 48);
+    return ctx.getImageData(0, 0, 48, 48).data;
+  } catch (error) {
+    if (isCanvasAccessBlocked(error)) {
+      throw new FaceMatchError(
+        "IMAGE_ACCESS_BLOCKED",
+        "We couldn't read that photo because the browser blocked image access. Please try a different photo.",
       );
-    img.src = dataUrl;
-  });
+    }
+    throw new FaceMatchError("IMAGE_LOAD_FAILED", "Could not analyze image.");
+  }
 }
 
 /** Reject when the live shot is essentially the same file as the reference (replay attack). */
 export async function validateNotDuplicatePhotos(
-  referenceDataUrl: string,
-  liveDataUrl: string,
+  referenceSource: string,
+  liveSource: string,
 ): Promise<void> {
-  if (referenceDataUrl === liveDataUrl) {
+  if (referenceSource === liveSource) {
     throw new FaceMatchError(
       "SAME_IMAGE",
       "The live photo matches your uploaded file exactly. Use your camera for the selfie step, not the same gallery image.",
@@ -321,8 +321,8 @@ export async function validateNotDuplicatePhotos(
   }
 
   const [refImg, liveImg] = await Promise.all([
-    loadThumb(referenceDataUrl),
-    loadThumb(liveDataUrl),
+    loadThumb(referenceSource),
+    loadThumb(liveSource),
   ]);
 
   let samePixels = 0;
@@ -352,14 +352,22 @@ export interface FaceCompareResult {
 }
 
 export async function compareFacePhotos(
-  referenceDataUrl: string,
-  liveDataUrl: string,
+  referenceSource: string,
+  liveSource: string,
 ): Promise<FaceCompareResult> {
-  await validateNotDuplicatePhotos(referenceDataUrl, liveDataUrl);
+  try {
+    await validateNotDuplicatePhotos(referenceSource, liveSource);
+  } catch (error) {
+    if (error instanceof FaceMatchError && error.code === "IMAGE_ACCESS_BLOCKED") {
+      // Continue with the face comparison even if duplicate-image checks are blocked.
+    } else {
+      throw error;
+    }
+  }
 
   const [referenceDescriptor, liveDescriptor] = await Promise.all([
-    extractFaceDescriptor(referenceDataUrl),
-    extractFaceDescriptor(liveDataUrl),
+    extractFaceDescriptor(referenceSource),
+    extractFaceDescriptor(liveSource),
   ]);
 
   const distance = faceapi.euclideanDistance(
@@ -398,7 +406,15 @@ export async function compareFaceReferenceToLive(
     loadImageFromDataUrl(liveDataUrl),
   ]);
 
-  await validateNotDuplicatePhotos(imageToDataUrl(refImg), liveDataUrl);
+  try {
+    await validateNotDuplicatePhotos(referenceUrl, liveDataUrl);
+  } catch (error) {
+    if (error instanceof FaceMatchError && error.code === "IMAGE_ACCESS_BLOCKED") {
+      // Continue with the face comparison even if duplicate-image checks are blocked.
+    } else {
+      throw error;
+    }
+  }
 
   const [referenceDescriptor, liveDescriptor] = await Promise.all([
     detectSingleFaceDescriptor(refImg),

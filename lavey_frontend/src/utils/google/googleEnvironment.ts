@@ -1,8 +1,20 @@
+import { Capacitor } from '@capacitor/core';
+import { isNativeMobileApp } from '@/utils/mobile/isNativeMobileApp';
+
 /** Google Identity Services blocks embedded webviews (Cursor preview, VS Code Simple Browser, etc.). */
 export function isEmbeddedWebView(): boolean {
+  if (isNativeMobileApp() || Capacitor.isNativePlatform()) {
+    return false;
+  }
+
   const ua = navigator.userAgent;
 
-  if (/Cursor|Electron|SimpleBrowser|WebView|wv\)/i.test(ua)) {
+  if (/Cursor|Electron|SimpleBrowser/i.test(ua)) {
+    return true;
+  }
+
+  // Android WebView includes "; wv)" — allow on native Capacitor (handled above).
+  if (/WebView/i.test(ua) && !/;\s*wv\)/i.test(ua)) {
     return true;
   }
 

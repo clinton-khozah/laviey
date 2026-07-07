@@ -8,6 +8,7 @@ import {
   stashOAuthRedirectContext,
 } from "@/utils/auth/oauthRedirectStorage";
 import { markPendingOnboardingQuiz } from "@/utils/onboarding/pendingOnboardingQuiz";
+import { getNativeOAuthParams } from "@/utils/mobile/nativeOAuth";
 import { requestGoogleIdToken } from "@/utils/google/googleIdTokenSignIn";
 import { STORAGE_KEYS } from "@/constants/storageKeys";
 import { defaultAvatar } from "@/constants/defaultAvatar";
@@ -148,10 +149,12 @@ export const authService = {
 
     resetOAuthCallbackState();
     markPendingOnboardingQuiz();
-    stashOAuthRedirectContext(apiConfig.baseUrl, window.location.origin);
-    const origin = encodeURIComponent(window.location.origin);
+    const { origin, client } = getNativeOAuthParams();
+    stashOAuthRedirectContext(apiConfig.baseUrl, origin, client);
+    const originParam = encodeURIComponent(origin);
+    const clientParam = encodeURIComponent(client);
     window.location.assign(
-      `${apiConfig.baseUrl}${API_ENDPOINTS.auth.google}?origin=${origin}`,
+      `${apiConfig.baseUrl}${API_ENDPOINTS.auth.google}?origin=${originParam}&client=${clientParam}`,
     );
     return new Promise(() => {
       /* full-page redirect to Google via backend */

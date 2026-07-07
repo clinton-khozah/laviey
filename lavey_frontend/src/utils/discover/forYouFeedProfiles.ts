@@ -35,7 +35,7 @@ export function resolveForYouFeedProfiles(
   if (unliked.length > 0) {
     recyclePoolKey = '';
     recycleOrder = [];
-    return { profiles: sortByBestFit(unliked), isRecycling: false };
+    return { profiles: unliked, isRecycling: false };
   }
 
   const poolKey = pool

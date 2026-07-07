@@ -2,7 +2,7 @@
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: #000;
+  background: #f8fafc;
   overflow: hidden;
 }
 
@@ -29,7 +29,7 @@
   scroll-snap-align: start;
   scroll-snap-stop: always;
   overflow: hidden;
-  background: #000;
+  background: #f8fafc;
 }
 
 .profile-post-viewer__media {
@@ -46,7 +46,7 @@
 .profile-post-viewer__media--image {
   object-fit: contain;
   object-position: center;
-  background: #000;
+  background: #f8fafc;
 }
 
 .profile-post-viewer__progress-track {

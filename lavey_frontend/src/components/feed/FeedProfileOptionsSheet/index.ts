@@ -1,2 +1,5 @@
-export { FeedProfileOptionsSheet } from './FeedProfileOptionsSheet';
-export type { FeedProfileActionMeta, FeedProfileOptionAction } from './FeedProfileOptionsSheet';
+export { FeedProfileOptionsSheet } from "./FeedProfileOptionsSheet";
+export type {
+  FeedProfileActionMeta,
+  FeedProfileOptionAction,
+} from "./FeedProfileOptionsSheet";

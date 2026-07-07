@@ -1,9 +1,14 @@
 import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
+import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
 import {
   filterProfilesByDistanceCap,
   resolveDistanceCapKm,
   sortProfilesByDistance,
 } from './discoverDistanceTiers';
+
+function hasProfilePhoto(profile: Profile): boolean {
+  return hasCustomProfileAvatar(profile.avatar);
+}
 
 /** Age + gender + optional verified — distance tiers are handled by the discover feed loader / API. */
 export function applyDiscoverDemographicFilters(
@@ -11,6 +16,7 @@ export function applyDiscoverDemographicFilters(
   filters: DiscoverFilters,
 ): Profile[] {
   return profiles.filter((profile) => {
+    if (filters.hasProfilePhoto && !hasProfilePhoto(profile)) return false;
     if (filters.verifiedOnly && !profile.verified) return false;
     if (profile.age < filters.ageMin || profile.age > filters.ageMax) return false;
     if (filters.genders.length > 0) {
@@ -45,7 +51,7 @@ export function applyForYouFeedFilters(
     if (withoutGender.length > 0) return withoutGender;
   }
 
-  return profiles;
+  return filters.hasProfilePhoto ? profiles.filter(hasProfilePhoto) : profiles;
 }
 
 /** Client-side distance pass for mock API and legacy callers. */

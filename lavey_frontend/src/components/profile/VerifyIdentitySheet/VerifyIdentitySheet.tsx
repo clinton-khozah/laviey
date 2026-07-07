@@ -157,7 +157,7 @@ export function VerifyIdentitySheet({
             <span className="verify-identity-sheet__status">Unverified</span>
             <h3 className="verify-identity-sheet__heading">Prove it&apos;s really you</h3>
             <p className="verify-identity-sheet__text">
-              Use your profile photo or upload a reference, then take a live selfie. We compare them on your device.
+              Use your profile photo or upload a reference, then take a live selfie. It usually takes about 5 minutes to finish, and we&apos;ll notify you when it&apos;s done.
             </p>
             <div className="verify-identity-sheet__photo-preview-row" aria-hidden>
               <div className="verify-identity-sheet__photo-placeholder">

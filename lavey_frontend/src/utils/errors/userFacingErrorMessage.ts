@@ -2,6 +2,14 @@ import { ApiError } from '@/services/api/apiError';
 
 const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
 const SIGN_IN_AGAIN_MESSAGE = 'Please sign in again.';
+const TEMPORARY_SERVICE_MESSAGE = 'Service is temporarily unavailable. Please try again.';
+
+export function sanitizeInfrastructureErrorMessage(message: string): string {
+  if (/<!doctype html|<html[\s>]|cloudflare|connection timed out|522:/i.test(message)) {
+    return TEMPORARY_SERVICE_MESSAGE;
+  }
+  return message;
+}
 
 export function isSessionExpiredMessage(message: string): boolean {
   const lower = message.toLowerCase();
@@ -50,13 +58,14 @@ export function isSignInRequiredError(error: unknown): boolean {
 }
 
 export function sanitizeAuthErrorMessage(message: string): string {
-  if (isSessionExpiredMessage(message)) {
+  const safeMessage = sanitizeInfrastructureErrorMessage(message);
+  if (isSessionExpiredMessage(safeMessage)) {
     return SESSION_EXPIRED_MESSAGE;
   }
-  if (isAuthTokenMessage(message)) {
+  if (isAuthTokenMessage(safeMessage)) {
     return SIGN_IN_AGAIN_MESSAGE;
   }
-  return message;
+  return safeMessage;
 }
 
 export function getUserFacingErrorMessage(
@@ -70,7 +79,7 @@ export function getUserFacingErrorMessage(
     if (error.status === 401) {
       return sanitizeAuthErrorMessage(error.message);
     }
-    return error.message;
+    return sanitizeInfrastructureErrorMessage(error.message);
   }
 
   if (error instanceof Error) {

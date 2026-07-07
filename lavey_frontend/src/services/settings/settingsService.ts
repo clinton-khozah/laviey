@@ -18,6 +18,7 @@ export interface UpdateUserSettingsInput {
   chatTypingStyle?: ChatTypingStyle;
   language?: MeetingLanguageCode;
   pushNotificationsEnabled?: boolean;
+  likeFeedbackSoundEnabled?: boolean;
 }
 
 function usesBackendSettings(): boolean {

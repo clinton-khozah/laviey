@@ -8,6 +8,7 @@ export interface UserSettings {
   chatTypingStyle: ChatTypingStyle;
   language: MeetingLanguageCode;
   pushNotificationsEnabled: boolean;
+  likeFeedbackSoundEnabled: boolean;
 }
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
@@ -15,6 +16,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   chatTypingStyle: 'romantic',
   language: 'en',
   pushNotificationsEnabled: true,
+  likeFeedbackSoundEnabled: true,
 };
 
 export function loadUserSettings(): UserSettings {
@@ -37,4 +39,8 @@ export function saveUserSettings(settings: UserSettings): void {
 
 export function arePushNotificationsEnabled(): boolean {
   return loadUserSettings().pushNotificationsEnabled;
+}
+
+export function areLikeFeedbackSoundsEnabled(): boolean {
+  return loadUserSettings().likeFeedbackSoundEnabled;
 }
