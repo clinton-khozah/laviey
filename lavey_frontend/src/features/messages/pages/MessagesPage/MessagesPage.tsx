@@ -7,6 +7,9 @@ import { LaveyPromoThread } from '@/components/messages/LaveyPromoThread';
 import type { ChatConversationAction } from '@/components/messages/ChatSendOptionsMenu';
 import { MatchProfileModal } from '@/components/messages/MatchProfileModal';
 import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage';
+import { DiscoverFilterSheet } from '@/components/discover/DiscoverFilterSheet';
+import { DiscoveryPhoneSearchSheet } from '@/components/discover/DiscoveryPhoneSearchSheet';
+import { PaidChatSheet } from '@/components/discover/PaidChatSheet';
 import { MessagesHeader, type MessageFilter } from '@/components/messages/MessagesHeader';
 import { MatchAvatarsStrip, OnlineMatchesStrip } from '@/components/messages/MessageMatchStrip';
 import { PageScroller } from '@/components/layout/PageScroller';
@@ -20,6 +23,7 @@ import { LAVEY_OFFICIAL_CONVERSATION_ID } from '@/constants/laveyOfficial';
 import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox, useMessagesDiscoverSuggestions, useMessagesFindSuggestions, useDiscoverFilters } from '@/hooks';
 import { messageService, matchService } from '@/services';
 import { privacyService } from '@/services/privacy/privacyService';
+import { profileService } from '@/services/profile/profileService';
 import { reportsService } from '@/services/reports/reportsService';
 import type { Conversation, DeleteConversationScope, Profile } from '@/types';
 import { isMatchConversation, sortConversations } from '@/utils/messages/sortConversations';
@@ -67,6 +71,11 @@ export function MessagesPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [discoverOpen, setDiscoverOpen] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
+  const [phoneSearchOpen, setPhoneSearchOpen] = useState(false);
+  const [phoneSearchActive, setPhoneSearchActive] = useState(false);
+  const [phoneSearchProfiles, setPhoneSearchProfiles] = useState<Profile[]>([]);
+  const [discoverFiltersOpen, setDiscoverFiltersOpen] = useState(false);
+  const [paidChatProfile, setPaidChatProfile] = useState<Profile | null>(null);
   const [discoverProfile, setDiscoverProfile] = useState<Profile | null>(null);
   // Used to auto-send a greeting from `MatchProfileModal` after we switch into the chat.
   const [pendingAutoMessage, setPendingAutoMessage] = useState<string | null>(null);
@@ -90,6 +99,7 @@ export function MessagesPage() {
     isSending,
     sendMessage,
     sendPhoto,
+    sendAudio,
     notifyTyping,
     reactToMessage,
     deleteMessage,
@@ -141,7 +151,12 @@ export function MessagesPage() {
     notificationProfileId,
   );
 
-  const { filters: discoverFilters } = useDiscoverFilters();
+  const {
+    filters: discoverFilters,
+    setFilters: setDiscoverFilters,
+    resetFilters: resetDiscoverFilters,
+    hasActiveFilters: hasActiveDiscoverFilters,
+  } = useDiscoverFilters();
 
   const {
     profiles: discoverProfiles,
@@ -156,6 +171,45 @@ export function MessagesPage() {
     error: findError,
     refetch: refetchFind,
   } = useMessagesFindSuggestions(findOpen, discoverFilters);
+
+  const handlePhoneSearch = async (
+    value: string,
+    kind: 'phone' | 'email',
+  ): Promise<number> => {
+    const result =
+      kind === 'phone'
+        ? await privacyService.searchByPhone(value)
+        : await privacyService.searchByEmail(value);
+    const matchedProfiles = await Promise.all(
+      result.matches.map((match) => profileService.getProfileById(match.userId)),
+    );
+    setPhoneSearchProfiles(matchedProfiles);
+    setPhoneSearchActive(true);
+    setFindOpen(true);
+    return matchedProfiles.length;
+  };
+
+  const openDiscoverFilters = () => {
+    setPhoneSearchActive(false);
+    setPhoneSearchProfiles([]);
+    setFindOpen(true);
+    setDiscoverFiltersOpen(true);
+  };
+
+  const handlePaidChat = async (profile: Profile) => {
+    try {
+      const conversationId = await messageService.findConversationByProfileId(profile.id);
+      if (conversationId) {
+        setFindOpen(false);
+        setDiscoverOpen(false);
+        openChatWithProfile(profile.id);
+        return;
+      }
+    } catch {
+      // If there is no existing chat, the purchase sheet handles the unlock.
+    }
+    setPaidChatProfile(profile);
+  };
 
   const handleLaveyPromoRead = useCallback(() => {
     void refetch(true);
@@ -490,21 +544,38 @@ export function MessagesPage() {
     <>
       {findOpen ? (
         <MessagesDiscoverPage
-          profiles={findProfiles}
+          profiles={phoneSearchActive ? phoneSearchProfiles : findProfiles}
           likedIds={likedIds}
           likedPostIds={likedPostIds}
           iCrushSentIds={iCrushSentIds}
           matchToast={matchToast}
-          isLoading={findLoading}
-          error={findError}
-          onBack={() => setFindOpen(false)}
+          isLoading={phoneSearchActive ? false : findLoading}
+          error={phoneSearchActive ? null : findError}
+          onBack={() => {
+            setFindOpen(false);
+            setPhoneSearchActive(false);
+            setPhoneSearchProfiles([]);
+          }}
           onFlame={handleDiscoverFlame}
           onICrush={handleDiscoverICrush}
           onPostLike={handleDiscoverPostLike}
           onProfileClick={(p) => setDiscoverProfile(p)}
+          onPaidChat={(profile) => void handlePaidChat(profile)}
           onDismissMatchToast={dismissMatchToast}
           onMatchGreeting={handleFindMatchGreeting}
-          onRetry={() => void refetchFind()}
+          onRetry={() => {
+            if (phoneSearchActive) setPhoneSearchOpen(true);
+            else void refetchFind();
+          }}
+          onSearchClick={() => setPhoneSearchOpen(true)}
+          onFilterClick={openDiscoverFilters}
+          hasActiveFilters={hasActiveDiscoverFilters}
+          emptyMessage={
+            phoneSearchActive
+              ? 'No opted-in profile was found for those contact details.'
+              : undefined
+          }
+          resultLabel={phoneSearchActive ? 'Phone or email search result' : undefined}
         />
       ) : discoverOpen ? (
         <MessagesDiscoverPage
@@ -519,11 +590,14 @@ export function MessagesPage() {
             setDiscoverOpen(false);
             setFindOpen(false);
           }}
-          onFindClick={() => setFindOpen(true)}
+          onSearchClick={() => setPhoneSearchOpen(true)}
+          onFilterClick={openDiscoverFilters}
+          hasActiveFilters={hasActiveDiscoverFilters}
           onFlame={handleDiscoverFlame}
           onICrush={handleDiscoverICrush}
           onPostLike={handleDiscoverPostLike}
           onProfileClick={(p) => setDiscoverProfile(p)}
+          onPaidChat={(profile) => void handlePaidChat(profile)}
           onDismissMatchToast={dismissMatchToast}
           onMatchGreeting={handleDiscoverMatchGreeting}
           onRetry={() => void refetchDiscover()}
@@ -564,6 +638,7 @@ export function MessagesPage() {
           onBack={() => setActiveId(null)}
           onSend={(text) => void sendMessage(text)}
           onSendPhoto={sendPhoto}
+          onSendAudio={sendAudio}
           onTypingChange={notifyTyping}
           onProfileClick={() => openProfile(activeConversation)}
           onReact={(messageId, emoji) => void reactToMessage(messageId, emoji)}
@@ -692,6 +767,32 @@ export function MessagesPage() {
           </PageScroller>
         </div>
       )}
+
+      <DiscoveryPhoneSearchSheet
+        open={phoneSearchOpen}
+        onClose={() => setPhoneSearchOpen(false)}
+        onSearch={handlePhoneSearch}
+      />
+
+      <DiscoverFilterSheet
+        open={discoverFiltersOpen}
+        filters={discoverFilters}
+        onClose={() => setDiscoverFiltersOpen(false)}
+        onApply={setDiscoverFilters}
+        onReset={resetDiscoverFilters}
+      />
+
+      <PaidChatSheet
+        profile={paidChatProfile}
+        onClose={() => setPaidChatProfile(null)}
+        onUnlocked={() => {
+          const profileId = paidChatProfile?.id;
+          setPaidChatProfile(null);
+          setFindOpen(false);
+          setDiscoverOpen(false);
+          if (profileId) openChatWithProfile(profileId);
+        }}
+      />
 
       <MatchProfileModal
         open={notificationProfileId !== null}

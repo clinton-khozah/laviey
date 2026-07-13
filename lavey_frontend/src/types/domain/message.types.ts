@@ -32,10 +32,12 @@ export interface ChatMessage {
   read: boolean;
   /** Emoji reaction on this message */
   reaction?: string;
-  /** text (default) or ephemeral photo */
-  kind?: 'text' | 'image';
+  /** Text (default), ephemeral photo, or voice message. */
+  kind?: 'text' | 'image' | 'audio';
   /** Short-lived signed URL for chat photos */
   imageUrl?: string;
+  /** Short-lived signed URL for a private voice message. */
+  audioUrl?: string;
   /** ISO expiry — photos auto-delete after 24h */
   expiresAt?: string;
   /** Photo TTL passed — content removed server-side */

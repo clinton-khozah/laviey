@@ -170,6 +170,125 @@
   color: var(--accent-violet);
 }
 
+.chat-bubble-wrap--audio {
+  max-width: min(88%, 360px);
+}
+
+.chat-bubble--audio {
+  width: min(78vw, 330px);
+  padding: 10px 11px 7px;
+}
+
+.chat-bubble__audio-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.chat-bubble__audio-row audio {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  accent-color: var(--accent-pink);
+}
+
+.chat-bubble__audio-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.chat-bubble__audio-unavailable {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.chat-bubble__audio-menu {
+  flex: 0 0 auto;
+  padding: 6px 2px;
+  color: inherit;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.chat-thread__voice-btn,
+.chat-thread__record-cancel,
+.chat-thread__record-send {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.chat-thread__voice-btn {
+  width: 38px;
+  height: 38px;
+  color: var(--accent-pink);
+  background: rgba(255, 77, 109, 0.1);
+}
+
+.chat-thread__voice-btn svg,
+.chat-thread__record-send svg {
+  width: 20px;
+  height: 20px;
+}
+
+.chat-thread__recorder {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 7px 9px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 77, 109, 0.28);
+  background: var(--bg-elevated);
+}
+
+.chat-thread__record-cancel {
+  width: 36px;
+  height: 36px;
+  color: var(--text-secondary);
+  font-size: 25px;
+}
+
+.chat-thread__record-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.14);
+  animation: chat-record-pulse 1.1s ease-in-out infinite;
+}
+
+.chat-thread__record-time {
+  min-width: 34px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.chat-thread__record-label {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.chat-thread__record-send {
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-pink), var(--accent-violet));
+}
+
+@keyframes chat-record-pulse {
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+
 .chat-thread__body {
   flex: 1;
   position: relative;

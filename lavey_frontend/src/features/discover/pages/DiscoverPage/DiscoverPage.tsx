@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiscoverFilterSheet } from "@/components/discover/DiscoverFilterSheet";
 import { DiscoverProfileSetupGate } from "@/components/discover/DiscoverProfileSetupGate";
+import { DiscoveryPhoneSearchSheet } from "@/components/discover/DiscoveryPhoneSearchSheet";
+import { PaidChatSheet } from "@/components/discover/PaidChatSheet";
 import { ReceivedLikesSheet } from "@/components/feed/ReceivedLikesSheet";
 import { TopBar } from "@/components/layout/TopBar";
 import { PlatinumUpgradeSheet } from "@/components/subscription/PlatinumUpgradeSheet";
@@ -30,6 +32,7 @@ import {
 } from "@/hooks";
 import { userProfileService } from "@/services/users/userProfileService";
 import { privacyService } from "@/services/privacy/privacyService";
+import { profileService } from "@/services/profile/profileService";
 import { reportsService } from "@/services/reports/reportsService";
 import { subscribeAlgorithmChange } from "@/features/admin/algorithm/algorithmConfig";
 import type { Profile } from "@/types";
@@ -95,7 +98,14 @@ export function DiscoverPage() {
   const filtersPulseTimerRef = useRef<number | null>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [findProfile, setFindProfile] = useState<Profile | null>(null);
+  const [phoneSearchOpen, setPhoneSearchOpen] = useState(false);
+  const [phoneSearchActive, setPhoneSearchActive] = useState(false);
+  const [phoneSearchProfiles, setPhoneSearchProfiles] = useState<Profile[]>([]);
+  const [paidChatProfile, setPaidChatProfile] = useState<Profile | null>(null);
   const [feedOptionsProfile, setFeedOptionsProfile] = useState<Profile | null>(
+    null,
+  );
+  const [clearPhotoProfileId, setClearPhotoProfileId] = useState<string | null>(
     null,
   );
   const [hiddenFeedProfileIds, setHiddenFeedProfileIds] = useState<Set<string>>(
@@ -204,6 +214,11 @@ export function DiscoverPage() {
     profile: Profile,
     meta?: { reportReason?: string },
   ) => {
+    if (action === "clear-photo") {
+      setClearPhotoProfileId(profile.id);
+      return;
+    }
+
     if (action === "view-profile") {
       setProfileModal(profile);
       return;
@@ -285,6 +300,43 @@ export function DiscoverPage() {
   const handleFindFlameFromModal = () => {
     if (!findProfile || findModalLiked) return;
     void sendFlame(findProfile.id);
+  };
+
+  const handlePhoneSearch = async (
+    value: string,
+    kind: "phone" | "email",
+  ): Promise<number> => {
+    const result =
+      kind === "phone"
+        ? await privacyService.searchByPhone(value)
+        : await privacyService.searchByEmail(value);
+    const matchedProfiles = await Promise.all(
+      result.matches.map((match) => profileService.getProfileById(match.userId)),
+    );
+    setPhoneSearchProfiles(matchedProfiles);
+    setPhoneSearchActive(true);
+    return matchedProfiles.length;
+  };
+
+  const closeFind = () => {
+    setFindOpen(false);
+    setPhoneSearchOpen(false);
+    setPhoneSearchActive(false);
+    setPhoneSearchProfiles([]);
+  };
+
+  const handlePaidChat = async (profile: Profile) => {
+    try {
+      const conversationId = await messageService.findConversationByProfileId(profile.id);
+      if (conversationId) {
+        setFindOpen(false);
+        openChatWithProfile(profile.id);
+        return;
+      }
+    } catch {
+      // Fall through to the credit sheet when no existing conversation can be confirmed.
+    }
+    setPaidChatProfile(profile);
   };
 
   useEffect(() => subscribeAlgorithmChange(() => void refetch()), [refetch]);
@@ -395,7 +447,7 @@ export function DiscoverPage() {
 
       {showFeedBackground ? (
         <>
-          {showDiscoverChrome && !findOpen ? (
+          {showDiscoverChrome && !findOpen && !clearPhotoProfileId ? (
             <TopBar
               filter={filter}
               onFilterChange={setFilter}
@@ -442,6 +494,8 @@ export function DiscoverPage() {
             onRetry={() => void refetch()}
             onProfileClick={setProfileModal}
             onMoreOptions={setFeedOptionsProfile}
+            clearPhotoProfileId={clearPhotoProfileId}
+            onExitClearPhoto={() => setClearPhotoProfileId(null)}
             onDismissMatchToast={dismissMatchToast}
             onMatchGreeting={handleMatchGreeting}
           />
@@ -506,23 +560,60 @@ export function DiscoverPage() {
 
           {findOpen ? (
             <MessagesDiscoverPage
-              profiles={findProfiles}
+              profiles={phoneSearchActive ? phoneSearchProfiles : findProfiles}
               likedIds={likedIds}
               likedPostIds={likedPostIds}
               iCrushSentIds={iCrushSentIds}
               matchToast={matchToast}
-              isLoading={findLoading}
-              error={findError}
-              onBack={() => setFindOpen(false)}
+              isLoading={phoneSearchActive ? false : findLoading}
+              error={phoneSearchActive ? null : findError}
+              onBack={closeFind}
               onFlame={sendFlame}
               onICrush={handleICrush}
               onPostLike={handleFindPostLike}
               onProfileClick={setFindProfile}
+              onPaidChat={(profile) => void handlePaidChat(profile)}
               onDismissMatchToast={dismissMatchToast}
               onMatchGreeting={handleMatchGreeting}
-              onRetry={() => void refetchFind()}
+              onRetry={() => {
+                if (phoneSearchActive) {
+                  setPhoneSearchOpen(true);
+                } else {
+                  void refetchFind();
+                }
+              }}
+              onSearchClick={() => setPhoneSearchOpen(true)}
+              onFilterClick={() => {
+                setPhoneSearchActive(false);
+                setPhoneSearchProfiles([]);
+                setFiltersOpen(true);
+              }}
+              hasActiveFilters={hasActiveFilters}
+              emptyMessage={
+                phoneSearchActive
+                  ? "No opted-in profile was found for those contact details."
+                  : undefined
+              }
+              resultLabel={phoneSearchActive ? "Phone or email search result" : undefined}
             />
           ) : null}
+
+          <DiscoveryPhoneSearchSheet
+            open={phoneSearchOpen}
+            onClose={() => setPhoneSearchOpen(false)}
+            onSearch={handlePhoneSearch}
+          />
+
+          <PaidChatSheet
+            profile={paidChatProfile}
+            onClose={() => setPaidChatProfile(null)}
+            onUnlocked={() => {
+              const profileId = paidChatProfile?.id;
+              setPaidChatProfile(null);
+              setFindOpen(false);
+              if (profileId) openChatWithProfile(profileId);
+            }}
+          />
 
           <MatchProfileModal
             open={findProfile !== null}

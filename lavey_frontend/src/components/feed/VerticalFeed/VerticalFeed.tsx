@@ -47,6 +47,9 @@ export function VerticalFeed({
   onICrush,
   onProfileClick,
   onMoreOptions,
+  onPaidChat,
+  clearPhotoProfileId,
+  onExitClearPhoto,
   isLocked = false,
   infiniteLoop = false,
   onNearEndOfFeed,
@@ -424,6 +427,9 @@ export function VerticalFeed({
           onICrush={() => onICrush?.(entry.profile.id)}
           onProfileClick={() => onProfileClick(entry.profile)}
           onMoreOptions={() => onMoreOptions(entry.profile)}
+          onPaidChat={onPaidChat ? () => onPaidChat(entry.profile) : undefined}
+          clearPhoto={clearPhotoProfileId === entry.profile.id}
+          onExitClearPhoto={onExitClearPhoto}
           showSwipeHint={index === swipeHintIndex && showSwipeHint}
         />
       ))}

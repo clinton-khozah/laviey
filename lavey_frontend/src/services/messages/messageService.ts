@@ -130,6 +130,33 @@ export const messageService = {
     return res.data;
   },
 
+  async sendAudio(conversationId: string, audio: Blob): Promise<ChatMessage> {
+    if (!usesBackendMessages()) {
+      await sleep(300);
+      return {
+        id: `m-audio-${Date.now()}`,
+        conversationId,
+        senderId: "me",
+        text: "Voice message",
+        kind: "audio",
+        audioUrl: URL.createObjectURL(audio),
+        sentAt: "Just now",
+        read: true,
+      };
+    }
+
+    const mime = audio.type.split(";")[0] || "audio/webm";
+    const extension = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
+    const form = new FormData();
+    form.append("audio", audio, `voice-${Date.now()}.${extension}`);
+    const res = await httpClient.postForm<ApiResponse<ChatMessage>>(
+      API_ENDPOINTS.messages.sendAudio(conversationId),
+      form,
+      { skipErrorPage: true },
+    );
+    return res.data;
+  },
+
   async markConversationRead(conversationId: string): Promise<void> {
     if (!usesBackendMessages()) return;
     await httpClient.post(API_ENDPOINTS.messages.markRead(conversationId), {});

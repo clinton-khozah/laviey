@@ -254,7 +254,7 @@ export function SafetyPrivacySheet({
           <h3 className="safety-sheet__section-title">Contacts</h3>
           <ToggleRow
             label="Let contacts find me"
-            hint="People saved in your phone can see your account on Lavey"
+            hint="People with your phone number or email can find you on Lavey"
             pressed={settings.contactsCanFindMe}
             disabled={isSaving || isLoading}
             onToggle={handleContactsToggle}

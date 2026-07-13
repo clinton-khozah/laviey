@@ -8,4 +8,5 @@ export interface ActionRailProps {
   onICrush: () => void;
   onProfileClick: () => void;
   onMoreOptions: () => void;
+  onPaidChat?: () => void;
 }

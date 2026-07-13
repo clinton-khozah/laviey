@@ -26,6 +26,7 @@ interface ChatThreadProps {
   onBack: () => void;
   onSend: (text: string) => void;
   onSendPhoto?: (file: File) => Promise<void>;
+  onSendAudio?: (audio: Blob) => Promise<void>;
   onTypingChange?: (isTyping: boolean) => void;
   onProfileClick: () => void;
   onReact: (messageId: string, emoji: string) => void;
@@ -42,6 +43,7 @@ export function ChatThread({
   onBack,
   onSend,
   onSendPhoto,
+  onSendAudio,
   onTypingChange,
   onProfileClick,
   onReact,
@@ -54,11 +56,18 @@ export function ChatThread({
   const [stickerTrayOpen, setStickerTrayOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState<ChatMessage | null>(null);
   const [deleteMessageTarget, setDeleteMessageTarget] = useState<ChatMessage | null>(null);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const scrollEndRef = useRef<HTMLDivElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recorderStreamRef = useRef<MediaStream | null>(null);
+  const recorderChunksRef = useRef<Blob[]>([]);
+  const sendRecordingRef = useRef(false);
+  const recordingTimerRef = useRef<number | null>(null);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -113,14 +122,89 @@ export function ChatThread({
     e.target.value = '';
     if (!file || !onSendPhoto) return;
 
-    setPhotoError(null);
+    setMediaError(null);
     try {
       await onSendPhoto(file);
     } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : 'Could not send that photo.');
-      window.setTimeout(() => setPhotoError(null), 3200);
+      setMediaError(err instanceof Error ? err.message : 'Could not send that photo.');
+      window.setTimeout(() => setMediaError(null), 3200);
     }
   };
+
+  const clearRecording = () => {
+    if (recordingTimerRef.current) window.clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = null;
+    recorderStreamRef.current?.getTracks().forEach((track) => track.stop());
+    recorderStreamRef.current = null;
+    recorderRef.current = null;
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  };
+
+  const finishRecording = (send: boolean) => {
+    sendRecordingRef.current = send;
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    else clearRecording();
+  };
+
+  const startRecording = async () => {
+    if (!onSendAudio) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setMediaError('Voice recording is not supported on this browser.');
+      return;
+    }
+    setMediaError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported(type));
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 64_000 })
+        : new MediaRecorder(stream);
+      recorderStreamRef.current = stream;
+      recorderRef.current = recorder;
+      recorderChunksRef.current = [];
+      sendRecordingRef.current = false;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recorderChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(recorderChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm',
+        });
+        const shouldSend = sendRecordingRef.current && blob.size > 0;
+        clearRecording();
+        if (shouldSend) {
+          void onSendAudio(blob).catch((error) => {
+            setMediaError(error instanceof Error ? error.message : 'Could not send voice message.');
+          });
+        }
+      };
+      recorder.start(250);
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds((seconds) => {
+          if (seconds >= 119) {
+            window.setTimeout(() => finishRecording(true), 0);
+            return 120;
+          }
+          return seconds + 1;
+        });
+      }, 1000);
+    } catch {
+      clearRecording();
+      setMediaError('Allow microphone access to record a voice message.');
+    }
+  };
+
+  useEffect(() => () => {
+    sendRecordingRef.current = false;
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    clearRecording();
+  }, []);
 
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -217,23 +301,23 @@ export function ChatThread({
                 <div className="chat-thread__date-pill">Today</div>
                 {messages.map((msg) => {
                   const isPhoto = msg.kind === 'image';
-                  const isSendingPhoto = isPhoto && msg.sending;
-                  const isSticker = !isPhoto && isChatStickerMessage(msg.text);
+                  const isAudio = msg.kind === 'audio';
+                  const isSendingMedia = (isPhoto || isAudio) && msg.sending;
+                  const isSticker = !isPhoto && !isAudio && isChatStickerMessage(msg.text);
                   return (
                 <div
                   key={msg.id}
-                  className={`chat-bubble-wrap chat-bubble-wrap--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble-wrap--sticker' : ''} ${isPhoto ? 'chat-bubble-wrap--photo' : ''} ${isSendingPhoto ? 'chat-bubble-wrap--sending' : ''} ${msg.reaction ? 'chat-bubble-wrap--has-reaction' : ''}`}
+                  className={`chat-bubble-wrap chat-bubble-wrap--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble-wrap--sticker' : ''} ${isPhoto ? 'chat-bubble-wrap--photo' : ''} ${isAudio ? 'chat-bubble-wrap--audio' : ''} ${isSendingMedia ? 'chat-bubble-wrap--sending' : ''} ${msg.reaction ? 'chat-bubble-wrap--has-reaction' : ''}`}
                 >
-                  <button
-                    type="button"
-                    className={`chat-bubble chat-bubble--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble--sticker' : ''} ${isPhoto ? 'chat-bubble--photo' : ''}`}
-                    disabled={isSendingPhoto}
-                    onPointerDown={() => !isPhoto && handlePointerDown(msg)}
-                    onPointerUp={() => !isPhoto && handlePointerUp(msg)}
+                  <div
+                    className={`chat-bubble chat-bubble--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble--sticker' : ''} ${isPhoto ? 'chat-bubble--photo' : ''} ${isAudio ? 'chat-bubble--audio' : ''}`}
+                    aria-disabled={isSendingMedia}
+                    onPointerDown={() => !isPhoto && !isAudio && handlePointerDown(msg)}
+                    onPointerUp={() => !isPhoto && !isAudio && handlePointerUp(msg)}
                     onPointerLeave={clearPressTimer}
                     onPointerCancel={clearPressTimer}
                     onContextMenu={(e) => {
-                      if (isSendingPhoto) return;
+                      if (isSendingMedia) return;
                       e.preventDefault();
                       openActions(msg);
                     }}
@@ -244,6 +328,22 @@ export function ChatThread({
                         onOpenActions={() => openActions(msg)}
                         onRequestDelete={() => setDeleteMessageTarget(msg)}
                       />
+                    ) : isAudio ? (
+                      <div className="chat-bubble__audio-row">
+                        <span className="chat-bubble__audio-icon" aria-hidden>🎙</span>
+                        {msg.audioUrl ? (
+                          <audio controls preload="metadata" src={msg.audioUrl}>
+                            Your browser does not support audio playback.
+                          </audio>
+                        ) : (
+                          <span className="chat-bubble__audio-unavailable">
+                            {msg.sending ? 'Sending voice message…' : 'Voice message unavailable'}
+                          </span>
+                        )}
+                        {!msg.sending ? (
+                          <button type="button" className="chat-bubble__audio-menu" aria-label="Voice message options" onClick={() => openActions(msg)}>•••</button>
+                        ) : null}
+                      </div>
                     ) : (
                       <p className={isSticker ? 'chat-bubble__sticker' : 'chat-bubble__text'}>{msg.text}</p>
                     )}
@@ -256,7 +356,7 @@ export function ChatThread({
                         />
                       )}
                     </div>
-                  </button>
+                  </div>
                   {msg.reaction && (
                     <span className="chat-bubble__reaction" aria-label={`Reaction ${msg.reaction}`}>
                       {msg.reaction}
@@ -272,9 +372,9 @@ export function ChatThread({
         </div>
 
         <div className="chat-thread__footer">
-          {photoError ? (
+          {mediaError ? (
             <p className="chat-thread__photo-error" role="alert">
-              {photoError}
+              {mediaError}
             </p>
           ) : null}
           {stickerTrayOpen ? (
@@ -293,7 +393,17 @@ export function ChatThread({
               ))}
             </div>
           ) : null}
-          <form className="chat-thread__composer" onSubmit={handleSubmit}>
+          {isRecording ? (
+            <div className="chat-thread__recorder" role="group" aria-label="Recording voice message">
+              <button type="button" className="chat-thread__record-cancel" onClick={() => finishRecording(false)} aria-label="Cancel recording">×</button>
+              <span className="chat-thread__record-dot" aria-hidden />
+              <span className="chat-thread__record-time">{Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}</span>
+              <span className="chat-thread__record-label">Recording…</span>
+              <button type="button" className="chat-thread__record-send" onClick={() => finishRecording(true)} aria-label="Stop and send voice message">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+              </button>
+            </div>
+          ) : <form className="chat-thread__composer" onSubmit={handleSubmit}>
             <input
               ref={photoInputRef}
               type="file"
@@ -303,6 +413,14 @@ export function ChatThread({
               aria-hidden
               onChange={(e) => void handlePhotoPick(e)}
             />
+            {onSendAudio ? (
+              <button type="button" className="chat-thread__voice-btn" aria-label="Record voice message" disabled={isSending} onClick={() => void startRecording()}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <rect x="9" y="3" width="6" height="11" rx="3" />
+                  <path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3M9 21h6" />
+                </svg>
+              </button>
+            ) : null}
             {onSendPhoto ? (
               <button
                 type="button"
@@ -353,7 +471,7 @@ export function ChatThread({
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
-          </form>
+          </form>}
         </div>
       </div>
 

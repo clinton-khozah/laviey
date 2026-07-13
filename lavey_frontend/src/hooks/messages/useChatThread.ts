@@ -145,6 +145,43 @@ export function useChatThread(conversationId: string | null) {
     [conversationId],
   );
 
+  const sendAudio = useCallback(
+    async (audio: Blob) => {
+      if (!conversationId) return;
+      const pendingId = `pending-audio-${Date.now()}`;
+      const previewUrl = URL.createObjectURL(audio);
+      const optimistic: ChatMessage = {
+        id: pendingId,
+        conversationId,
+        senderId: 'me',
+        text: 'Voice message',
+        kind: 'audio',
+        audioUrl: previewUrl,
+        sentAt: 'Just now',
+        read: false,
+        sending: true,
+      };
+      setMessages((prev) => [...prev, optimistic]);
+      setIsSending(true);
+      try {
+        const msg = await messageService.sendAudio(conversationId, audio);
+        setMessages((prev) => {
+          const withoutPending = prev.filter((m) => m.id !== pendingId);
+          return withoutPending.some((m) => m.id === msg.id)
+            ? withoutPending
+            : [...withoutPending, msg];
+        });
+      } catch (error) {
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId));
+        throw error;
+      } finally {
+        URL.revokeObjectURL(previewUrl);
+        setIsSending(false);
+      }
+    },
+    [conversationId],
+  );
+
   const reactToMessage = useCallback(
     async (messageId: string, emoji: string) => {
       if (!conversationId) return;
@@ -176,6 +213,7 @@ export function useChatThread(conversationId: string | null) {
     isSending,
     sendMessage,
     sendPhoto,
+    sendAudio,
     notifyTyping,
     reactToMessage,
     deleteMessage,

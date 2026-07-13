@@ -47,7 +47,7 @@ export function TopBar({
       type="button"
       className="top-bar__find"
       onClick={onFindClick}
-      aria-label="Find people"
+      aria-label="Open Discovery"
     >
       <svg
         viewBox="0 0 24 24"
@@ -56,8 +56,8 @@ export function TopBar({
         strokeWidth="2"
         aria-hidden
       >
-        <circle cx="11" cy="11" r="7" />
-        <path d="M20 20l-4-4" />
+        <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1116 0z" />
+        <circle cx="12" cy="10" r="2.5" />
       </svg>
     </button>
   ) : (

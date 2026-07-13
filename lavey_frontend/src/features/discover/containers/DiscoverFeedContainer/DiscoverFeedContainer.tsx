@@ -12,12 +12,14 @@ export interface DiscoverFeedContainerProps {
   likedPostIds: Set<string>;
   iCrushSentIds: Set<string>;
   matchToast: MatchToastProfile | null;
-  onFlame: (profileId: string) => void;
+  onFlame: (profileId: string) => void | Promise<void>;
   onICrush: (profileId: string) => void;
   onPostLike: (profile: Profile) => void;
   onRetry: () => void;
   onProfileClick: (profile: Profile) => void;
   onMoreOptions: (profile: Profile) => void;
+  clearPhotoProfileId?: string | null;
+  onExitClearPhoto?: () => void;
   onDismissMatchToast: () => void;
   onMatchGreeting: (text: string) => void;
   onNearEndOfFeed?: () => void;
@@ -38,6 +40,8 @@ export function DiscoverFeedContainer({
   onRetry,
   onProfileClick,
   onMoreOptions,
+  clearPhotoProfileId,
+  onExitClearPhoto,
   onDismissMatchToast,
   onMatchGreeting,
   onNearEndOfFeed,
@@ -67,7 +71,9 @@ export function DiscoverFeedContainer({
         onPostLike={onPostLike}
         onProfileClick={onProfileClick}
         onMoreOptions={onMoreOptions}
-        isLocked={Boolean(matchToast)}
+        clearPhotoProfileId={clearPhotoProfileId}
+        onExitClearPhoto={onExitClearPhoto}
+        isLocked={Boolean(matchToast) || Boolean(clearPhotoProfileId)}
         infiniteLoop={infiniteLoop}
         onNearEndOfFeed={onNearEndOfFeed}
       />

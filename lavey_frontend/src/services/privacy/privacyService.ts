@@ -25,6 +25,10 @@ export interface ContactImportResponse {
   matches: Array<{ userId: string; displayName: string; avatarUrl: string }>;
 }
 
+export interface PhoneSearchResponse {
+  matches: Array<{ userId: string; displayName: string; avatarUrl: string }>;
+}
+
 function usesBackendPrivacy(): boolean {
   return usesBackendApi();
 }
@@ -108,6 +112,32 @@ export const privacyService = {
     const res = await httpClient.post<ApiResponse<ContactImportResponse>>(
       API_ENDPOINTS.users.contactsImport,
       { body: { phones } },
+    );
+    return res.data;
+  },
+
+  async searchByPhone(phone: string): Promise<PhoneSearchResponse> {
+    if (!usesBackendPrivacy()) {
+      await sleep(250);
+      return { matches: [] };
+    }
+
+    const res = await httpClient.post<ApiResponse<PhoneSearchResponse>>(
+      API_ENDPOINTS.users.contactsSearch,
+      { body: { phone }, skipErrorPage: true },
+    );
+    return res.data;
+  },
+
+  async searchByEmail(email: string): Promise<PhoneSearchResponse> {
+    if (!usesBackendPrivacy()) {
+      await sleep(250);
+      return { matches: [] };
+    }
+
+    const res = await httpClient.post<ApiResponse<PhoneSearchResponse>>(
+      API_ENDPOINTS.users.contactsSearch,
+      { body: { email }, skipErrorPage: true },
     );
     return res.data;
   },

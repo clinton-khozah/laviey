@@ -22,6 +22,9 @@ export function FeedItem({
   onICrush,
   onProfileClick,
   onMoreOptions,
+  onPaidChat,
+  clearPhoto = false,
+  onExitClearPhoto,
   showSwipeHint = false,
 }: FeedItemProps) {
   const firstPost = profile.posts?.[0];
@@ -48,14 +51,50 @@ export function FeedItem({
   const { ref, inView } = useInView(0.72);
   const [progress, setProgress] = useState(0);
   const [heartBurst, setHeartBurst] = useState(false);
+  const [likePending, setLikePending] = useState(false);
+  const heartBurstTimerRef = useRef<number | null>(null);
+  const isLiked = liked || likePending;
+
+  const showHeartBurst = () => {
+    setHeartBurst(true);
+    if (heartBurstTimerRef.current !== null) {
+      window.clearTimeout(heartBurstTimerRef.current);
+    }
+    heartBurstTimerRef.current = window.setTimeout(() => {
+      setHeartBurst(false);
+      heartBurstTimerRef.current = null;
+    }, 900);
+  };
 
   const triggerHeart = () => {
-    setHeartBurst(true);
+    showHeartBurst();
     if (firstPost?.id && !likedPost) onPostLike();
-    setTimeout(() => setHeartBurst(false), 900);
+  };
+
+  const handleLike = async () => {
+    if (isLiked) return;
+
+    setLikePending(true);
+    showHeartBurst();
+
+    try {
+      await onLike();
+    } catch {
+      // The optimistic heart is rolled back below if the request fails.
+    } finally {
+      setLikePending(false);
+    }
   };
 
   const { onPointerUp } = useDoubleTap(triggerHeart);
+
+  useEffect(() => {
+    return () => {
+      if (heartBurstTimerRef.current !== null) {
+        window.clearTimeout(heartBurstTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -91,19 +130,23 @@ export function FeedItem({
   };
 
   return (
-    <article className="feed-item" ref={ref} onPointerUp={onPointerUp}>
+    <article
+      className={`feed-item${clearPhoto ? " feed-item--clear-photo" : ""}`}
+      ref={ref}
+      onPointerUp={clearPhoto ? undefined : onPointerUp}
+    >
       {showInitial ? (
         <div className="feed-item__media feed-item__media--initial">
           <FeedProfilePlaceholder name={profile.name} />
         </div>
       ) : videoSrc ? (
         <>
-          <div className="feed-item__progress-track">
+          {!clearPhoto ? <div className="feed-item__progress-track">
             <motion.div
               className="feed-item__progress-fill"
               style={{ scaleX: progress }}
             />
-          </div>
+          </div> : null}
           <video
             ref={videoRef}
             className="feed-item__media"
@@ -130,10 +173,14 @@ export function FeedItem({
         />
       )}
 
-      <div className="feed-item__gradient feed-item__gradient--top" />
-      <div className="feed-item__gradient feed-item__gradient--bottom" />
+      {!clearPhoto ? (
+        <>
+          <div className="feed-item__gradient feed-item__gradient--top" />
+          <div className="feed-item__gradient feed-item__gradient--bottom" />
+        </>
+      ) : null}
 
-      <AnimatePresence>
+      {!clearPhoto ? <AnimatePresence>
         {heartBurst && (
           <motion.div
             className="feed-item__heart-burst"
@@ -147,20 +194,32 @@ export function FeedItem({
             </svg>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> : null}
 
-      <ProfileOverlay profile={profile} />
-      <ActionRail
-        profile={profile}
-        liked={liked}
-        iCrushSent={iCrushSent}
-        onLike={onLike}
-        onICrush={onICrush}
-        onProfileClick={onProfileClick}
-        onMoreOptions={onMoreOptions}
-      />
+      {!clearPhoto ? (
+        <>
+          <ProfileOverlay profile={profile} />
+          <ActionRail
+            profile={profile}
+            liked={isLiked}
+            iCrushSent={iCrushSent}
+            onLike={() => void handleLike()}
+            onICrush={onICrush}
+            onProfileClick={onProfileClick}
+            onMoreOptions={onMoreOptions}
+            onPaidChat={onPaidChat}
+          />
+        </>
+      ) : (
+        <button
+          type="button"
+          className="feed-item__clear-photo-exit"
+          onClick={onExitClearPhoto}
+          aria-label="Show profile details"
+        />
+      )}
 
-      <AnimatePresence>
+      {!clearPhoto ? <AnimatePresence>
         {showSwipeHint && (
           <motion.div
             className="feed-item__swipe-hint"
@@ -191,7 +250,7 @@ export function FeedItem({
             <span>Swipe up</span>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> : null}
     </article>
   );
 }

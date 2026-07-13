@@ -108,6 +108,15 @@
   opacity: 0.7;
 }
 
+.action-rail__btn--paid-chat {
+  color: #7dd3fc;
+}
+
+.action-rail__btn--paid-chat .action-rail__label {
+  color: #bae6fd;
+  font-weight: 700;
+}
+
 .action-rail__btn--crushy {
   margin: 2px 0 0;
   gap: 2px;

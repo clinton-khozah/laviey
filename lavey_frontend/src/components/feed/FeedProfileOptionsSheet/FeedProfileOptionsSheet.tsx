@@ -6,7 +6,11 @@ import { hasCustomProfileAvatar } from "@/utils/discover/discoverProfileReady";
 import type { Profile } from "@/types";
 import "./FeedProfileOptionsSheet.css";
 
-export type FeedProfileOptionAction = "view-profile" | "report" | "block";
+export type FeedProfileOptionAction =
+  | "clear-photo"
+  | "view-profile"
+  | "report"
+  | "block";
 
 export interface FeedProfileActionMeta {
   reportReason?: string;
@@ -131,6 +135,30 @@ export function FeedProfileOptionsSheet({
   const renderMenu = () => (
     <>
       {renderIntro()}
+
+      <button
+        type="button"
+        className="feed-profile-options__action"
+        disabled={Boolean(busyAction)}
+        onClick={() => void runAction("clear-photo")}
+      >
+        <span className="feed-profile-options__icon" aria-hidden>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <circle cx="8.5" cy="9" r="1.5" />
+            <path d="M21 15l-5-5L5 20" />
+          </svg>
+        </span>
+        <span className="feed-profile-options__copy">
+          <strong>View clear photo</strong>
+          <span>Hide everything; tap the photo to bring it back</span>
+        </span>
+      </button>
 
       <button
         type="button"

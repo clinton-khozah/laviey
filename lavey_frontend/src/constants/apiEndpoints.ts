@@ -18,6 +18,12 @@ export const API_ENDPOINTS = {
     byId: (id: string) => `/profiles/${id}`,
     recordView: (id: string) => `/profiles/${id}/view`,
   },
+  paidChat: {
+    catalog: '/discovery/chat-credits',
+    checkout: '/discovery/chat-credits/checkout',
+    checkoutStatus: (paymentId: string) => `/discovery/chat-credits/checkouts/${encodeURIComponent(paymentId)}`,
+    unlock: (profileId: string) => `/discovery/chat-unlocks/${profileId}`,
+  },
   matches: {
     flame: '/matches/flame',
     list: '/matches',
@@ -40,6 +46,7 @@ export const API_ENDPOINTS = {
     thread: (id: string) => `/messages/conversations/${id}`,
     sendMessage: (id: string) => `/messages/conversations/${id}/messages`,
     sendPhoto: (id: string) => `/messages/conversations/${id}/photos`,
+    sendAudio: (id: string) => `/messages/conversations/${id}/audio`,
     markRead: (id: string) => `/messages/conversations/${id}/read`,
     typing: (id: string) => `/messages/conversations/${id}/typing`,
     delete: (id: string) => `/messages/conversations/${id}`,
@@ -76,6 +83,7 @@ export const API_ENDPOINTS = {
     blocked: '/users/me/blocked',
     blockUser: (userId: string) => `/users/me/blocked/${userId}`,
     contactsImport: '/users/me/contacts/import',
+    contactsSearch: '/users/me/contacts/search',
     dataExport: '/users/me/data-export',
     deleteAccount: '/users/me',
     pushVapidPublicKey: '/users/me/push/vapid-public-key',

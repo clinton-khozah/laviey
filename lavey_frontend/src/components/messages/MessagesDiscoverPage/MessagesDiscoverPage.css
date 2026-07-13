@@ -114,6 +114,7 @@
 }
 
 .messages-discover-page__find {
+  position: relative;
   flex-shrink: 0;
   width: 36px;
   height: 36px;
@@ -126,6 +127,17 @@
   border: 1px solid var(--border-subtle);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+.messages-discover-page__filter-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid rgba(8, 8, 12, 0.85);
+  border-radius: 50%;
+  background: var(--accent-flame);
 }
 
 .messages-discover-page__find svg {
