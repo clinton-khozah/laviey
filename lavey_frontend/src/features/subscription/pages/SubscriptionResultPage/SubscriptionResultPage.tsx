@@ -10,6 +10,7 @@ import {
   readPendingPayfastCheckout,
 } from '@/utils/subscription/platinumCheckoutStorage';
 import { notifyPlatinumUpdated } from '@/utils/subscription/platinumUpdatedEvent';
+import { openChatWithProfile } from '@/utils/navigation/appNav';
 import {
   clearPlatinumWelcomePending,
   setPlatinumWelcomePending,
@@ -26,6 +27,7 @@ export function SubscriptionResultPage({ variant, onNavigate }: SubscriptionResu
     new URLSearchParams(window.location.search).get('purchase') === 'chat_credits';
   const [isConfirming, setIsConfirming] = useState(variant === 'success');
   const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [readyChatProfileId, setReadyChatProfileId] = useState<string | null>(null);
   const [statusText, setStatusText] = useState(
     variant === 'success'
       ? isChatPurchase
@@ -113,9 +115,16 @@ export function SubscriptionResultPage({ variant, onNavigate }: SubscriptionResu
             sessionStorage.removeItem('lavey_chat_credit_payment_id');
             clearPendingPayfastCheckout();
             setIsConfirming(false);
-            setStatusText(
-              `${checkout.credits} chat ${checkout.credits === 1 ? 'credit is' : 'credits are'} ready. Your balance is ${checkout.balance}.`,
-            );
+            if (checkout.conversationId && checkout.targetProfileId) {
+              setReadyChatProfileId(checkout.targetProfileId);
+              setStatusText(
+                `Your chat is ready. One credit was used, 40% of its value was gifted to the recipient, and your balance is ${checkout.balance}.`,
+              );
+            } else {
+              setStatusText(
+                `${checkout.credits} chat ${checkout.credits === 1 ? 'credit is' : 'credits are'} ready. Your balance is ${checkout.balance}.`,
+              );
+            }
             return;
           }
           if (checkout.status === 'failed' || checkout.status === 'cancelled') break;
@@ -137,11 +146,17 @@ export function SubscriptionResultPage({ variant, onNavigate }: SubscriptionResu
   }, [variant, isChatPurchase]);
 
   const handleBack = () => {
-    if (isChatPurchase) sessionStorage.removeItem('lavey_chat_credit_payment_id');
+    if (isChatPurchase) {
+      sessionStorage.removeItem('lavey_chat_credit_payment_id');
+      sessionStorage.removeItem('lavey_chat_credit_target_profile_id');
+    }
     clearPendingPayfastCheckout();
     clearUserProfileCache();
     notifyPlatinumUpdated();
     onNavigate('/');
+    if (readyChatProfileId) {
+      window.setTimeout(() => openChatWithProfile(readyChatProfileId), 0);
+    }
   };
 
   const handleWelcomeClose = () => {
@@ -172,7 +187,7 @@ export function SubscriptionResultPage({ variant, onNavigate }: SubscriptionResu
           </h1>
           <p className="subscription-result__message">{statusText}</p>
           <button type="button" className="subscription-result__btn" onClick={handleBack}>
-            Back to Lavey
+            {readyChatProfileId ? 'Open chat' : 'Back to Lavey'}
           </button>
         </>
       ) : null}

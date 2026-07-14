@@ -1,4 +1,7 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useChatTypingStyle } from '@/hooks';
+import { settingsService } from '@/services/settings/settingsService';
+import { CHAT_TYPING_STYLE_OPTIONS, type ChatTypingStyle } from '@/types/domain/chatTypingStyle.types';
 import './ChatSendOptionsMenu.css';
 
 export type ChatConversationAction =
@@ -173,6 +176,25 @@ export function ChatSendOptionsMenu({
   isMuted = false,
 }: ChatSendOptionsMenuProps) {
   const options = buildOptions(isPinned, isMuted);
+  const { chatTypingStyle, setChatTypingStyle } = useChatTypingStyle();
+  const [isSavingStyle, setIsSavingStyle] = useState(false);
+  const [styleError, setStyleError] = useState<string | null>(null);
+
+  const handleStyleChange = async (next: ChatTypingStyle) => {
+    if (next === chatTypingStyle || isSavingStyle) return;
+    const previous = chatTypingStyle;
+    setStyleError(null);
+    setIsSavingStyle(true);
+    setChatTypingStyle(next);
+    try {
+      await settingsService.updateSettings({ chatTypingStyle: next });
+    } catch {
+      setChatTypingStyle(previous);
+      setStyleError('Could not save font');
+    } finally {
+      setIsSavingStyle(false);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -189,7 +211,28 @@ export function ChatSendOptionsMenu({
     <>
       <button type="button" className="chat-send-menu__backdrop" onClick={onClose} aria-label="Close menu" />
       <div className="chat-send-menu" role="menu" aria-label="Conversation options">
-        <p className="chat-send-menu__title">Conversation options</p>
+        <div className="chat-send-menu__font-section">
+          <div className="chat-send-menu__font-heading">
+            <span className="chat-send-menu__font-icon" aria-hidden>Aa</span>
+            <span className="chat-send-menu__font-label">Chat font</span>
+          </div>
+          <div className="chat-send-menu__fonts" role="radiogroup" aria-label="Chat font">
+            {CHAT_TYPING_STYLE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={chatTypingStyle === option.id}
+                disabled={isSavingStyle}
+                className={`chat-send-menu__font chat-send-menu__font--${option.id} ${chatTypingStyle === option.id ? 'is-active' : ''}`}
+                onClick={() => void handleStyleChange(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {styleError ? <span className="chat-send-menu__font-error" role="alert">{styleError}</span> : null}
+        </div>
         <ul className="chat-send-menu__list">
           {options.map((option) => (
             <li key={option.id} role="none" className={option.dividerBefore ? 'chat-send-menu__divider' : undefined}>

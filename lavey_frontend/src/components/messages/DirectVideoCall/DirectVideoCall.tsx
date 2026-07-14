@@ -31,6 +31,9 @@ export function DirectVideoCall({ call, onEnd }: DirectVideoCallProps) {
     mediaReady: Boolean(media.localStream),
   });
   const participant = participants[0];
+  const participantHasMedia = Boolean(
+    participant?.stream?.getTracks().some((track) => track.readyState === 'live'),
+  );
 
   useEffect(() => {
     if (!participant?.stream) return;
@@ -61,15 +64,15 @@ export function DirectVideoCall({ call, onEnd }: DirectVideoCallProps) {
             <p>
               {status === 'unsupported'
                 ? 'Live video is unavailable in this browser'
-                : participant
+                : participantHasMedia
                   ? 'Connected'
                   : call.status === 'ringing'
                     ? 'Ringing…'
                     : 'Connecting…'}
             </p>
           </div>
-          <span className={`direct-video-call__secure ${participant ? 'direct-video-call__secure--live' : ''}`}>
-            {participant ? 'Live' : 'Private'}
+          <span className={`direct-video-call__secure ${participantHasMedia ? 'direct-video-call__secure--live' : ''}`}>
+            {participantHasMedia ? 'Live' : 'Private'}
           </span>
         </header>
 

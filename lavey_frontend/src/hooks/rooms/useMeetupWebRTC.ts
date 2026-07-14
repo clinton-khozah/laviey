@@ -20,6 +20,8 @@ interface SignalPayload {
   to: string;
   sdp?: RTCSessionDescriptionInit;
   candidate?: RTCIceCandidateInit;
+  /** Both peers must switch to relay transport during a TURN retry. */
+  relayOnly?: boolean;
 }
 
 interface UseMeetupWebRTCOptions {
@@ -43,6 +45,7 @@ interface PeerRecord {
   makingOffer: boolean;
   relayOnly: boolean;
   relayRetried: boolean;
+  connectionTimeoutId: number | null;
 }
 
 function parsePresenceMeta(raw: unknown, presenceKey?: string): MeetupPresenceMeta | null {
@@ -237,6 +240,9 @@ export function useMeetupWebRTC({
     (peerId: string) => {
       const record = peersRef.current.get(peerId);
       if (!record) return;
+      if (record.connectionTimeoutId !== null) {
+        window.clearTimeout(record.connectionTimeoutId);
+      }
       record.pc.close();
       peersRef.current.delete(peerId);
       syncParticipants();
@@ -259,6 +265,7 @@ export function useMeetupWebRTC({
           from: localUserId,
           to: peerId,
           sdp: offer,
+          relayOnly: record.relayOnly,
         });
       } catch {
         /* ignore renegotiation races */
@@ -380,12 +387,26 @@ export function useMeetupWebRTC({
         makingOffer: false,
         relayOnly,
         relayRetried: relayOnly,
+        connectionTimeoutId: null,
       };
       peersRef.current.set(meta.odUserId, record);
       wirePeerConnection(record);
+      record.connectionTimeoutId = window.setTimeout(() => {
+        if (pc.connectionState === 'connected' || pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          return;
+        }
+        if (!record.relayRetried && turnAvailableRef.current) {
+          record.relayRetried = true;
+          const savedMeta = { ...record.meta };
+          removePeerRecord(savedMeta.odUserId);
+          if (localUserId < savedMeta.odUserId) {
+            void createOfferRef.current(savedMeta, true);
+          }
+        }
+      }, 8_000);
       return record;
     },
-    [wirePeerConnection],
+    [localUserId, removePeerRecord, wirePeerConnection],
   );
 
   const createOffer = useCallback(
@@ -414,6 +435,7 @@ export function useMeetupWebRTC({
           from: localUserId,
           to: meta.odUserId,
           sdp: offer,
+          relayOnly,
         });
         syncParticipants();
       } catch {
@@ -441,8 +463,13 @@ export function useMeetupWebRTC({
       if (payload.type === 'offer' && payload.sdp) {
         const peerId = payload.from;
         const isPolite = localUserId > peerId;
+        const relayOnly = Boolean(payload.relayOnly);
 
         let record = peersRef.current.get(peerId);
+        if (record && relayOnly && !record.relayOnly) {
+          removePeerRecord(peerId);
+          record = undefined;
+        }
         if (record && isPeerConnectionDead(record)) {
           removePeerRecord(peerId);
           record = undefined;
@@ -457,7 +484,7 @@ export function useMeetupWebRTC({
               avatarUrl: '',
               isHost: false,
             },
-            false,
+            relayOnly,
           );
         }
 
@@ -486,6 +513,7 @@ export function useMeetupWebRTC({
             from: localUserId,
             to: peerId,
             sdp: answer,
+            relayOnly: record.relayOnly,
           });
           await flushPendingCandidates(record);
           syncParticipants();

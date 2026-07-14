@@ -52,6 +52,19 @@ export interface GiftWallet {
   payoutAccount: PayoutAccount | null;
 }
 
+export interface GiftActivity {
+  dailyEarnings: Array<{ date: string; amountUsd: number }>;
+  withdrawals: Array<{
+    id: string;
+    amountUsd: number;
+    status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+    methodLabel: string;
+    accountMask: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
 export interface SavePayoutAccountInput {
   methodId: string;
   bankId: string;
@@ -145,6 +158,15 @@ export const payoutService = {
     }
 
     const res = await httpClient.get<ApiResponse<GiftWallet>>(API_ENDPOINTS.gifts.wallet);
+    return res.data;
+  },
+
+  async getActivity(): Promise<GiftActivity> {
+    if (!usesBackendPayouts()) {
+      await sleep(120);
+      return { dailyEarnings: [], withdrawals: [] };
+    }
+    const res = await httpClient.get<ApiResponse<GiftActivity>>(API_ENDPOINTS.gifts.activity);
     return res.data;
   },
 

@@ -162,7 +162,7 @@ export function ProfileMenuSheet({
                   <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
                 </svg>
               }
-              label="Your gifts"
+              label="My gifts"
               value={`$${profile.stats.giftEarnings.toFixed(2)}`}
               description="From gifts and admin credits"
               variant="earnings"

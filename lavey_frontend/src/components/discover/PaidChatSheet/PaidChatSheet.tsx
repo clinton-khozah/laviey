@@ -11,6 +11,27 @@ interface PaidChatSheetProps {
   onUnlocked: (conversationId: string) => void;
 }
 
+function CreditCoinStack({ credits }: { credits: number }) {
+  const visibleCoins = credits >= 12 ? 4 : credits >= 5 ? 3 : 1;
+  return (
+    <span
+      className={`paid-chat-sheet__coins paid-chat-sheet__coins--${visibleCoins}`}
+      aria-hidden
+    >
+      {Array.from({ length: visibleCoins }, (_, index) => (
+        <span className="paid-chat-sheet__coin" key={index}>
+          <span className="paid-chat-sheet__coin-face">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M6.8 6.5h10.4a2.3 2.3 0 012.3 2.3v5.4a2.3 2.3 0 01-2.3 2.3h-5.7L8 19v-2.5H6.8a2.3 2.3 0 01-2.3-2.3V8.8a2.3 2.3 0 012.3-2.3z" />
+              <path d="M8 10.4h8M8 13.2h5.2" />
+            </svg>
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function PaidChatSheet({ profile, onClose, onUnlocked }: PaidChatSheetProps) {
   const [catalog, setCatalog] = useState<ChatCreditCatalog | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,8 +85,9 @@ export function PaidChatSheet({ profile, onClose, onUnlocked }: PaidChatSheetPro
     setBusyId(packId);
     setError(null);
     try {
-      const checkout = await paidChatService.startCheckout(packId);
+      const checkout = await paidChatService.startCheckout(packId, profile.id);
       sessionStorage.setItem('lavey_chat_credit_payment_id', checkout.mPaymentId);
+      sessionStorage.setItem('lavey_chat_credit_target_profile_id', profile.id);
       submitPayfastCheckout(checkout);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not start checkout.');
@@ -115,8 +137,14 @@ export function PaidChatSheet({ profile, onClose, onUnlocked }: PaidChatSheetPro
                   disabled={Boolean(busyId)}
                   onClick={() => void buy(pack.id)}
                 >
-                  <span><strong>{pack.label}</strong><small>{pack.description}</small></span>
-                  <b>R{pack.amountZar.toFixed(2)}</b>
+                  <span className="paid-chat-sheet__pack-main">
+                    <CreditCoinStack credits={pack.credits} />
+                    <span className="paid-chat-sheet__pack-copy">
+                      <strong>{pack.label}</strong>
+                      <small>{pack.description}</small>
+                    </span>
+                  </span>
+                  <b className="paid-chat-sheet__pack-price">R{pack.amountZar.toFixed(2)}</b>
                 </button>
               ))}
             </div>

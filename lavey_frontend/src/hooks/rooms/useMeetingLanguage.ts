@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   DEFAULT_MEETING_LANGUAGE,
+  MEETING_LANGUAGE_CHANGE_EVENT,
   MEETING_LANGUAGE_STORAGE_KEY,
   type MeetingLanguageCode,
 } from '@/constants/meeting/meetingLanguages';
@@ -28,8 +29,18 @@ export function useMeetingLanguage() {
     }
   }, [language]);
 
+  useEffect(() => {
+    const syncLanguage = (event: Event) => {
+      const next = (event as CustomEvent<MeetingLanguageCode>).detail;
+      if (next) setLanguageState(next);
+    };
+    window.addEventListener(MEETING_LANGUAGE_CHANGE_EVENT, syncLanguage);
+    return () => window.removeEventListener(MEETING_LANGUAGE_CHANGE_EVENT, syncLanguage);
+  }, []);
+
   const setLanguage = useCallback((code: MeetingLanguageCode) => {
     setLanguageState(code);
+    window.dispatchEvent(new CustomEvent(MEETING_LANGUAGE_CHANGE_EVENT, { detail: code }));
   }, []);
 
   return { language, setLanguage };

@@ -3,8 +3,6 @@ import './MessagesHeader.css';
 export type MessageFilter = 'all' | 'unread' | 'online';
 
 interface MessagesHeaderProps {
-  unreadTotal: number;
-  matchCount: number;
   filter: MessageFilter;
   filterCounts: { all: number; unread: number; online: number };
   onFilterChange: (filter: MessageFilter) => void;
@@ -18,8 +16,6 @@ const FILTERS: { id: MessageFilter; label: string }[] = [
 ];
 
 export function MessagesHeader({
-  unreadTotal,
-  matchCount,
   filter,
   filterCounts,
   onFilterChange,
@@ -30,16 +26,6 @@ export function MessagesHeader({
       <div className="messages-header__top">
         <div className="messages-header__brand">
           <h1 className="messages-header__title">Messages</h1>
-          <div className="messages-header__stats">
-            <span className="messages-header__stat messages-header__stat--matches">
-              {matchCount} {matchCount === 1 ? 'match' : 'matches'}
-            </span>
-            {unreadTotal > 0 && (
-              <span className="messages-header__stat messages-header__stat--unread">
-                {unreadTotal} unread
-              </span>
-            )}
-          </div>
         </div>
         <button
           type="button"

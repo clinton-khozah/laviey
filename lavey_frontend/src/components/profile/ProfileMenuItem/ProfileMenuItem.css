@@ -31,6 +31,10 @@
   color: white;
 }
 
+.profile-menu-item--earnings .profile-menu-item__value {
+  color: var(--accent-mint);
+}
+
 .profile-menu-item--danger {
   margin-top: 4px;
   border-color: rgba(255, 77, 109, 0.2);

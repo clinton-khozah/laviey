@@ -7,9 +7,21 @@
 .paid-chat-sheet__balance strong { color: var(--accent-mint); }
 .paid-chat-sheet__unlock { min-height: 44px; padding: 10px 14px; border-radius: 12px; color: #fff; background: var(--gradient-flame); font-weight: 800; }
 .paid-chat-sheet__packs { display: flex; flex-direction: column; gap: 6px; }
-.paid-chat-sheet__pack { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; text-align: left; border-radius: 12px; background: var(--surface-muted); border: 1px solid var(--border-subtle); color: var(--text-primary); }
-.paid-chat-sheet__pack span { display: flex; flex-direction: column; gap: 2px; }
+.paid-chat-sheet__pack { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 68px; padding: 10px 12px; text-align: left; border-radius: 14px; background: var(--surface-muted); border: 1px solid var(--border-subtle); color: var(--text-primary); transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease; }
+.paid-chat-sheet__pack:active:not(:disabled) { transform: scale(.98); border-color: rgba(245, 181, 43, .48); box-shadow: 0 5px 18px rgba(146, 92, 8, .13); }
+.paid-chat-sheet__pack-main { display: flex; min-width: 0; align-items: center; gap: 11px; }
+.paid-chat-sheet__pack-copy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .paid-chat-sheet__pack small { color: var(--text-muted); font-size: 10px; }
-.paid-chat-sheet__pack b { white-space: nowrap; color: var(--accent-flame); }
+.paid-chat-sheet__pack-price { white-space: nowrap; color: #d99410; font-size: 14px; text-shadow: 0 1px 0 rgba(255,255,255,.2); }
+.paid-chat-sheet__coins { position: relative; display: block; width: 47px; height: 44px; flex: 0 0 47px; }
+.paid-chat-sheet__coin { position: absolute; top: 4px; left: 5px; display: grid; width: 35px; height: 35px; place-items: center; overflow: hidden; border: 2px solid #9b5c08; border-radius: 50%; background: linear-gradient(135deg, #fff2a6 0%, #f9c83d 24%, #c57909 63%, #f4b92b 82%, #8f5004 100%); box-shadow: inset 0 0 0 2px #ffe77a, inset -4px -5px 7px rgba(115, 62, 0, .34), inset 3px 3px 5px rgba(255,255,255,.62), 0 4px 7px rgba(61, 35, 1, .3); }
+.paid-chat-sheet__coin::before { position: absolute; inset: -12px 13px 15px -8px; border-radius: 50%; background: linear-gradient(125deg, rgba(255,255,255,.8), rgba(255,255,255,0)); content: ''; transform: rotate(-18deg); }
+.paid-chat-sheet__coin::after { position: absolute; inset: 2px; border: 1px dashed rgba(112, 61, 2, .62); border-radius: 50%; content: ''; }
+.paid-chat-sheet__coin-face { position: relative; z-index: 1; display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid rgba(130, 75, 3, .55); border-radius: 50%; background: radial-gradient(circle at 35% 28%, #ffe87a, #dda016 70%); box-shadow: inset 1px 1px 2px rgba(255,255,255,.5), inset -2px -2px 3px rgba(113,61,0,.28); }
+.paid-chat-sheet__coin-face svg { width: 15px; height: 15px; stroke: #875006; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 0 rgba(255,244,170,.7)); }
+.paid-chat-sheet__coins--3 .paid-chat-sheet__coin:nth-child(1), .paid-chat-sheet__coins--4 .paid-chat-sheet__coin:nth-child(1) { transform: translate(-5px, 5px) rotate(-12deg); }
+.paid-chat-sheet__coins--3 .paid-chat-sheet__coin:nth-child(2), .paid-chat-sheet__coins--4 .paid-chat-sheet__coin:nth-child(2) { transform: translate(5px, 6px) rotate(12deg); }
+.paid-chat-sheet__coins--3 .paid-chat-sheet__coin:nth-child(3), .paid-chat-sheet__coins--4 .paid-chat-sheet__coin:nth-child(3) { transform: translate(0, -3px); }
+.paid-chat-sheet__coins--4 .paid-chat-sheet__coin:nth-child(4) { transform: translate(7px, -5px) scale(.92) rotate(16deg); }
 .paid-chat-sheet button:disabled { opacity: .55; }
 .paid-chat-sheet__error { margin: 0; padding: 9px 10px; border-radius: 10px; color: #fecaca; background: rgba(239, 68, 68, .12); font-size: 12px; }

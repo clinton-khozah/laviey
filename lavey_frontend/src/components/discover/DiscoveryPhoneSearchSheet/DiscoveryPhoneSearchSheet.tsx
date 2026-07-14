@@ -111,7 +111,6 @@ export function DiscoveryPhoneSearchSheet({
             autoComplete={kind === "phone" ? "tel" : "email"}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={kind === "phone" ? "27 82 123 4567" : undefined}
             disabled={isSearching}
             autoFocus
           />

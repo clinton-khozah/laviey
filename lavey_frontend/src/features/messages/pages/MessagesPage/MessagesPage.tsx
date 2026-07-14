@@ -322,7 +322,6 @@ export function MessagesPage() {
     void refetch(true);
   }, [refetch]);
 
-  const unreadTotal = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
   const filterCounts = useMemo(
     () => ({
@@ -748,8 +747,6 @@ export function MessagesPage() {
           </div>
           <div className="messages-page__sticky">
             <MessagesHeader
-              unreadTotal={unreadTotal}
-              matchCount={matchConversations.length}
               filter={filter}
               filterCounts={filterCounts}
               onFilterChange={setFilter}
@@ -772,7 +769,6 @@ export function MessagesPage() {
                       conversations={onlineStripConversations}
                       onSelect={setActiveId}
                       onAvatarClick={(conversation) => setActiveId(conversation.id)}
-                      title="Online now"
                     />
                   </div>
                 ) : null}

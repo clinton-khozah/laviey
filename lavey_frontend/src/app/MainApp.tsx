@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { MatchActionsProvider } from '@/app/providers/MatchActionsProvider';
 import { UserSettingsSync } from '@/app/components/UserSettingsSync';
+import { AppTranslationSync } from '@/app/components/AppTranslationSync';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { useConversations, usePushNotifications } from '@/hooks';
@@ -103,6 +104,7 @@ export function MainApp() {
   return (
     <MatchActionsProvider>
       <UserSettingsSync />
+      <AppTranslationSync />
       <AppShell
         activeNavId={activeNav}
         messageBadgeCount={messageBadgeCount}

@@ -25,10 +25,10 @@ export const paidChatService = {
     return response.data;
   },
 
-  async startCheckout(packId: string): Promise<PayfastCheckoutResponse> {
+  async startCheckout(packId: string, targetProfileId: string): Promise<PayfastCheckoutResponse> {
     const response = await httpClient.post<ApiResponse<PayfastCheckoutResponse>>(
       API_ENDPOINTS.paidChat.checkout,
-      { body: { packId }, skipErrorPage: true },
+      { body: { packId, targetProfileId }, skipErrorPage: true },
     );
     return response.data;
   },
@@ -37,11 +37,15 @@ export const paidChatService = {
     status: string;
     credits: number;
     balance: number;
+    targetProfileId: string | null;
+    conversationId: string | null;
   }> {
     const response = await httpClient.get<ApiResponse<{
       status: string;
       credits: number;
       balance: number;
+      targetProfileId: string | null;
+      conversationId: string | null;
     }>>(API_ENDPOINTS.paidChat.checkoutStatus(paymentId), { skipErrorPage: true });
     return response.data;
   },

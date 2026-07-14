@@ -2,6 +2,9 @@
  * API route definitions. Keep paths in one place for easy backend alignment.
  */
 export const API_ENDPOINTS = {
+  translation: {
+    ui: '/translation/ui',
+  },
   auth: {
     google: '/auth/google',
     googleCallback: '/auth/google/callback',
@@ -112,6 +115,7 @@ export const API_ENDPOINTS = {
     send: '/gifts',
     payoutCatalog: '/gifts/payout-catalog',
     wallet: '/users/me/gifts/wallet',
+    activity: '/users/me/gifts/activity',
     payoutAccount: '/users/me/gifts/payout-account',
     withdraw: '/users/me/gifts/withdraw',
   },

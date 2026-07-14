@@ -22,26 +22,8 @@
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.04em;
-  margin-bottom: 4px;
+  margin-bottom: 0;
   color: var(--text-primary);
-}
-
-.messages-header__stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.messages-header__stat {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.messages-header__stat--unread {
-  color: var(--accent-flame-end);
-  font-weight: 600;
 }
 
 .messages-header__compose {

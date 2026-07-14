@@ -1,6 +1,7 @@
 export type MeetingLanguageCode = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'ja' | 'ko' | 'zh';
 
 export const MEETING_LANGUAGE_STORAGE_KEY = 'lavey_meeting_language';
+export const MEETING_LANGUAGE_CHANGE_EVENT = 'lavey:language-change';
 
 export interface MeetingLanguageOption {
   code: MeetingLanguageCode;

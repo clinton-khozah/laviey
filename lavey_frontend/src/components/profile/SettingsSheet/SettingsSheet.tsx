@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import { AppLanguagePicker } from '@/components/profile/AppLanguagePicker';
 import { ChangePasswordSheet } from '@/components/profile/ChangePasswordSheet';
-import { ChatTypingStylePicker } from '@/components/profile/ChatTypingStylePicker';
 import { SheetSaveSuccess } from '@/components/profile/SheetSaveSuccess';
 import { ThemeModePicker } from '@/components/profile/ThemeModePicker';
 import { useAuth, useChatTypingStyle, useMeetingLanguage, useTheme } from '@/hooks';
@@ -196,10 +195,6 @@ export function SettingsSheet({ open, onClose, onOpenSupport }: SettingsSheetPro
             <ThemeModePicker
               value={draft.theme}
               onChange={(next) => patchDraft({ theme: next })}
-            />
-            <ChatTypingStylePicker
-              value={draft.chatTypingStyle}
-              onChange={(next) => patchDraft({ chatTypingStyle: next })}
             />
             <AppLanguagePicker
               value={draft.language}
