@@ -81,6 +81,7 @@ export const messageService = {
   async sendMessage(
     conversationId: string,
     text: string,
+    replyToMessageId?: string,
   ): Promise<ChatMessage> {
     if (!usesBackendMessages()) {
       await sleep(200);
@@ -96,12 +97,16 @@ export const messageService = {
 
     const res = await httpClient.post<ApiResponse<ChatMessage>>(
       API_ENDPOINTS.messages.sendMessage(conversationId),
-      { body: { text } },
+      { body: { text, replyToMessageId } },
     );
     return res.data;
   },
 
-  async sendPhoto(conversationId: string, file: File): Promise<ChatMessage> {
+  async sendPhoto(
+    conversationId: string,
+    file: File,
+    replyToMessageId?: string,
+  ): Promise<ChatMessage> {
     if (!usesBackendMessages()) {
       await sleep(350);
       const url = URL.createObjectURL(file);
@@ -123,6 +128,7 @@ export const messageService = {
 
     const form = new FormData();
     form.append("photo", file, file.name || "photo.webp");
+    if (replyToMessageId) form.append("replyToMessageId", replyToMessageId);
     const res = await httpClient.postForm<ApiResponse<ChatMessage>>(
       API_ENDPOINTS.messages.sendPhoto(conversationId),
       form,
@@ -130,7 +136,11 @@ export const messageService = {
     return res.data;
   },
 
-  async sendAudio(conversationId: string, audio: Blob): Promise<ChatMessage> {
+  async sendAudio(
+    conversationId: string,
+    audio: Blob,
+    replyToMessageId?: string,
+  ): Promise<ChatMessage> {
     if (!usesBackendMessages()) {
       await sleep(300);
       return {
@@ -149,6 +159,7 @@ export const messageService = {
     const extension = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
     const form = new FormData();
     form.append("audio", audio, `voice-${Date.now()}.${extension}`);
+    if (replyToMessageId) form.append("replyToMessageId", replyToMessageId);
     const res = await httpClient.postForm<ApiResponse<ChatMessage>>(
       API_ENDPOINTS.messages.sendAudio(conversationId),
       form,

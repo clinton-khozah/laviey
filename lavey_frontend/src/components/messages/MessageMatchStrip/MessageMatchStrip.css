@@ -202,12 +202,11 @@
 
 .msg-match-strip__online {
   flex-shrink: 0;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: #10b981;
-  line-height: 1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.14);
 }
 
 .msg-match-strip__name-row:active .msg-match-strip__name {

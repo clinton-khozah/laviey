@@ -9,6 +9,14 @@ function usesBackendMessages(): boolean {
   return usesBackendApi();
 }
 
+function containsCjkText(value: string): boolean {
+  return /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(value);
+}
+
+function hasUnexpectedLanguage(result: ChatAssistResult): boolean {
+  return [result.moodLabel, result.moodExplanation, ...result.suggestions].some(containsCjkText);
+}
+
 export const chatAssistService = {
   async analyze(
     conversationId: string,
@@ -38,7 +46,9 @@ export const chatAssistService = {
           },
         },
       );
-      return res.data;
+      return hasUnexpectedLanguage(res.data)
+        ? localChatAssist(participantName, transcript)
+        : res.data;
     } catch {
       return localChatAssist(participantName, transcript);
     }

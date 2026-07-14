@@ -76,6 +76,7 @@ export function ChatAssistPanel({
   const [result, setResult] = useState<ChatAssistResult | null>(null);
   const [pos, setPos] = useState<FloatPosition | null>(null);
   const requestRef = useRef(0);
+  const suppressClickRef = useRef(false);
   const messagesRef = useRef(messages);
 
   messagesRef.current = messages;
@@ -193,11 +194,16 @@ export function ChatAssistPanel({
     if (drag.pointerId !== e.pointerId) return;
 
     drag.active = false;
+    suppressClickRef.current = drag.moved;
     e.currentTarget.releasePointerCapture(e.pointerId);
+  };
 
-    if (!drag.moved) {
-      openAssist();
+  const handleFabClick = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
     }
+    openAssist();
   };
 
   const refreshButton = (
@@ -229,6 +235,7 @@ export function ChatAssistPanel({
               onPointerMove={handleFabPointerMove}
               onPointerUp={handleFabPointerUp}
               onPointerCancel={handleFabPointerUp}
+              onClick={handleFabClick}
               aria-expanded={open}
               aria-controls="chat-assist-panel"
               aria-label="Loviey reply ideas and mood"

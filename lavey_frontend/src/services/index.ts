@@ -9,6 +9,7 @@ export { payoutService } from './gifts/payoutService';
 export { legalService } from './legal/legalService';
 export { matchService } from './match/matchService';
 export { messageService } from './messages/messageService';
+export { chatVideoCallService } from './messages/chatVideoCallService';
 export { onboardingService } from './onboarding/onboardingService';
 export { privacyService } from './privacy/privacyService';
 export { profileService } from './profile/profileService';

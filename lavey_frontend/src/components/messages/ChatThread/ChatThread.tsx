@@ -24,11 +24,13 @@ interface ChatThreadProps {
   isLoading: boolean;
   isSending: boolean;
   onBack: () => void;
-  onSend: (text: string) => void;
-  onSendPhoto?: (file: File) => Promise<void>;
-  onSendAudio?: (audio: Blob) => Promise<void>;
+  onSend: (text: string, replyTo?: ChatMessage) => void;
+  onSendPhoto?: (file: File, replyTo?: ChatMessage) => Promise<void>;
+  onSendAudio?: (audio: Blob, replyTo?: ChatMessage) => Promise<void>;
   onTypingChange?: (isTyping: boolean) => void;
   onProfileClick: () => void;
+  onVideoCall?: () => void;
+  isVideoCallStarting?: boolean;
   onReact: (messageId: string, emoji: string) => void;
   onDeleteMessage: (messageId: string, scope: DeleteMessageScope) => void | Promise<void>;
   onConversationAction: (action: ChatConversationAction) => void;
@@ -46,6 +48,8 @@ export function ChatThread({
   onSendAudio,
   onTypingChange,
   onProfileClick,
+  onVideoCall,
+  isVideoCallStarting = false,
   onReact,
   onDeleteMessage,
   onConversationAction,
@@ -56,9 +60,11 @@ export function ChatThread({
   const [stickerTrayOpen, setStickerTrayOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState<ChatMessage | null>(null);
   const [deleteMessageTarget, setDeleteMessageTarget] = useState<ChatMessage | null>(null);
+  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -67,13 +73,19 @@ export function ChatThread({
   const recorderStreamRef = useRef<MediaStream | null>(null);
   const recorderChunksRef = useRef<Blob[]>([]);
   const sendRecordingRef = useRef(false);
+  const recordingPausedRef = useRef(false);
+  const recordingStartingRef = useRef(false);
+  const recordingSecondsRef = useRef(0);
+  const recordingTimeRef = useRef<HTMLSpanElement>(null);
   const recordingTimerRef = useRef<number | null>(null);
+  const recordingReplyRef = useRef<ChatMessage | null>(null);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!draft.trim()) return;
-    onSend(draft);
+    onSend(draft, replyTarget ?? undefined);
     setDraft('');
+    setReplyTarget(null);
     setStickerTrayOpen(false);
   };
 
@@ -124,7 +136,8 @@ export function ChatThread({
 
     setMediaError(null);
     try {
-      await onSendPhoto(file);
+      await onSendPhoto(file, replyTarget ?? undefined);
+      setReplyTarget(null);
     } catch (err) {
       setMediaError(err instanceof Error ? err.message : 'Could not send that photo.');
       window.setTimeout(() => setMediaError(null), 3200);
@@ -137,8 +150,12 @@ export function ChatThread({
     recorderStreamRef.current?.getTracks().forEach((track) => track.stop());
     recorderStreamRef.current = null;
     recorderRef.current = null;
+    recordingStartingRef.current = false;
+    recordingPausedRef.current = false;
     setIsRecording(false);
-    setRecordingSeconds(0);
+    setIsRecordingPaused(false);
+    recordingSecondsRef.current = 0;
+    if (recordingTimeRef.current) recordingTimeRef.current.textContent = '0:00';
   };
 
   const finishRecording = (send: boolean) => {
@@ -148,15 +165,43 @@ export function ChatThread({
     else clearRecording();
   };
 
+  const toggleRecordingPause = () => {
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.state === 'inactive') return;
+
+    if (recorder.state === 'recording') {
+      recorder.pause();
+      recordingPausedRef.current = true;
+      setIsRecordingPaused(true);
+      return;
+    }
+
+    if (recorder.state === 'paused') {
+      recorder.resume();
+      recordingPausedRef.current = false;
+      setIsRecordingPaused(false);
+    }
+  };
+
   const startRecording = async () => {
     if (!onSendAudio) return;
+    if (recordingStartingRef.current || recorderRef.current) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       setMediaError('Voice recording is not supported on this browser.');
       return;
     }
+    recordingStartingRef.current = true;
     setMediaError(null);
+    recordingReplyRef.current = replyTarget;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
       const mimeType = candidates.find((type) => MediaRecorder.isTypeSupported(type));
       const recorder = mimeType
@@ -166,8 +211,22 @@ export function ChatThread({
       recorderRef.current = recorder;
       recorderChunksRef.current = [];
       sendRecordingRef.current = false;
+      recordingPausedRef.current = false;
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) recorderChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        sendRecordingRef.current = false;
+        clearRecording();
+        setMediaError('Recording stopped unexpectedly. Please try again.');
+      };
+      recorder.onpause = () => {
+        recordingPausedRef.current = true;
+        setIsRecordingPaused(true);
+      };
+      recorder.onresume = () => {
+        recordingPausedRef.current = false;
+        setIsRecordingPaused(false);
       };
       recorder.onstop = () => {
         const blob = new Blob(recorderChunksRef.current, {
@@ -176,24 +235,34 @@ export function ChatThread({
         const shouldSend = sendRecordingRef.current && blob.size > 0;
         clearRecording();
         if (shouldSend) {
-          void onSendAudio(blob).catch((error) => {
+          void onSendAudio(blob, recordingReplyRef.current ?? undefined).then(() => {
+            setReplyTarget(null);
+            recordingReplyRef.current = null;
+          }).catch((error) => {
             setMediaError(error instanceof Error ? error.message : 'Could not send voice message.');
           });
         }
       };
-      recorder.start(250);
+      recorder.start();
+      recordingStartingRef.current = false;
       setIsRecording(true);
-      setRecordingSeconds(0);
+      setIsRecordingPaused(false);
+      recordingSecondsRef.current = 0;
       recordingTimerRef.current = window.setInterval(() => {
-        setRecordingSeconds((seconds) => {
-          if (seconds >= 119) {
-            window.setTimeout(() => finishRecording(true), 0);
-            return 120;
-          }
-          return seconds + 1;
-        });
+        if (recordingPausedRef.current) return;
+        recordingSecondsRef.current = Math.min(120, recordingSecondsRef.current + 1);
+        const seconds = recordingSecondsRef.current;
+        if (recordingTimeRef.current) {
+          recordingTimeRef.current.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+        }
+        if (seconds >= 120) {
+          if (recordingTimerRef.current) window.clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+          finishRecording(true);
+        }
       }, 1000);
     } catch {
+      recordingStartingRef.current = false;
       clearRecording();
       setMediaError('Allow microphone access to record a voice message.');
     }
@@ -209,6 +278,15 @@ export function ChatThread({
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages.length, messages.at(-1)?.id, messages.at(-1)?.sending]);
+
+  const scrollToRepliedMessage = (messageId: string) => {
+    document.getElementById(`chat-message-${messageId}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    setHighlightedMessageId(messageId);
+    window.setTimeout(() => setHighlightedMessageId(null), 1400);
+  };
 
   return (
     <AppOverlay>
@@ -249,7 +327,14 @@ export function ChatThread({
             </div>
           </button>
           <div className="chat-thread__actions">
-            <button type="button" className="chat-thread__action-btn" aria-label="Video call">
+            <button
+              type="button"
+              className={`chat-thread__action-btn chat-thread__action-btn--video ${isVideoCallStarting ? 'chat-thread__action-btn--calling' : ''}`}
+              aria-label={isVideoCallStarting ? `Calling ${conversation.participantName}` : `Video call ${conversation.participantName}`}
+              aria-pressed={isVideoCallStarting}
+              onClick={onVideoCall}
+              disabled={!onVideoCall || isVideoCallStarting}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                 <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
@@ -307,7 +392,8 @@ export function ChatThread({
                   return (
                 <div
                   key={msg.id}
-                  className={`chat-bubble-wrap chat-bubble-wrap--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble-wrap--sticker' : ''} ${isPhoto ? 'chat-bubble-wrap--photo' : ''} ${isAudio ? 'chat-bubble-wrap--audio' : ''} ${isSendingMedia ? 'chat-bubble-wrap--sending' : ''} ${msg.reaction ? 'chat-bubble-wrap--has-reaction' : ''}`}
+                  id={`chat-message-${msg.id}`}
+                  className={`chat-bubble-wrap chat-bubble-wrap--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble-wrap--sticker' : ''} ${isPhoto ? 'chat-bubble-wrap--photo' : ''} ${isAudio ? 'chat-bubble-wrap--audio' : ''} ${isSendingMedia ? 'chat-bubble-wrap--sending' : ''} ${msg.reaction ? 'chat-bubble-wrap--has-reaction' : ''} ${highlightedMessageId === msg.id ? 'chat-bubble-wrap--highlighted' : ''}`}
                 >
                   <div
                     className={`chat-bubble chat-bubble--${msg.senderId === 'me' ? 'me' : 'them'} ${isSticker ? 'chat-bubble--sticker' : ''} ${isPhoto ? 'chat-bubble--photo' : ''} ${isAudio ? 'chat-bubble--audio' : ''}`}
@@ -322,6 +408,27 @@ export function ChatThread({
                       openActions(msg);
                     }}
                   >
+                    {msg.replyTo ? (
+                      <button
+                        type="button"
+                        className="chat-bubble__reply-quote"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onPointerUp={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          scrollToRepliedMessage(msg.replyTo!.id);
+                        }}
+                      >
+                        <strong>{msg.replyTo.senderId === 'me' ? 'You' : conversation.participantName}</strong>
+                        <span>
+                          {msg.replyTo.kind === 'image'
+                            ? '📷 Photo'
+                            : msg.replyTo.kind === 'audio'
+                              ? '🎙 Voice message'
+                              : msg.replyTo.text}
+                        </span>
+                      </button>
+                    ) : null}
                     {isPhoto ? (
                       <ChatPhotoBubble
                         message={msg}
@@ -393,12 +500,40 @@ export function ChatThread({
               ))}
             </div>
           ) : null}
+          {replyTarget ? (
+            <div className="chat-thread__reply-preview" role="status">
+              <span className="chat-thread__reply-accent" aria-hidden />
+              <span className="chat-thread__reply-copy">
+                <strong>Replying to {replyTarget.senderId === 'me' ? 'yourself' : conversation.participantName}</strong>
+                <span>
+                  {replyTarget.kind === 'image'
+                    ? '📷 Photo'
+                    : replyTarget.kind === 'audio'
+                      ? '🎙 Voice message'
+                      : replyTarget.text}
+                </span>
+              </span>
+              <button type="button" onClick={() => setReplyTarget(null)} aria-label="Cancel reply">×</button>
+            </div>
+          ) : null}
           {isRecording ? (
-            <div className="chat-thread__recorder" role="group" aria-label="Recording voice message">
-              <button type="button" className="chat-thread__record-cancel" onClick={() => finishRecording(false)} aria-label="Cancel recording">×</button>
+            <div className={`chat-thread__recorder ${isRecordingPaused ? 'chat-thread__recorder--paused' : ''}`} role="group" aria-label={isRecordingPaused ? 'Voice message paused' : 'Recording voice message'}>
+              <button type="button" className="chat-thread__record-cancel" onClick={() => finishRecording(false)} aria-label="Delete voice recording">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5M14 11v5" /></svg>
+              </button>
+              <button type="button" className="chat-thread__record-pause" onClick={toggleRecordingPause} aria-label={isRecordingPaused ? 'Continue recording' : 'Pause recording'}>
+                {isRecordingPaused ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 5h4v14H7zm6 0h4v14h-4z" /></svg>
+                )}
+              </button>
               <span className="chat-thread__record-dot" aria-hidden />
-              <span className="chat-thread__record-time">{Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, '0')}</span>
-              <span className="chat-thread__record-label">Recording…</span>
+              <span ref={recordingTimeRef} className="chat-thread__record-time">0:00</span>
+              <span className="chat-thread__record-wave" aria-hidden>
+                {Array.from({ length: 12 }, (_, index) => <span key={index} />)}
+              </span>
+              <span className="chat-thread__record-label">{isRecordingPaused ? 'Paused' : 'Recording'}</span>
               <button type="button" className="chat-thread__record-send" onClick={() => finishRecording(true)} aria-label="Stop and send voice message">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
               </button>
@@ -480,6 +615,9 @@ export function ChatThread({
         message={actionMessage}
         onClose={closeActions}
         onReact={handleReact}
+        onReply={() => {
+          if (actionMessage) setReplyTarget(actionMessage);
+        }}
         onRequestDelete={() => {
           setDeleteMessageTarget(actionMessage);
         }}

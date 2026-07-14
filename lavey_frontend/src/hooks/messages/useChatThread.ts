@@ -4,6 +4,16 @@ import { messageService } from '@/services';
 import type { ChatMessage, DeleteMessageScope } from '@/types';
 import { prepareChatPhotoForUpload } from '@/utils/messages/prepareChatPhotoForUpload';
 
+function buildReplyPreview(message?: ChatMessage): ChatMessage['replyTo'] | undefined {
+  if (!message) return undefined;
+  return {
+    id: message.id,
+    senderId: message.senderId,
+    text: message.text,
+    kind: message.kind ?? 'text',
+  };
+}
+
 export function useChatThread(conversationId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,11 +66,11 @@ export function useChatThread(conversationId: string | null) {
   }, [conversationId, loadMessages]);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, replyTo?: ChatMessage) => {
       if (!conversationId || !text.trim()) return;
       setIsSending(true);
       try {
-        const msg = await messageService.sendMessage(conversationId, text.trim());
+        const msg = await messageService.sendMessage(conversationId, text.trim(), replyTo?.id);
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
           return [...prev, msg];
@@ -75,7 +85,7 @@ export function useChatThread(conversationId: string | null) {
   );
 
   const sendPhoto = useCallback(
-    async (file: File) => {
+    async (file: File, replyTo?: ChatMessage) => {
       if (!conversationId) return;
 
       const pendingId = `pending-photo-${Date.now()}`;
@@ -90,6 +100,7 @@ export function useChatThread(conversationId: string | null) {
         sentAt: 'Just now',
         read: false,
         sending: true,
+        replyTo: buildReplyPreview(replyTo),
       };
 
       setMessages((prev) => [...prev, optimistic]);
@@ -97,7 +108,7 @@ export function useChatThread(conversationId: string | null) {
 
       try {
         const prepared = await prepareChatPhotoForUpload(file);
-        const msg = await messageService.sendPhoto(conversationId, prepared);
+        const msg = await messageService.sendPhoto(conversationId, prepared, replyTo?.id);
         setMessages((prev) => {
           const withoutPending = prev.filter((m) => m.id !== pendingId);
           if (withoutPending.some((m) => m.id === msg.id)) return withoutPending;
@@ -146,7 +157,7 @@ export function useChatThread(conversationId: string | null) {
   );
 
   const sendAudio = useCallback(
-    async (audio: Blob) => {
+    async (audio: Blob, replyTo?: ChatMessage) => {
       if (!conversationId) return;
       const pendingId = `pending-audio-${Date.now()}`;
       const previewUrl = URL.createObjectURL(audio);
@@ -160,11 +171,12 @@ export function useChatThread(conversationId: string | null) {
         sentAt: 'Just now',
         read: false,
         sending: true,
+        replyTo: buildReplyPreview(replyTo),
       };
       setMessages((prev) => [...prev, optimistic]);
       setIsSending(true);
       try {
-        const msg = await messageService.sendAudio(conversationId, audio);
+        const msg = await messageService.sendAudio(conversationId, audio, replyTo?.id);
         setMessages((prev) => {
           const withoutPending = prev.filter((m) => m.id !== pendingId);
           return withoutPending.some((m) => m.id === msg.id)

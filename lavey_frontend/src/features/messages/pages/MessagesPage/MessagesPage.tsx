@@ -10,8 +10,10 @@ import { MessagesDiscoverPage } from '@/components/messages/MessagesDiscoverPage
 import { DiscoverFilterSheet } from '@/components/discover/DiscoverFilterSheet';
 import { DiscoveryPhoneSearchSheet } from '@/components/discover/DiscoveryPhoneSearchSheet';
 import { PaidChatSheet } from '@/components/discover/PaidChatSheet';
+import { DirectVideoCall } from '@/components/messages/DirectVideoCall';
+import { IncomingVideoCall } from '@/components/messages/IncomingVideoCall';
 import { MessagesHeader, type MessageFilter } from '@/components/messages/MessagesHeader';
-import { MatchAvatarsStrip, OnlineMatchesStrip } from '@/components/messages/MessageMatchStrip';
+import { OnlineMatchesStrip } from '@/components/messages/MessageMatchStrip';
 import { PageScroller } from '@/components/layout/PageScroller';
 import { FeedState } from '@/components/ui/FeedState';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
@@ -21,15 +23,16 @@ import { APP_IMAGES } from '@/constants/images';
 import { NOTIFICATIONS_CONVERSATION_ID } from '@/constants/notifications';
 import { LAVEY_OFFICIAL_CONVERSATION_ID } from '@/constants/laveyOfficial';
 import { useChatThread, useConversations, useMatchProfile, useMatchActions, useNotificationInbox, useMessagesDiscoverSuggestions, useMessagesFindSuggestions, useDiscoverFilters } from '@/hooks';
-import { messageService, matchService } from '@/services';
+import { chatVideoCallService, messageService, matchService } from '@/services';
 import { privacyService } from '@/services/privacy/privacyService';
 import { profileService } from '@/services/profile/profileService';
 import { reportsService } from '@/services/reports/reportsService';
-import type { Conversation, DeleteConversationScope, Profile } from '@/types';
+import type { ChatVideoCall, Conversation, DeleteConversationScope, Profile } from '@/types';
 import { isMatchConversation, sortConversations } from '@/utils/messages/sortConversations';
 import { isICrushConversation } from '@/utils/messages/iCrushConversation';
 import { isLaveyOfficialConversation } from '@/utils/messages/laveyOfficialConversation';
 import { openChatWithProfile } from '@/utils/navigation/appNav';
+import { primeCallAudio } from '@/utils/audio/callRingtone';
 import './MessagesPage.css';
 
 function takePendingGreeting(): { profileId: string; text: string } | null {
@@ -87,11 +90,115 @@ export function MessagesPage() {
   const [actionToast, setActionToast] = useState<{ text: string; success?: boolean } | null>(null);
   const [notificationProfileId, setNotificationProfileId] = useState<string | null>(null);
   const [iCrushResponding, setICrushResponding] = useState(false);
+  const [activeVideoCall, setActiveVideoCall] = useState<ChatVideoCall | null>(null);
+  const [incomingVideoCall, setIncomingVideoCall] = useState<ChatVideoCall | null>(null);
+  const [videoCallBusy, setVideoCallBusy] = useState(false);
+
+  useEffect(() => {
+    const prime = () => primeCallAudio();
+    window.addEventListener('pointerdown', prime, { once: true });
+    window.addEventListener('keydown', prime, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', prime);
+      window.removeEventListener('keydown', prime);
+    };
+  }, []);
 
   const showActionToast = useCallback((message: string, success = false) => {
     setActionToast({ text: message, success });
     window.setTimeout(() => setActionToast(null), 2600);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncVideoCall = async () => {
+      try {
+        const call = await chatVideoCallService.getActive();
+        if (cancelled) return;
+        if (!call) {
+          setActiveVideoCall(null);
+          setIncomingVideoCall(null);
+          return;
+        }
+        if (call.direction === 'incoming' && call.status === 'ringing') {
+          setIncomingVideoCall(call);
+          setActiveVideoCall((current) => (current?.id === call.id ? current : null));
+          return;
+        }
+        setIncomingVideoCall(null);
+        setActiveVideoCall(call);
+      } catch {
+        // Keep the current call UI during a temporary network interruption.
+      }
+    };
+
+    void syncVideoCall();
+    const intervalId = window.setInterval(() => void syncVideoCall(), 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  const startVideoCall = useCallback(async (conversation: Conversation) => {
+    if (videoCallBusy) return;
+    primeCallAudio();
+    setVideoCallBusy(true);
+    try {
+      const call = await chatVideoCallService.start(conversation.id);
+      if (call.direction === 'incoming' && call.status === 'ringing') {
+        setIncomingVideoCall(call);
+      } else {
+        setIncomingVideoCall(null);
+        setActiveVideoCall(call);
+      }
+    } catch (error) {
+      showActionToast(error instanceof Error ? error.message : 'Could not start the video call');
+    } finally {
+      setVideoCallBusy(false);
+    }
+  }, [showActionToast, videoCallBusy]);
+
+  const answerVideoCall = useCallback(async () => {
+    if (!incomingVideoCall || videoCallBusy) return;
+    setVideoCallBusy(true);
+    try {
+      const call = await chatVideoCallService.update(incomingVideoCall.id, 'answer');
+      setIncomingVideoCall(null);
+      setActiveVideoCall(call);
+      setActiveId(call.conversationId);
+    } catch (error) {
+      setIncomingVideoCall(null);
+      showActionToast(error instanceof Error ? error.message : 'This call is no longer available');
+    } finally {
+      setVideoCallBusy(false);
+    }
+  }, [incomingVideoCall, showActionToast, videoCallBusy]);
+
+  const declineVideoCall = useCallback(async () => {
+    if (!incomingVideoCall || videoCallBusy) return;
+    setVideoCallBusy(true);
+    try {
+      await chatVideoCallService.update(incomingVideoCall.id, 'decline');
+    } catch {
+      // The caller may already have ended it.
+    } finally {
+      setIncomingVideoCall(null);
+      setVideoCallBusy(false);
+    }
+  }, [incomingVideoCall, videoCallBusy]);
+
+  const endVideoCall = useCallback(async () => {
+    const call = activeVideoCall;
+    setActiveVideoCall(null);
+    if (!call) return;
+    try {
+      await chatVideoCallService.update(call.id, 'end');
+    } catch {
+      // Closing the local camera remains immediate if the network drops.
+    }
+  }, [activeVideoCall]);
 
   const {
     messages,
@@ -231,25 +338,6 @@ export function MessagesPage() {
     [conversations],
   );
 
-  const matchStripConversations = useMemo(() => {
-    const seen = new Set<string>();
-    const ordered: Conversation[] = [];
-
-    for (const conversation of matchConversations) {
-      if (!conversation.isOnline || seen.has(conversation.id)) continue;
-      seen.add(conversation.id);
-      ordered.push(conversation);
-    }
-
-    for (const conversation of sortedConversations) {
-      if (!isMatchConversation(conversation) || seen.has(conversation.id)) continue;
-      seen.add(conversation.id);
-      ordered.push(conversation);
-    }
-
-    return ordered;
-  }, [matchConversations, sortedConversations]);
-
   const onlineStripConversations = useMemo(
     () => matchConversations.filter((conversation) => conversation.isOnline),
     [matchConversations],
@@ -266,15 +354,13 @@ export function MessagesPage() {
 
   const listConversations = useMemo(() => {
     if (filter === 'online') return [];
-    if (filter === 'all') {
-      return sortedConversations.filter((conversation) => !isMatchConversation(conversation));
-    }
+    if (filter === 'all') return sortedConversations;
     return filtered;
   }, [filter, filtered, sortedConversations]);
 
-  const showMatchStrip = filter === 'all' && matchStripConversations.length > 0;
-  const showOnlineStrip = filter === 'online' && onlineStripConversations.length > 0;
-  const hasStripContent = showMatchStrip || showOnlineStrip;
+  const showOnlineStrip =
+    (filter === 'all' || filter === 'online') && onlineStripConversations.length > 0;
+  const hasStripContent = showOnlineStrip;
 
   const handleMarkNotificationsRead = useCallback(() => {
     void markNotificationsRead().then(() => {
@@ -636,11 +722,13 @@ export function MessagesPage() {
           isLoading={threadLoading}
           isSending={isSending}
           onBack={() => setActiveId(null)}
-          onSend={(text) => void sendMessage(text)}
+          onSend={(text, replyTo) => void sendMessage(text, replyTo)}
           onSendPhoto={sendPhoto}
           onSendAudio={sendAudio}
           onTypingChange={notifyTyping}
           onProfileClick={() => openProfile(activeConversation)}
+          onVideoCall={() => void startVideoCall(activeConversation)}
+          isVideoCallStarting={videoCallBusy}
           onReact={(messageId, emoji) => void reactToMessage(messageId, emoji)}
           onDeleteMessage={async (messageId, scope) => {
             await deleteMessage(messageId, scope);
@@ -678,22 +766,13 @@ export function MessagesPage() {
 
             {!isLoading && !error && (
               <>
-                {showMatchStrip ? (
-                  <div className="messages-page__strips">
-                    <MatchAvatarsStrip
-                      conversations={matchStripConversations}
-                      onSelect={setActiveId}
-                      onAvatarClick={openProfile}
-                    />
-                  </div>
-                ) : null}
-
                 {showOnlineStrip ? (
                   <div className="messages-page__strips">
                     <OnlineMatchesStrip
                       conversations={onlineStripConversations}
                       onSelect={setActiveId}
-                      onAvatarClick={openProfile}
+                      onAvatarClick={(conversation) => setActiveId(conversation.id)}
+                      title="Online now"
                     />
                   </div>
                 ) : null}
@@ -864,6 +943,19 @@ export function MessagesPage() {
           ) : null}
           <span>{actionToast.text}</span>
         </div>
+      ) : null}
+
+      {incomingVideoCall && !activeVideoCall ? (
+        <IncomingVideoCall
+          call={incomingVideoCall}
+          busy={videoCallBusy}
+          onAnswer={() => void answerVideoCall()}
+          onDecline={() => void declineVideoCall()}
+        />
+      ) : null}
+
+      {activeVideoCall ? (
+        <DirectVideoCall call={activeVideoCall} onEnd={() => void endVideoCall()} />
       ) : null}
     </>
   );

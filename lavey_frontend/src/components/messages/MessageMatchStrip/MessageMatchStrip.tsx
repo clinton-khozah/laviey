@@ -129,7 +129,9 @@ export function MessageMatchStrip({
                   <span className="msg-match-strip__name">
                     {firstName(conversation.participantName)}
                   </span>
-                  {isOnline ? <span className="msg-match-strip__online">Online</span> : null}
+                  {isOnline ? (
+                    <span className="msg-match-strip__online" role="img" aria-label="Online" />
+                  ) : null}
                 </button>
               </div>
             );

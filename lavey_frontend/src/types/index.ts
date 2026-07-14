@@ -47,6 +47,9 @@ export type {
   DeleteConversationScope,
   DeleteMessageScope,
   ConversationKind,
+  ChatVideoCall,
+  ChatVideoCallAction,
+  ChatVideoCallStatus,
 } from './domain/message.types';
 export type { NotificationEvent, NotificationKind } from './domain/notification.types';
 export { isActionableNotification, notificationKindLabel } from './domain/notification.types';

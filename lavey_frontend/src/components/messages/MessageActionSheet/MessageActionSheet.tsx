@@ -10,6 +10,7 @@ interface MessageActionSheetProps {
   message: ChatMessage | null;
   onClose: () => void;
   onReact: (emoji: string) => void;
+  onReply: () => void;
   onRequestDelete: () => void;
 }
 
@@ -18,6 +19,7 @@ export function MessageActionSheet({
   message,
   onClose,
   onReact,
+  onReply,
   onRequestDelete,
 }: MessageActionSheetProps) {
   useEffect(() => {
@@ -34,6 +36,11 @@ export function MessageActionSheet({
 
   const handleRequestDelete = () => {
     onRequestDelete();
+    onClose();
+  };
+
+  const handleReply = () => {
+    onReply();
     onClose();
   };
 
@@ -84,17 +91,22 @@ export function MessageActionSheet({
               <div className="message-action-sheet__section message-action-sheet__section--actions">
                 <div className="message-action-sheet__actions-row">
                   <span className="message-action-sheet__label">Message</span>
-                  <button
-                    type="button"
-                    className="message-action-sheet__delete-icon"
-                    onClick={handleRequestDelete}
-                    aria-label="Delete message"
-                    title="Delete message"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-                    </svg>
-                  </button>
+                  <div className="message-action-sheet__action-buttons">
+                    <button type="button" className="message-action-sheet__reply-icon" onClick={handleReply} aria-label="Reply to message" title="Reply">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M9 17l-5-5 5-5M4 12h9a7 7 0 017 7" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="message-action-sheet__delete-icon"
+                      onClick={handleRequestDelete}
+                      aria-label="Delete message"
+                      title="Delete message"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
