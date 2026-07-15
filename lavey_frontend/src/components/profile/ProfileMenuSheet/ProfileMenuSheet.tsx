@@ -167,6 +167,7 @@ export function ProfileMenuSheet({
               description="From gifts and admin credits"
               variant="earnings"
               onClick={() => pick('earnings')}
+              disabled
             />
           </div>
 

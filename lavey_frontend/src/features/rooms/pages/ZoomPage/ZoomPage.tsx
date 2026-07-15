@@ -400,6 +400,84 @@ export function ZoomPage() {
             {!hasMeetupContent && (
               <FeedState
                 message="No meetups yet. Tap + to schedule a public room or invite a match."
+                illustration={
+                  <svg viewBox="0 0 200 160" fill="none">
+                    <ellipse
+                      cx="100"
+                      cy="137"
+                      rx="62"
+                      ry="9"
+                      fill="url(#meetup-empty-shadow)"
+                      opacity="0.32"
+                    />
+                    <circle cx="100" cy="76" r="49" fill="url(#meetup-empty-halo)" />
+                    <rect
+                      x="50"
+                      y="43"
+                      width="100"
+                      height="79"
+                      rx="22"
+                      fill="url(#meetup-empty-card)"
+                    />
+                    <rect
+                      x="61"
+                      y="55"
+                      width="78"
+                      height="55"
+                      rx="15"
+                      fill="rgba(255,255,255,0.14)"
+                      stroke="rgba(255,255,255,0.22)"
+                    />
+                    <circle cx="83" cy="77" r="10" fill="rgba(255,255,255,0.92)" />
+                    <path
+                      d="M67 101c2.8-11 9.2-16 16-16s13.2 5 16 16"
+                      fill="rgba(255,255,255,0.92)"
+                    />
+                    <circle cx="117" cy="76" r="8" fill="rgba(255,255,255,0.72)" />
+                    <path
+                      d="M104 101c2.2-9 7.2-13 13-13 5.7 0 10.7 4 13 13"
+                      fill="rgba(255,255,255,0.72)"
+                    />
+                    <circle cx="151" cy="43" r="17" fill="#fff" />
+                    <path
+                      d="M151 35v16m-8-8h16"
+                      stroke="#ec4899"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                    <path
+                      d="M62 43v-6m76 6v-6"
+                      stroke="rgba(255,255,255,0.9)"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="42" cy="61" r="4" fill="#fbbf24" />
+                    <circle cx="160" cy="103" r="3" fill="#a78bfa" />
+                    <circle cx="48" cy="113" r="2.5" fill="#fb7185" />
+                    <defs>
+                      <linearGradient
+                        id="meetup-empty-card"
+                        x1="50"
+                        y1="43"
+                        x2="150"
+                        y2="122"
+                        gradientUnits="userSpaceOnUse"
+                      >
+                        <stop stopColor="#7c3aed" />
+                        <stop offset="0.52" stopColor="#c026d3" />
+                        <stop offset="1" stopColor="#ff4d6d" />
+                      </linearGradient>
+                      <radialGradient id="meetup-empty-halo">
+                        <stop stopColor="#a855f7" stopOpacity="0.3" />
+                        <stop offset="1" stopColor="#a855f7" stopOpacity="0" />
+                      </radialGradient>
+                      <radialGradient id="meetup-empty-shadow">
+                        <stop stopColor="#000" />
+                        <stop offset="1" stopColor="#000" stopOpacity="0" />
+                      </radialGradient>
+                    </defs>
+                  </svg>
+                }
                 onRetry={() => void refetch()}
                 retryLabel="Refresh"
               />

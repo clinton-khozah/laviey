@@ -6,17 +6,23 @@ interface SignInRequiredPromptProps {
   message?: string;
   className?: string;
   onBeforeSignIn?: () => void;
+  onSignIn?: () => void;
 }
 
 export function SignInRequiredPrompt({
   message = 'Please sign in to continue.',
   className = '',
   onBeforeSignIn,
+  onSignIn,
 }: SignInRequiredPromptProps) {
   const { signOut } = useAuth();
 
   const handleSignIn = () => {
     onBeforeSignIn?.();
+    if (onSignIn) {
+      onSignIn();
+      return;
+    }
     void signOut();
   };
 

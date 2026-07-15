@@ -21,7 +21,7 @@ interface ProfileTarget {
 
 function messageClass(sender: AdminSupportTicketDetail['messages'][number]['sender']): string {
   if (sender === 'admin') return 'is-sent';
-  if (sender === 'system') return 'is-system';
+  if (sender === 'system' || sender === 'ai') return 'is-system';
   return 'is-received';
 }
 
@@ -305,6 +305,9 @@ export function AdminSupportInbox() {
                     )}
                     {message.sender === 'system' && (
                       <small className="admin-support-inbox__sender">Automated reply</small>
+                    )}
+                    {message.sender === 'ai' && (
+                      <small className="admin-support-inbox__sender">Lavey AI</small>
                     )}
                     {message.sender === 'user' && (
                       <small className="admin-support-inbox__sender">{ticket.userName}</small>

@@ -8,8 +8,6 @@ export function EmailAuthForm({
   onModeChange,
   onSignIn,
   onSignUp,
-  onResendVerification,
-  resendCooldownSec = 0,
   disabled,
 }: EmailAuthFormProps) {
   const [email, setEmail] = useState('');
@@ -110,19 +108,6 @@ export function EmailAuthForm({
       <button type="submit" className="email-auth__submit" disabled={disabled}>
         {mode === 'sign-in' ? 'Sign in with email' : 'Create account'}
       </button>
-
-      {mode === 'sign-in' && onResendVerification && (
-        <button
-          type="button"
-          className="email-auth__resend"
-          disabled={disabled || !email.trim() || resendCooldownSec > 0}
-          onClick={() => onResendVerification(email.trim())}
-        >
-          {resendCooldownSec > 0
-            ? `Resend verification code (${resendCooldownSec}s)`
-            : 'Resend verification code'}
-        </button>
-      )}
 
       <p className="email-auth__toggle">
         {mode === 'sign-in' ? (

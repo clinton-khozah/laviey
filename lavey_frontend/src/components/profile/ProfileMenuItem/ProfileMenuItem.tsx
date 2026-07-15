@@ -36,9 +36,11 @@ export function ProfileMenuItem({
         {description && <span className="profile-menu-item__desc">{description}</span>}
       </span>
       {badge && <span className="profile-menu-item__badge">{badge}</span>}
-      <svg className="profile-menu-item__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-        <path d="M9 18l6-6-6-6" />
-      </svg>
+      {!disabled && (
+        <svg className="profile-menu-item__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      )}
     </button>
   );
 }

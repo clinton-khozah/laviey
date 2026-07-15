@@ -175,6 +175,7 @@ export const API_ENDPOINTS = {
     config: '/support/config',
     conversation: '/support/conversation',
     messages: '/support/messages',
+    consultant: '/support/consultant',
   },
   legal: {
     terms: '/legal/terms',

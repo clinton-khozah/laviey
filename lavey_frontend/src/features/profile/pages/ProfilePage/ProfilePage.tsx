@@ -559,26 +559,6 @@ export function ProfilePage() {
                 </div>
               ) : null}
               <p className="profile-page__bio">{profile.bio}</p>
-              <div className="profile-page__interests" aria-label="Interests">
-                <div className="profile-page__interests-row">
-                  {profile.interests.map((item) => (
-                    <span
-                      key={item.key}
-                      className="profile-page__tag"
-                      data-interest={item.key}
-                    >
-                      {item.emoji && (
-                        <span className="profile-page__tag-emoji" aria-hidden>
-                          {item.emoji}
-                        </span>
-                      )}
-                      <span className="profile-page__tag-label">
-                        #{item.label}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              </div>
             </div>
 
             <div className="profile-page__stats" aria-label="Profile stats">
@@ -693,7 +673,12 @@ export function ProfilePage() {
             </div>
           </div>
 
-          <div className="profile-page__tab-panel" role="tabpanel">
+          <div
+            className={`profile-page__tab-panel ${
+              tab === "posts" ? "profile-page__tab-panel--posts" : ""
+            }`}
+            role="tabpanel"
+          >
             {tab === "posts" ? (
               <ProfilePostsGrid
                 posts={displayPosts}

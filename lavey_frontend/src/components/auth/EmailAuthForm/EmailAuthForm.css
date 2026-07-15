@@ -109,27 +109,6 @@
   cursor: not-allowed;
 }
 
-.email-auth__resend {
-  padding: 11px 16px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  background: var(--input-bg);
-  border: 1px solid var(--border-subtle);
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.email-auth__resend:hover:not(:disabled) {
-  border-color: rgba(124, 58, 237, 0.35);
-  background: rgba(124, 58, 237, 0.06);
-}
-
-.email-auth__resend:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
 .email-auth__toggle {
   text-align: center;
   font-size: 12px;

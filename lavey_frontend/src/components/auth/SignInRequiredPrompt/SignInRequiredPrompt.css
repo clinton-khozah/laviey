@@ -78,3 +78,62 @@
 .sign-in-required--inline .sign-in-required__title {
   font-size: 16px;
 }
+
+.sign-in-required--page {
+  position: relative;
+  min-height: 100dvh;
+  justify-content: center;
+  padding: max(28px, var(--safe-top)) 24px max(32px, var(--safe-bottom));
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 22%, rgba(168, 85, 247, 0.16), transparent 34%),
+    radial-gradient(circle at 12% 82%, rgba(255, 77, 109, 0.1), transparent 34%),
+    var(--bg-primary);
+}
+
+.sign-in-required--page::before,
+.sign-in-required--page::after {
+  content: '';
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.sign-in-required--page::before {
+  top: -92px;
+  right: -76px;
+  border: 1px solid rgba(168, 85, 247, 0.18);
+}
+
+.sign-in-required--page::after {
+  bottom: -110px;
+  left: -80px;
+  border: 1px solid rgba(255, 77, 109, 0.14);
+}
+
+.sign-in-required--page .sign-in-required__art,
+.sign-in-required--page .sign-in-required__title,
+.sign-in-required--page .sign-in-required__message,
+.sign-in-required--page .sign-in-required__cta {
+  position: relative;
+  z-index: 1;
+}
+
+.sign-in-required--page .sign-in-required__art {
+  width: min(210px, 62vw);
+  height: 172px;
+}
+
+.sign-in-required--page .sign-in-required__title {
+  font-size: clamp(22px, 6vw, 28px);
+}
+
+.sign-in-required--page .sign-in-required__cta {
+  width: min(280px, 100%);
+  min-height: 48px;
+  margin-top: 10px;
+  box-shadow: 0 12px 28px rgba(255, 77, 109, 0.24);
+}

@@ -17,20 +17,22 @@ export interface SupportMessage {
   text: string;
   sentAt: string;
   isAutoReply?: boolean;
+  isAi?: boolean;
 }
 
 export interface SupportConversation {
   conversationId: string;
   status: string;
+  supportMode: 'ai' | 'consultant';
   messages: SupportMessage[];
   config: SupportConfig;
 }
 
 const MOCK_CONFIG: SupportConfig = {
   displayName: 'Lavey Support',
-  statusText: "We're here to help",
+  statusText: 'AI help · Consultants available',
   welcomeMessage:
-    "Hi! 👋 We're the Lavey team. Tell us what's going on — we usually reply within a few hours.",
+    "Hi! 👋 I'm Lavey AI. Tell me what's going on and I'll help using Lavey's support information. You can ask for a consultant at any time.",
   quickTopics: [
     'Account help',
     'Billing & Platinum',
@@ -53,6 +55,7 @@ export const supportService = {
       return {
         conversationId: 'mock',
         status: 'open',
+        supportMode: 'ai',
         config: MOCK_CONFIG,
         messages: [
           {
@@ -99,6 +102,33 @@ export const supportService = {
     const res = await httpClient.post<ApiResponse<SupportConversation>>(
       API_ENDPOINTS.support.messages,
       { body: { body: trimmed } },
+    );
+    return res.data;
+  },
+
+  async requestConsultant(): Promise<SupportConversation> {
+    if (!usesBackendSupport()) {
+      const prior = await supportService.getConversation();
+      const now = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      return {
+        ...prior,
+        status: 'open',
+        supportMode: 'consultant',
+        messages: [
+          ...prior.messages,
+          {
+            id: `handoff-${Date.now()}`,
+            sender: 'support',
+            text: 'Your conversation has been sent to a Lavey consultant. They can see the messages above and will reply here as soon as possible.',
+            sentAt: now,
+            isAutoReply: true,
+          },
+        ],
+      };
+    }
+
+    const res = await httpClient.post<ApiResponse<SupportConversation>>(
+      API_ENDPOINTS.support.consultant,
     );
     return res.data;
   },

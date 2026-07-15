@@ -5,7 +5,5 @@ export interface EmailAuthFormProps {
   onModeChange: (mode: EmailAuthMode) => void;
   onSignIn: (email: string, password: string) => void;
   onSignUp: (email: string, password: string, displayName: string) => void;
-  onResendVerification?: (email: string) => void;
-  resendCooldownSec?: number;
   disabled?: boolean;
 }

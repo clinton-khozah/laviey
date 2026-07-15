@@ -17,7 +17,7 @@ export interface AdminSupportTicketListItem {
 
 export interface AdminSupportMessage {
   id: string;
-  sender: 'user' | 'admin' | 'system';
+  sender: 'user' | 'admin' | 'system' | 'ai';
   text: string;
   sentAt: string;
   adminName?: string;

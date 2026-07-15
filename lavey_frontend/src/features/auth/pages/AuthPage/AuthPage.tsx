@@ -22,7 +22,6 @@ export function AuthPage() {
     signUpWithEmail,
     verifyEmailWithCode,
     resendVerificationEmail,
-    resendVerificationForEmail,
     resendCooldownSec,
     clearPendingVerification,
     clearError,
@@ -100,10 +99,6 @@ export function AuthPage() {
                 onSignUp={(email, password, displayName) =>
                   void signUpWithEmail({ email, password, displayName })
                 }
-                onResendVerification={(email) =>
-                  void resendVerificationForEmail(email)
-                }
-                resendCooldownSec={resendCooldownSec}
                 disabled={isSubmitting}
               />
             </>

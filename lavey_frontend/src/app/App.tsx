@@ -23,6 +23,7 @@ import {
 import { hasOAuthReturnParams } from "@/utils/auth/oauthCallbackState";
 import { applyThemeToDocument, loadTheme } from "@/utils/theme/themeStorage";
 import { useEffect, useState } from "react";
+import { SignInRequiredPrompt } from "@/components/auth/SignInRequiredPrompt/SignInRequiredPrompt";
 
 const ADMIN_ROOT_PATH = "/admin/19990808";
 const ADMIN_LOGIN_PATH = "/admin/19990808/adminlogin";
@@ -31,6 +32,8 @@ function App() {
   const {
     isAuthenticated,
     isLoading,
+    isSessionExpired,
+    continueToSignIn,
     needsOnboardingQuiz,
     completeOnboardingQuiz,
   } = useAuth();
@@ -101,7 +104,15 @@ function App() {
 
   let content = <MainApp />;
 
-  if (errorPageCode) {
+  if (isSessionExpired && !isAdminRoute) {
+    content = (
+      <SignInRequiredPrompt
+        message="Please sign in to continue."
+        className="sign-in-required--page"
+        onSignIn={continueToSignIn}
+      />
+    );
+  } else if (errorPageCode) {
     content = (
       <ErrorPage
         code={errorPageCode}

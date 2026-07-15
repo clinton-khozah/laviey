@@ -27,6 +27,7 @@ import { discoverFiltersFromOnboarding } from "@/utils/discover/discoverFiltersF
 import { clearDiscoverFiltersManual, saveDiscoverFilters } from "@/utils/discover/discoverFilterStorage";
 import { resetDiscoverSetupState } from "@/utils/discover/discoverSetupStorage";
 import { sleep } from "@/utils/sleep";
+import { SESSION_EXPIRED_EVENT } from "@/utils/auth/authSessionEvents";
 
 const VERIFICATION_RESEND_COOLDOWN_SEC = 15;
 const AUTH_BOOTSTRAP_TIMEOUT_MS = 12_000;
@@ -36,6 +37,7 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   isSubmitting: boolean;
+  isSessionExpired: boolean;
   needsOnboardingQuiz: boolean;
   pendingVerificationEmail: string | null;
   error: string | null;
@@ -52,6 +54,7 @@ export interface AuthContextValue {
   completeOnboardingQuiz: (answers: OnboardingQuizAnswers) => Promise<void>;
   establishSessionAfterOAuth: (session: AuthSession) => Promise<void>;
   clearError: () => void;
+  continueToSignIn: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -91,6 +94,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     null,
   );
   const [resendCooldownSec, setResendCooldownSec] = useState(0);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearPendingOnboardingQuiz();
+      clearOnboardingQuizAnswers();
+      clearUserProfileCache();
+      setSession(null);
+      setNeedsOnboardingQuiz(false);
+      setPendingVerificationEmail(null);
+      setVerificationStatus(null);
+      setError(null);
+      setIsSubmitting(false);
+      setIsSessionExpired(true);
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, []);
 
   useEffect(() => {
     if (resendCooldownSec <= 0) return;
@@ -166,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeSession = useCallback(
     async (next: AuthSession) => {
+      setIsSessionExpired(false);
       setSession(next);
       setPendingVerificationEmail(null);
       setVerificationStatus(null);
@@ -198,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const establishSessionAfterOAuth = useCallback(async (next: AuthSession) => {
     setIsLoading(true);
+    setIsSessionExpired(false);
     setSession(next);
     setPendingVerificationEmail(null);
     setVerificationStatus(null);
@@ -212,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(session),
       isLoading,
       isSubmitting,
+      isSessionExpired,
       needsOnboardingQuiz,
       pendingVerificationEmail,
       error,
@@ -325,6 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
       },
       signOut: async () => {
+        setIsSessionExpired(false);
         setIsSubmitting(true);
         clearPendingOnboardingQuiz();
         clearOnboardingQuizAnswers();
@@ -367,11 +393,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       establishSessionAfterOAuth,
       clearError: () => setError(null),
+      continueToSignIn: () => setIsSessionExpired(false),
     }),
     [
       session,
       isLoading,
       isSubmitting,
+      isSessionExpired,
       needsOnboardingQuiz,
       pendingVerificationEmail,
       error,
