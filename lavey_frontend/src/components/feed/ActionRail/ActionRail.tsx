@@ -68,16 +68,23 @@ export function ActionRail({
         type="button"
         className={`action-rail__btn action-rail__btn--flame ${liked ? 'action-rail__btn--flame-active' : ''} ${isMutual ? 'action-rail__btn--mutual' : ''}`}
         onClick={onLike}
-        whileTap={{ scale: 0.88 }}
+        whileTap={{ scale: 0.9 }}
+        transition={{ type: 'tween', duration: 0.12 }}
         aria-label={isMutual ? 'Matched' : liked ? 'Like sent' : 'Send like'}
         aria-pressed={liked}
       >
-        <svg viewBox="0 0 24 24" aria-hidden className="action-rail__heart-icon">
+        <motion.svg
+          viewBox="0 0 24 24"
+          aria-hidden
+          className="action-rail__heart-icon"
+          animate={liked ? { scale: [1, 1.32, 1] } : { scale: 1 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        >
           <path
             className="action-rail__heart-shape"
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
           />
-        </svg>
+        </motion.svg>
         <span className={`action-rail__label ${isMutual ? 'action-rail__label--matched' : ''}`}>
           {likeLabel}
         </span>
@@ -87,7 +94,8 @@ export function ActionRail({
         type="button"
         className={`action-rail__btn action-rail__btn--crushy ${iCrushSent ? 'action-rail__btn--crushy-active' : ''} ${crushyConfirmOpen ? 'action-rail__btn--crushy-pending' : ''}`}
         onClick={handleCrushyClick}
-        whileTap={iCrushSent ? undefined : { scale: 0.9 }}
+        whileTap={iCrushSent ? undefined : { scale: 0.92 }}
+        transition={{ type: 'tween', duration: 0.12 }}
         aria-label={iCrushSent ? 'Crushy sent' : 'Send crushy'}
         aria-pressed={iCrushSent}
         disabled={iCrushSent}

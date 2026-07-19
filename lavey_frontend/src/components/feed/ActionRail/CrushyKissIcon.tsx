@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import './CrushyKissIcon.css';
 
 interface CrushyKissIconProps {
@@ -24,7 +25,13 @@ export function CrushyKissIcon({
         .join(' ')}
       aria-hidden
     >
-      <span className="crushy-kiss-icon__emoji">💋</span>
+      <motion.span
+        className="crushy-kiss-icon__emoji"
+        animate={active ? { scale: [1, 1.32, 1] } : { scale: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
+        💋
+      </motion.span>
     </span>
   );
 }

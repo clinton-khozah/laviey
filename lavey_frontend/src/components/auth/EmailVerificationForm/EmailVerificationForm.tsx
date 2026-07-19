@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
 import './EmailVerificationForm.css';
 
 export interface EmailVerificationFormProps {
@@ -11,6 +11,8 @@ export interface EmailVerificationFormProps {
   statusMessage?: string | null;
 }
 
+const CODE_LENGTH = 8;
+
 export function EmailVerificationForm({
   email,
   onVerify,
@@ -20,7 +22,78 @@ export function EmailVerificationForm({
   resendCooldownSec = 0,
   statusMessage,
 }: EmailVerificationFormProps) {
-  const [code, setCode] = useState('');
+  const [digits, setDigits] = useState<string[]>(() => Array(CODE_LENGTH).fill(''));
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  const code = digits.join('');
+
+  const focusBox = (index: number) => {
+    inputRefs.current[index]?.focus();
+    inputRefs.current[index]?.select();
+  };
+
+  const handleChange = (index: number, rawValue: string) => {
+    const value = rawValue.replace(/\D/g, '');
+    if (!value) {
+      setDigits((prev) => {
+        const next = [...prev];
+        next[index] = '';
+        return next;
+      });
+      return;
+    }
+
+    setDigits((prev) => {
+      const next = [...prev];
+      const chars = value.split('');
+      let cursor = index;
+      for (const char of chars) {
+        if (cursor >= CODE_LENGTH) break;
+        next[cursor] = char;
+        cursor += 1;
+      }
+      window.requestAnimationFrame(() => focusBox(Math.min(cursor, CODE_LENGTH - 1)));
+      return next;
+    });
+  };
+
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (digits[index]) {
+        setDigits((prev) => {
+          const next = [...prev];
+          next[index] = '';
+          return next;
+        });
+        return;
+      }
+      if (index > 0) {
+        e.preventDefault();
+        setDigits((prev) => {
+          const next = [...prev];
+          next[index - 1] = '';
+          return next;
+        });
+        focusBox(index - 1);
+      }
+      return;
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      e.preventDefault();
+      focusBox(index - 1);
+    }
+    if (e.key === 'ArrowRight' && index < CODE_LENGTH - 1) {
+      e.preventDefault();
+      focusBox(index + 1);
+    }
+  };
+
+  const handlePaste = (index: number, e: ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '');
+    if (!pasted) return;
+    e.preventDefault();
+    handleChange(index, pasted);
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -37,26 +110,37 @@ export function EmailVerificationForm({
       <div className="email-verify__intro">
         <p className="email-verify__title">Verify your email</p>
         <p className="email-verify__copy">
-          We sent a 6-digit code to <strong>{email}</strong>. Enter it below to continue.
+          We sent an {CODE_LENGTH}-digit code to <strong>{email}</strong>. Enter it below to continue.
         </p>
       </div>
 
-      <label className="email-verify__field">
+      <div className="email-verify__field">
         <span className="email-verify__label">Verification code</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          pattern="[0-9]*"
-          maxLength={8}
-          className="email-verify__input"
-          placeholder="123456"
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-          required
-          disabled={disabled}
-        />
-      </label>
+        <div className="email-verify__boxes" role="group" aria-label="Verification code">
+          {digits.map((digit, index) => (
+            <input
+              key={index}
+              ref={(el) => {
+                inputRefs.current[index] = el;
+              }}
+              type="text"
+              inputMode="numeric"
+              autoComplete={index === 0 ? 'one-time-code' : 'off'}
+              pattern="[0-9]*"
+              maxLength={CODE_LENGTH}
+              className="email-verify__box"
+              value={digit}
+              onChange={(e) => handleChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={(e) => handlePaste(index, e)}
+              onFocus={(e) => e.target.select()}
+              required
+              disabled={disabled}
+              aria-label={`Digit ${index + 1}`}
+            />
+          ))}
+        </div>
+      </div>
 
       {statusMessage && (
         <p className="email-verify__status" role="status">
@@ -64,7 +148,11 @@ export function EmailVerificationForm({
         </p>
       )}
 
-      <button type="submit" className="email-verify__submit" disabled={disabled || code.length < 6}>
+      <button
+        type="submit"
+        className="email-verify__submit"
+        disabled={disabled || code.length < CODE_LENGTH}
+      >
         Verify &amp; continue
       </button>
 

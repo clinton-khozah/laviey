@@ -41,13 +41,20 @@
   text-transform: uppercase;
 }
 
-.email-verify__input {
+.email-verify__boxes {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+
+.email-verify__box {
   width: 100%;
-  padding: 14px 12px;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  padding: 0;
   border-radius: 11px;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: 0.28em;
   text-align: center;
   color: var(--text-primary);
   background: var(--input-bg);
@@ -55,7 +62,7 @@
   outline: none;
 }
 
-.email-verify__input:focus {
+.email-verify__box:focus {
   border-color: rgba(124, 58, 237, 0.45);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
 }

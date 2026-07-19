@@ -36,10 +36,10 @@
   text-transform: uppercase;
   line-height: 1;
   white-space: nowrap;
-  color: #111827;
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+  color: #3f2a02;
+  background: linear-gradient(145deg, #fff6db 0%, #f3d27a 32%, #d4a017 68%, #b8860b 100%);
+  border: 1px solid rgba(184, 134, 11, 0.55);
+  box-shadow: 0 4px 12px rgba(184, 134, 11, 0.35);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -47,12 +47,12 @@
   width: 9px;
   height: 9px;
   flex-shrink: 0;
-  color: #f59e0b;
-  filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.35));
+  color: #7a4e00;
+  filter: drop-shadow(0 0 2px rgba(122, 78, 0, 0.35));
 }
 
 .top-bar__upgrade:hover {
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 6px 16px rgba(184, 134, 11, 0.45);
 }
 
 .top-bar__upgrade:active {
@@ -60,9 +60,9 @@
 }
 
 [data-theme="light"] .top-bar__upgrade {
-  color: #111827;
-  background: #ffffff;
-  border-color: rgba(15, 23, 42, 0.12);
+  color: #3f2a02;
+  background: linear-gradient(145deg, #fff6db 0%, #f3d27a 32%, #d4a017 68%, #b8860b 100%);
+  border-color: rgba(184, 134, 11, 0.55);
 }
 
 .top-bar__logo {

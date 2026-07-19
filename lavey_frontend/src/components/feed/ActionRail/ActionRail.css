@@ -79,8 +79,8 @@
 }
 
 .action-rail__heart-icon {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   overflow: visible;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
 }
@@ -90,6 +90,7 @@
   stroke: none;
   transform-origin: 12px 12px;
   transform: scale(1.08);
+  transition: fill 0.28s ease-out, filter 0.28s ease-out;
 }
 
 .action-rail__btn--flame-active .action-rail__heart-shape {
