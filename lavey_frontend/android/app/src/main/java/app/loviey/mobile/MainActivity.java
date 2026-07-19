@@ -30,7 +30,7 @@ public class MainActivity extends BridgeActivity {
         if (controller != null) {
             controller.hide(WindowInsetsCompat.Type.navigationBars());
             controller.setSystemBarsBehavior(
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BY_SWIPE
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             );
         }
     }
