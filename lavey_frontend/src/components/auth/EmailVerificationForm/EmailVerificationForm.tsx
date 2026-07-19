@@ -1,4 +1,4 @@
-import { useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
 import './EmailVerificationForm.css';
 
 export interface EmailVerificationFormProps {
@@ -9,6 +9,7 @@ export interface EmailVerificationFormProps {
   disabled?: boolean;
   resendCooldownSec?: number;
   statusMessage?: string | null;
+  errorMessage?: string | null;
 }
 
 const CODE_LENGTH = 8;
@@ -21,9 +22,22 @@ export function EmailVerificationForm({
   disabled,
   resendCooldownSec = 0,
   statusMessage,
+  errorMessage,
 }: EmailVerificationFormProps) {
   const [digits, setDigits] = useState<string[]>(() => Array(CODE_LENGTH).fill(''));
+  const [boxError, setBoxError] = useState(false);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+
+  // A wrong/expired code should clear the boxes and put focus back on the first
+  // one so re-entering a fresh code doesn't require manually deleting each digit.
+  useEffect(() => {
+    if (!errorMessage) return;
+    setBoxError(true);
+    setDigits(Array(CODE_LENGTH).fill(''));
+    window.requestAnimationFrame(() => {
+      inputRefs.current[0]?.focus();
+    });
+  }, [errorMessage]);
 
   const code = digits.join('');
 
@@ -33,6 +47,7 @@ export function EmailVerificationForm({
   };
 
   const handleChange = (index: number, rawValue: string) => {
+    setBoxError(false);
     const value = rawValue.replace(/\D/g, '');
     if (!value) {
       setDigits((prev) => {
@@ -128,7 +143,7 @@ export function EmailVerificationForm({
               autoComplete={index === 0 ? 'one-time-code' : 'off'}
               pattern="[0-9]*"
               maxLength={CODE_LENGTH}
-              className="email-verify__box"
+              className={`email-verify__box${boxError ? ' email-verify__box--error' : ''}`}
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
@@ -142,7 +157,13 @@ export function EmailVerificationForm({
         </div>
       </div>
 
-      {statusMessage && (
+      {boxError && errorMessage && (
+        <p className="email-verify__error" role="alert">
+          {errorMessage}
+        </p>
+      )}
+
+      {!(boxError && errorMessage) && statusMessage && (
         <p className="email-verify__status" role="status">
           {statusMessage}
         </p>

@@ -116,10 +116,11 @@ export function AuthPage() {
               disabled={isSubmitting}
               resendCooldownSec={resendCooldownSec}
               statusMessage={verificationStatus}
+              errorMessage={error}
             />
           )}
 
-          {error && (
+          {error && !showVerification && (
             <p className="auth-page__error" role="alert">
               {error}
             </p>
