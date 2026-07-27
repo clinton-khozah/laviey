@@ -8,6 +8,7 @@ import { AdminAlgorithmOverseer } from '@/features/admin/components/AdminAlgorit
 import { AdminExperimentAnalytics } from '@/features/admin/components/AdminExperimentAnalytics';
 import { AdminSupportInbox } from '@/features/admin/components/AdminSupportInbox';
 import { AdminContentModeration } from '@/features/admin/components/AdminContentModeration';
+import { AdminVerificationQueue } from '@/features/admin/components/AdminVerificationQueue';
 import { AdminUserManagement } from '@/features/admin/components/AdminUserManagement';
 import { AdminQuickToolsPage, getToolPageMeta, isHrQuickTool, isOpsQuickTool, isQuickToolView, hrTabFromTool, TOOL_PAGE_META, type QuickToolId } from '@/features/admin/components/AdminQuickToolsPanel';
 import { AdminHrHub } from '@/features/admin/components/AdminHrHub';
@@ -28,6 +29,7 @@ interface AdminDashboardPageProps {
 type AdminSectionId =
   | 'command'
   | 'users'
+  | 'verification'
   | 'content'
   | 'comms'
   | 'monetization'
@@ -67,6 +69,19 @@ const MODULES: ModuleCard[] = [
       'Verification queue with approve/reject/escalate',
       'Restricted visibility controls and account actions',
       'High-value user tracker and churn watchlist',
+    ],
+  },
+  {
+    id: 'verification',
+    label: 'Verification requests',
+    sub: 'Identity Review',
+    icon: 'shield',
+    summary: 'Review reference photo vs. live selfie submissions and approve or reject identity verification.',
+    capabilities: [
+      'Reference photo vs. live selfie side by side',
+      'Approve — marks the profile verified and notifies the member',
+      'Reject — notifies the member to try again',
+      'Falls back to this queue whenever AI face-match isn\'t available',
     ],
   },
   {
@@ -200,6 +215,7 @@ function commandKpisFromOverview(overview: CommandOverview | null) {
 function sectionBreadcrumb(id: AdminSectionId): string {
   if (id === 'command') return 'Admin / Overview';
   if (id === 'users') return 'Admin / User Management';
+  if (id === 'verification') return 'Admin / Verification Requests';
   if (id === 'content') return 'Admin / Content Control';
   if (id === 'comms') return 'Admin / Communication Hub';
   if (id === 'monetization') return 'Admin / Monetization';
@@ -266,6 +282,7 @@ const ADMIN_BASE = '/admin/19990808';
 const SECTION_PATHS: Record<AdminSectionId, string> = {
   command: ADMIN_BASE,
   users: `${ADMIN_BASE}/user-management`,
+  verification: `${ADMIN_BASE}/verification-requests`,
   content: `${ADMIN_BASE}/content-control`,
   comms: `${ADMIN_BASE}/communication-hub`,
   monetization: `${ADMIN_BASE}/monetization-lab`,
@@ -814,6 +831,10 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
 
     if (activeView === 'users') {
       return <AdminUserManagement onOpenSupport={() => switchView('comms')} />;
+    }
+
+    if (activeView === 'verification') {
+      return <AdminVerificationQueue />;
     }
 
     if (activeView === 'comms') {
