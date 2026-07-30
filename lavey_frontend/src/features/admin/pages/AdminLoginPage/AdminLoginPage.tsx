@@ -11,11 +11,20 @@ interface AdminLoginPageProps {
   onLoginSuccess: () => void;
 }
 
+function readInviteParams(): { token: string; email: string } {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    token: params.get('inviteToken')?.trim() ?? '',
+    email: params.get('email')?.trim() ?? '',
+  };
+}
+
 export function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) {
   const { isSubmitting, error, clearError, signIn, signUp } = useAdminAuth();
-  const [mode, setMode] = useState<AdminEmailAuthMode>('sign-in');
+  const invite = useState(readInviteParams)[0];
+  const [mode, setMode] = useState<AdminEmailAuthMode>(invite.token ? 'sign-up' : 'sign-in');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [prefillEmail, setPrefillEmail] = useState('');
+  const [prefillEmail, setPrefillEmail] = useState(invite.email);
   const [requiresInviteCode, setRequiresInviteCode] = useState(false);
 
   useEffect(() => {
@@ -68,12 +77,17 @@ export function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) {
         <h1 className="admin-login__title">{mode === 'sign-in' ? 'Admin sign in' : 'Admin registration'}</h1>
         <p className="admin-login__subtitle">Secure access to the Lavey command center</p>
 
-        {mode === 'sign-up' && requiresInviteCode && (
+        {mode === 'sign-up' && invite.token ? (
+          <p className="admin-login__hint" role="note">
+            You&apos;ve been invited to join the Lavey admin team. Your invite code is already filled in — just add
+            your name and choose a password.
+          </p>
+        ) : mode === 'sign-up' && requiresInviteCode ? (
           <p className="admin-login__hint" role="note">
             An admin account already exists. Use <strong>Sign in</strong> with that account, or enter your team invite
             code below to add another admin.
           </p>
-        )}
+        ) : null}
 
         {statusMessage && (
           <p className="admin-login__status" role="status">
@@ -90,6 +104,7 @@ export function AdminLoginPage({ onLoginSuccess }: AdminLoginPageProps) {
           }
           disabled={isSubmitting}
           initialEmail={prefillEmail}
+          initialInviteCode={invite.token}
           requiresInviteCode={requiresInviteCode}
         />
 

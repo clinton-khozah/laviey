@@ -12,16 +12,21 @@ export function AdminEmailAuthForm({
   showInviteCode = true,
   requiresInviteCode = false,
   initialEmail = '',
+  initialInviteCode = '',
 }: AdminEmailAuthFormProps) {
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [inviteCode, setInviteCode] = useState(initialInviteCode);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (initialEmail) setEmail(initialEmail);
   }, [initialEmail]);
+
+  useEffect(() => {
+    if (initialInviteCode) setInviteCode(initialInviteCode);
+  }, [initialInviteCode]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -62,7 +67,7 @@ export function AdminEmailAuthForm({
                 <input
                   type="text"
                   className="email-auth__input"
-                  placeholder={requiresInviteCode ? 'Required — ask your team lead' : 'Only if adding another admin'}
+                  placeholder={requiresInviteCode ? 'Required — from your invite email, or ask your team lead' : 'Only if adding another admin'}
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value)}
                   required={requiresInviteCode}

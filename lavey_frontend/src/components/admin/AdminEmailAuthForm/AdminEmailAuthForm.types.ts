@@ -9,4 +9,5 @@ export interface AdminEmailAuthFormProps {
   showInviteCode?: boolean;
   requiresInviteCode?: boolean;
   initialEmail?: string;
+  initialInviteCode?: string;
 }
