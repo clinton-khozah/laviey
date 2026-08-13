@@ -7,7 +7,7 @@ import './LandingMarketing.css';
 import { marketingService } from '@/services/marketing/marketingService';
 import { trackMarketingEvent } from '@/utils/analytics/googleAnalytics';
 
-const APK_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || '/downloads/Lavey-v1.0.0.apk';
+const DEFAULT_APK_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || '/downloads/Lavey-v1.0.0.apk';
 
 function compactDownloadCount(count: number): string {
   if (count < 1_000) return `${count}+`;
@@ -22,6 +22,7 @@ export function LandingPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
+  const [apkUrl, setApkUrl] = useState(DEFAULT_APK_URL);
   useEffect(() => {
     document.documentElement.classList.add('landing-document');
     document.body.classList.add('landing-document');
@@ -34,6 +35,7 @@ export function LandingPage() {
   useEffect(() => {
     void marketingService.recordVisit().catch(() => undefined);
     void marketingService.getStats().then((value) => setDownloadCount(value.downloadCount)).catch(() => undefined);
+    void marketingService.getApkDownloadUrl().then((url) => { if (url) setApkUrl(url); }).catch(() => undefined);
     const referralCode = new URLSearchParams(location.search).get('ref');
     if (referralCode) trackMarketingEvent('referral_visit', { referral_code: referralCode });
   }, []);
@@ -42,13 +44,13 @@ export function LandingPage() {
     event.preventDefault();
     trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
     try { const result = await marketingService.recordDownload(); setDownloadCount(result.downloadCount); } catch { /* download remains available if analytics API is offline */ }
-    const link = document.createElement('a'); link.href = APK_URL; link.download = 'Lavey-v1.0.0.apk'; document.body.appendChild(link); link.click(); link.remove();
+    const link = document.createElement('a'); link.href = apkUrl; link.download = 'Lavey-v1.0.0.apk'; document.body.appendChild(link); link.click(); link.remove();
   };
 
   return <main className="landing">
     <nav className="landing__nav">
       <a className="landing__brand" href="#top" aria-label="Lavey home"><img src="/images/logo.png" alt=""/><span>Lavey</span></a>
-      <a className="landing__nav-download" href={APK_URL} onClick={requestDownload}>Get the App</a>
+      <a className="landing__nav-download" href={apkUrl} onClick={requestDownload}>Get the App</a>
     </nav>
 
     <section className="landing__hero" id="top">
@@ -57,7 +59,7 @@ export function LandingPage() {
         <h1>Feel the vibe<br/>before you match.</h1>
         <p>Lavey is a free dating social app for meeting people nearby or connecting with someone anywhere in the world. Share your music, express your vibe and start conversations that feel easy from the first hello—no subscription needed.</p>
         <div className="landing__actions">
-          <a className="landing__download" href={APK_URL} onClick={requestDownload}><span>Download Lavey</span><small>Android APK · Free</small></a>
+          <a className="landing__download" href={apkUrl} onClick={requestDownload}><span>Download Lavey</span><small>Android APK · Free</small></a>
           <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
           <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
         </div>
@@ -81,7 +83,7 @@ export function LandingPage() {
       <div className="landing__footer-meta"><span className="landing__footer-brand"><img src="/images/logo.png" alt=""/>© {new Date().getFullYear()} Lavey. All rights reserved.</span><span className="landing__legal-links"><button type="button" onClick={() => setShowTerms(true)}>Terms & Conditions</button><a href="mailto:support@lavey.co.za">support@lavey.co.za</a><button type="button" onClick={() => { trackMarketingEvent('referral_opened'); setShowReferral(true); }}>Refer a friend &amp; earn</button></span><span>Powered and developed by <strong>Brainstak</strong> · Registration no. 2026/492377/07</span></div>
     </footer>
 
-    <aside className="landing__sticky-download" aria-label="Download Lavey for Android"><img src="/images/logo.png" alt=""/><div><strong>Get Lavey</strong><small>Free Android download</small></div><a href={APK_URL} onClick={requestDownload}>Download</a></aside>
+    <aside className="landing__sticky-download" aria-label="Download Lavey for Android"><img src="/images/logo.png" alt=""/><div><strong>Get Lavey</strong><small>Free Android download</small></div><a href={apkUrl} onClick={requestDownload}>Download</a></aside>
     {showReferral ? <ReferralDialog onClose={() => setShowReferral(false)} /> : null}
     {showTerms ? <TermsDialog onClose={() => setShowTerms(false)} /> : null}
   </main>;

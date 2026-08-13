@@ -42,6 +42,9 @@ export const marketingService = {
     return request('/marketing/visit', { method: 'POST', body: JSON.stringify({ visitorId: visitorId(), path: `${location.pathname}${location.search}`, referrer: document.referrer || undefined, source: query.get('utm_source') || undefined, medium: query.get('utm_medium') || undefined, campaign: query.get('utm_campaign') || undefined, referralCode: activeReferralCode() }) });
   },
   getStats(): Promise<{ downloadCount: number }> { return request('/marketing/stats'); },
+  getApkDownloadUrl(): Promise<string | null> {
+    return request<{ downloadUrl: string | null }>('/marketing/apk-url').then((value) => value.downloadUrl?.trim() || null);
+  },
   recordDownload(): Promise<{ downloadCount: number }> {
     return request('/marketing/download', { method: 'POST', body: JSON.stringify({ visitorId: visitorId(), source: 'landing-page', referralCode: activeReferralCode() }) });
   },

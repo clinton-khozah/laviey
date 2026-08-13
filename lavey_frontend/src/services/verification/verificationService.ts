@@ -51,10 +51,9 @@ export const verificationService = {
     form.append('reference', await sourceToBlob(referenceUrl), 'reference.jpg');
     form.append('live', await sourceToBlob(liveUrl), 'live.jpg');
 
-    const res = await httpClient.post<ApiResponse<VerificationStatusDto>>(
+    const res = await httpClient.postForm<ApiResponse<VerificationStatusDto>>(
       API_ENDPOINTS.users.verificationSubmit,
       form,
-      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60_000 },
     );
     return res.data;
   },
