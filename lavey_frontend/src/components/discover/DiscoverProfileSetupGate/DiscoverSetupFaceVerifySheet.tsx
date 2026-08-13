@@ -5,16 +5,11 @@ import { verificationService } from '@/services/verification/verificationService
 import { defaultAvatar } from '@/constants/defaultAvatar';
 import { hasCustomProfileAvatar } from '@/utils/discover/discoverProfileReady';
 import { LiveSelfieStep } from '@/components/profile/VerifyIdentitySheet/LiveSelfieStep';
-import {
-  compareFaceReferenceToLive,
-  faceMatchUserMessage,
-  type FaceCompareResult,
-} from '@/utils/face/faceMatcher';
 import { getUserFacingErrorMessage } from '@/utils/errors/userFacingErrorMessage';
 import type { UserProfile } from '@/types';
 import './DiscoverSetupSheets.css';
 
-type VerifyStep = 'intro' | 'live' | 'matching' | 'fail';
+type VerifyStep = 'intro' | 'live' | 'submitting' | 'done';
 
 interface DiscoverSetupFaceVerifySheetProps {
   open: boolean;
@@ -32,11 +27,7 @@ export function DiscoverSetupFaceVerifySheet({
   onVerified,
 }: DiscoverSetupFaceVerifySheetProps) {
   const [step, setStep] = useState<VerifyStep>('intro');
-  const [liveUrl, setLiveUrl] = useState<string | null>(null);
-  const [matchResult, setMatchResult] = useState<FaceCompareResult | null>(null);
-  const [failMessage, setFailMessage] = useState<string | null>(null);
-  const [_isSaving, setIsSaving] = useState(false);
-  const [_statusText, setStatusText] = useState('Matching your live selfie…');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const referenceUrl =
     (hasCustomProfileAvatar(avatarPreview) ? avatarPreview : undefined) ??
@@ -45,11 +36,7 @@ export function DiscoverSetupFaceVerifySheet({
 
   const reset = useCallback(() => {
     setStep('intro');
-    setLiveUrl(null);
-    setMatchResult(null);
-    setFailMessage(null);
-    setIsSaving(false);
-    setStatusText('Matching your live selfie…');
+    setSubmitError(null);
   }, []);
 
   useEffect(() => {
@@ -61,42 +48,26 @@ export function DiscoverSetupFaceVerifySheet({
     onClose();
   };
 
-  const runMatch = async (nextLiveUrl: string) => {
-    setStep('matching');
-    setFailMessage(null);
+  const submitForReview = async (nextLiveUrl: string) => {
+    setStep('submitting');
+    setSubmitError(null);
     try {
-      setStatusText('Matching your live selfie…');
-      const result = await compareFaceReferenceToLive(referenceUrl, nextLiveUrl);
-      if (!result.match) {
-        setMatchResult(result);
-        setFailMessage(
-          `Faces didn't match closely enough (${result.confidencePercent}% confidence). Try again with better lighting.`,
-        );
-        setStep('fail');
-        void verificationService.submitForManualReview(referenceUrl, nextLiveUrl).catch(() => {});
-        return;
-      }
-
-      setIsSaving(true);
-      setStatusText('Saving verified status…');
-      await verificationService.completeVerification();
+      await verificationService.submitForManualReview(referenceUrl, nextLiveUrl);
+      setStep('done');
       await onVerified();
-      handleClose();
     } catch (error) {
-      setFailMessage(faceMatchUserMessage(error));
-      setStep('fail');
-    } finally {
-      setIsSaving(false);
+      setSubmitError(getUserFacingErrorMessage(error, 'Could not submit verification.'));
+      setStep('live');
     }
   };
 
   const title =
     step === 'live'
-      ? 'Live selfie check'
-      : step === 'matching'
-        ? 'Verifying…'
-        : step === 'fail'
-          ? 'Verification failed'
+      ? 'Live selfie'
+      : step === 'submitting'
+        ? 'Submitting…'
+        : step === 'done'
+          ? 'Request sent'
           : 'Verify your face';
 
   return (
@@ -111,57 +82,44 @@ export function DiscoverSetupFaceVerifySheet({
         {step === 'intro' && (
           <>
             <p className="discover-setup-sheet__lead">
-              Confirm the profile photo is really you. We&apos;ll compare it to a live camera check — photos on another phone won&apos;t work.
+              Take a live selfie with your profile photo. Our team will review your request and
+              we&apos;ll notify you in the app when you&apos;re verified.
             </p>
             <div className="discover-setup-sheet__verify-ref">
               <img src={referenceUrl} alt="Your profile photo" />
               <span>Profile photo</span>
             </div>
             <button type="button" className="discover-setup-sheet__btn" onClick={() => setStep('live')}>
-              Start live check
+              Continue
             </button>
           </>
         )}
 
         {step === 'live' && (
-          <LiveSelfieStep
-            onBack={() => setStep('intro')}
-            onCapture={(url) => {
-              setLiveUrl(url);
-              void runMatch(url);
-            }}
-          />
+          <>
+            <LiveSelfieStep
+              onBack={() => setStep('intro')}
+              onCapture={(url) => {
+                void submitForReview(url);
+              }}
+            />
+            {submitError ? <p className="discover-setup-sheet__error">{submitError}</p> : null}
+          </>
         )}
 
-        {step === 'matching' && (
+        {step === 'submitting' && (
           <div className="discover-setup-sheet__matching">
-            <LogoLoader size="md" label="Verifying face" />
+            <LogoLoader size="md" label="Sending verification request" />
           </div>
         )}
 
-        {step === 'fail' && (
+        {step === 'done' && (
           <>
-            <p className="discover-setup-sheet__error">{failMessage ?? getUserFacingErrorMessage(null)}</p>
-            {matchResult && (
-              <p className="discover-setup-sheet__match-score">
-                Match confidence: {matchResult.confidencePercent}%
-              </p>
-            )}
-            {liveUrl && (
-              <div className="discover-setup-sheet__verify-ref">
-                <img src={liveUrl} alt="Live attempt" />
-                <span>Live attempt</span>
-              </div>
-            )}
-            <button type="button" className="discover-setup-sheet__btn" onClick={() => setStep('live')}>
-              Try live check again
-            </button>
-            <button
-              type="button"
-              className="discover-setup-sheet__btn discover-setup-sheet__btn--secondary"
-              onClick={() => setStep('intro')}
-            >
-              Back
+            <p className="discover-setup-sheet__lead">
+              Verification submitted. We&apos;ll notify you in the app when you&apos;re verified.
+            </p>
+            <button type="button" className="discover-setup-sheet__btn" onClick={handleClose}>
+              Done
             </button>
           </>
         )}

@@ -44,7 +44,7 @@ export function LandingPage() {
     event.preventDefault();
     trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
     try { const result = await marketingService.recordDownload(); setDownloadCount(result.downloadCount); } catch { /* download remains available if analytics API is offline */ }
-    const link = document.createElement('a'); link.href = apkUrl; link.download = 'Lavey-v1.0.0.apk'; document.body.appendChild(link); link.click(); link.remove();
+    const link = document.createElement('a'); link.href = apkUrl; link.download = 'Lavey-v1.0.0-build7.apk'; document.body.appendChild(link); link.click(); link.remove();
   };
 
   return <main className="landing">
@@ -59,7 +59,7 @@ export function LandingPage() {
         <h1>Feel the vibe<br/>before you match.</h1>
         <p>Lavey is a free dating social app for meeting people nearby or connecting with someone anywhere in the world. Share your music, express your vibe and start conversations that feel easy from the first hello—no subscription needed.</p>
         <div className="landing__actions">
-          <a className="landing__download" href={apkUrl} onClick={requestDownload}><span>Download Lavey</span><small>Android APK · Free</small></a>
+          <a className="landing__download" href={apkUrl} onClick={requestDownload}><span>Download Lavey</span><small>Android APK · v1.0.0 build 7</small></a>
           <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
           <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
         </div>

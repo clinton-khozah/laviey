@@ -15,6 +15,7 @@ interface CompanionRow {
   reply_delay_min_seconds: number;
   reply_delay_max_seconds: number;
   is_active: boolean;
+  auto_reply_enabled?: boolean;
   profiles?: { display_name?: string; avatar_url?: string; bio?: string; city?: string } | Array<{ display_name?: string; avatar_url?: string; bio?: string; city?: string }>;
 }
 
@@ -36,7 +37,7 @@ const initialForm = {
   dateOfBirth: '1998-01-01', gender: 'woman', city: '', country: 'South Africa',
   personalityPrompt: '', conversationGoals: 'Be warm\nAsk thoughtful follow-up questions\nRespect boundaries',
   interests: '', quizAnswers: '{\n  "purpose": "meaningful conversations",\n  "vibe": "chill"\n}',
-  replyDelayMinSeconds: 20, replyDelayMaxSeconds: 90, isActive: true,
+  replyDelayMinSeconds: 20, replyDelayMaxSeconds: 90, isActive: true, autoReplyEnabled: true,
 };
 
 function lines(value: string): string[] {
@@ -256,6 +257,7 @@ export function AdminAiCompanions() {
             <label>Maximum reply delay<input type="number" min={5} max={90} value={form.replyDelayMaxSeconds} onChange={(e) => setForm({ ...form, replyDelayMaxSeconds: Number(e.target.value) })} /></label>
           </div>
           <label className="admin-ai-companions__check"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />Active in discovery and chat</label>
+          <label className="admin-ai-companions__check"><input type="checkbox" checked={form.autoReplyEnabled} onChange={(e) => setForm({ ...form, autoReplyEnabled: e.target.checked })} />AI auto-reply (turn off to respond manually from this dashboard)</label>
           <button disabled={saving}>{saving ? 'Creating…' : 'Create disclosed AI companion'}</button>
         </form>
         <div className="admin-ai-companions__list">
@@ -264,7 +266,7 @@ export function AdminAiCompanions() {
             const profile = profileOf(row);
             return <article key={row.id}>
               <img src={profile?.avatar_url || row.photo_urls[0] || '/favicon.svg'} alt="" />
-              <div><strong>{profile?.display_name || 'AI companion'}</strong><span>✦ {row.disclosure_label}</span><p>{profile?.bio}</p><small>{row.interests.join(' · ')} · replies in {row.reply_delay_min_seconds}–{row.reply_delay_max_seconds}s</small></div>
+              <div><strong>{profile?.display_name || 'AI companion'}</strong><span>✦ {row.disclosure_label}</span><p>{profile?.bio}</p><small>{row.interests.join(' · ')} · replies in {row.reply_delay_min_seconds}–{row.reply_delay_max_seconds}s · {row.auto_reply_enabled === false ? 'manual replies' : 'AI auto-reply'}</small></div>
               <div className="admin-ai-companions__row-actions"><button type="button" className="admin-ai-companions__manage-btn" onClick={() => void openWorkspace(row)}>Manage</button><button type="button" className={`admin-ai-companions__status-btn ${row.is_active ? 'is-active' : 'is-paused'}`} onClick={() => void toggle(row)}><i aria-hidden />{row.is_active ? 'Active' : 'Paused'}</button></div>
             </article>;
           })}
@@ -280,6 +282,8 @@ export function AdminAiCompanions() {
               <label>Name<input defaultValue={String(workspace.profile.display_name ?? '')} onBlur={(e) => void api(`/admin/ai/companions/${workspace.companion.id}`, { method: 'PATCH', body: JSON.stringify({ displayName: e.target.value }) }).then(refreshWorkspace)} /></label>
               <label>Bio<textarea defaultValue={String(workspace.profile.bio ?? '')} onBlur={(e) => void api(`/admin/ai/companions/${workspace.companion.id}`, { method: 'PATCH', body: JSON.stringify({ bio: e.target.value }) }).then(refreshWorkspace)} /></label>
               <label>Headline<input defaultValue={String(workspace.profile.headline ?? '')} onBlur={(e) => void api(`/admin/ai/companions/${workspace.companion.id}`, { method: 'PATCH', body: JSON.stringify({ headline: e.target.value }) }).then(refreshWorkspace)} /></label>
+              <label className="admin-ai-companions__check"><input type="checkbox" checked={workspace.companion.auto_reply_enabled !== false} onChange={(e) => void api(`/admin/ai/companions/${workspace.companion.id}`, { method: 'PATCH', body: JSON.stringify({ autoReplyEnabled: e.target.checked }) }).then(refreshWorkspace)} />AI auto-reply enabled</label>
+              <p className="admin-ai-workspace__hint">When auto-reply is off, members still see the companion in chat but you reply manually below.</p>
               <button className="admin-ai-workspace__danger" onClick={() => void deleteCompanion()}>Delete AI companion</button>
             </div>
             <div className="admin-ai-workspace__panel">

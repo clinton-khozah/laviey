@@ -7,6 +7,7 @@ export type SheetSaveAction =
   | 'safety'
   | 'contacts-import'
   | 'verify'
+  | 'verify-submitted'
   | 'platinum'
   | 'post'
   | 'meetup-delete';
@@ -57,6 +58,11 @@ export function getSheetSaveCopy(action: SheetSaveAction, detail?: string): Shee
       return {
         title: 'You\'re verified',
         message: 'Your verified badge is live on your profile — matches can trust it\'s really you.',
+      };
+    case 'verify-submitted':
+      return {
+        title: 'Verification submitted',
+        message: 'Our team is reviewing your photos. We\'ll notify you in the app when you\'re verified.',
       };
     case 'platinum':
       return {

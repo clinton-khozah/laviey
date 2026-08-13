@@ -26,21 +26,7 @@ async function sourceToBlob(source: string): Promise<Blob> {
 }
 
 export const verificationService = {
-  async completeVerification(): Promise<UserProfile | null> {
-    const userId = authService.getStoredSession()?.user?.id ?? 'me';
-
-    if (!usesBackendVerification()) {
-      await sleep(400);
-      setProfileVerified(userId, true);
-      return null;
-    }
-
-    const res = await httpClient.post<ApiResponse<UserProfile>>(API_ENDPOINTS.users.verification);
-    setProfileVerified(userId, true);
-    return res.data;
-  },
-
-  /** Queue photos for admin review when automatic face matching fails. */
+  /** Submit reference + live selfie for admin review (always queued — no auto face match). */
   async submitForManualReview(referenceUrl: string, liveUrl: string): Promise<VerificationStatusDto> {
     if (!usesBackendVerification()) {
       await sleep(400);
@@ -55,6 +41,21 @@ export const verificationService = {
       API_ENDPOINTS.users.verificationSubmit,
       form,
     );
+    return res.data;
+  },
+
+  /** Legacy instant-verify endpoint — kept for mocks only. */
+  async completeVerification(): Promise<UserProfile | null> {
+    const userId = authService.getStoredSession()?.user?.id ?? 'me';
+
+    if (!usesBackendVerification()) {
+      await sleep(400);
+      setProfileVerified(userId, true);
+      return null;
+    }
+
+    const res = await httpClient.post<ApiResponse<UserProfile>>(API_ENDPOINTS.users.verification);
+    setProfileVerified(userId, true);
     return res.data;
   },
 };
