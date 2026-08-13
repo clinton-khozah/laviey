@@ -1,0 +1,219 @@
+.admin-holiday-cal {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fafafa;
+}
+
+.admin-holiday-cal__grid-wrap {
+  min-width: 0;
+}
+
+.admin-holiday-cal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.admin-holiday-cal__head strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-holiday-cal__head button {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: #374151;
+}
+
+.admin-holiday-cal__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.admin-holiday-cal__weekdays span {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.admin-holiday-cal__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.admin-holiday-cal__day {
+  aspect-ratio: 1 / 1;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.admin-holiday-cal__day:hover:not(:disabled) {
+  border-color: #93c5fd;
+}
+
+.admin-holiday-cal__day--blank {
+  background: transparent;
+  cursor: default;
+  pointer-events: none;
+}
+
+.admin-holiday-cal__day.is-today {
+  border-color: #2563eb;
+  font-weight: 700;
+}
+
+.admin-holiday-cal__day.is-off {
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.admin-holiday-cal__day.is-selected {
+  outline: 2px solid #2563eb;
+}
+
+.admin-holiday-cal__form {
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-holiday-cal__form > span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.admin-holiday-cal__form input {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.admin-holiday-cal__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-holiday-cal__form-actions button {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #374151;
+}
+
+.admin-holiday-cal__form-actions button.is-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.admin-holiday-cal__error {
+  margin: 0;
+  font-size: 11px;
+  color: #dc2626;
+}
+
+.admin-holiday-cal__list {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-holiday-cal__list > strong {
+  font-size: 12px;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.admin-holiday-cal__list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.admin-holiday-cal__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.admin-holiday-cal__list-date {
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.admin-holiday-cal__list-label {
+  flex: 1;
+  min-width: 0;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-holiday-cal__list li button {
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.admin-holiday-cal__empty {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .admin-holiday-cal {
+    grid-template-columns: 1fr;
+  }
+}

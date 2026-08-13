@@ -859,7 +859,15 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
 
                 <span className="onboarding-quiz__visual-ring" />
 
-                <span className="onboarding-quiz__visual-emoji">{step.heroEmoji}</span>
+                {step.stepKey === 'purpose' ? (
+                  <img
+                    src={APP_IMAGES.quizPurposeIcon}
+                    alt=""
+                    className="onboarding-quiz__visual-icon"
+                  />
+                ) : (
+                  <span className="onboarding-quiz__visual-emoji">{step.heroEmoji}</span>
+                )}
 
               </div>
 
@@ -1117,7 +1125,7 @@ export function OnboardingQuizPage({ onContinue }: OnboardingQuizPageProps) {
                     Wait — we&apos;re finding your best match!
                   </h2>
                   <p className="onboarding-quiz__welcome-copy">
-                    Your vibe is in. Hang tight while we line up someone who actually gets you.
+                    Your profile is set. Please wait while we find someone who aligns with what you&apos;re looking for.
                   </p>
                   <div className="onboarding-quiz__matching-dots" aria-hidden>
                     <span />

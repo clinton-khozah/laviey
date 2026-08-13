@@ -5,16 +5,27 @@ import {
   isLeaveClaimType,
   type ClaimStatus,
   type ClaimType,
+  type CompanyHoliday,
   type Employee,
   type EmployeeClaim,
   type EmployeeRole,
   type EmploymentStatus,
+  type Department,
   type HrDocumentAnalysis,
   type HrOverview,
 } from '@/services/admin/adminHrService';
 import './AdminHrHub.css';
+import { AdminHolidayCalendar } from '../AdminHolidayCalendar/AdminHolidayCalendar';
+import {
+  adminCompanySubscriptionsService,
+  type CompanyInvoice,
+} from '@/services/admin/adminCompanySubscriptionsService';
+import { adminAccessService, type AdminOperator } from '@/services/admin/adminAccessService';
+import { ADMIN_PERMISSION_ACTIONS, ADMIN_PERMISSION_PAGES } from './adminPermissionCatalog';
+import { AdminConfirmDialog, AdminHeartLoader, AdminNotificationModal } from '../AdminFeedback';
+import { LogoLoader } from '@/components/ui/LogoLoader';
 
-export type HrTab = 'employees' | 'roles' | 'leaves' | 'claims';
+export type HrTab = 'employees' | 'roles' | 'access' | 'leaves' | 'claims';
 
 interface AdminHrHubProps {
   initialTab: HrTab;
@@ -27,6 +38,7 @@ interface AdminHrHubProps {
 const HR_TABS: { id: HrTab; label: string }[] = [
   { id: 'employees', label: 'Employees' },
   { id: 'roles', label: 'Roles' },
+  { id: 'access', label: 'Admin access' },
   { id: 'leaves', label: 'Leave' },
   { id: 'claims', label: 'Claims' },
 ];
@@ -49,7 +61,6 @@ const EXPENSE_TYPES: { id: ClaimType; label: string }[] = [
 
 const ALL_REQUEST_TYPES = [...LEAVE_TYPES, ...EXPENSE_TYPES];
 
-const PERMISSION_OPTIONS = ['users', 'moderation', 'support', 'algorithms', 'hr', 'billing', 'experiments'];
 
 const DEPARTMENT_TONES: Record<string, string> = {
   Executive: 'executive',
@@ -112,6 +123,7 @@ type RoleFormState = {
   description: string;
   department: string;
   permissions: string[];
+  accessRules: Record<string, string[]>;
 };
 
 const emptyRoleForm = (): RoleFormState => ({
@@ -119,6 +131,7 @@ const emptyRoleForm = (): RoleFormState => ({
   description: '',
   department: 'Operations',
   permissions: [],
+  accessRules: {},
 });
 
 function formatMoney(amount: number, currency = 'ZAR'): string {
@@ -244,12 +257,24 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
   const [tab, setTab] = useState<HrTab>(initialTab);
   const [overview, setOverview] = useState<HrOverview | null>(null);
   const [roles, setRoles] = useState<EmployeeRole[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [showDepartmentCreator, setShowDepartmentCreator] = useState(false);
+  const [newDepartmentName, setNewDepartmentName] = useState('');
+  const [creatingDepartment, setCreatingDepartment] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [claims, setClaims] = useState<EmployeeClaim[]>([]);
+  const [holidays, setHolidays] = useState<CompanyHoliday[]>([]);
   const [claimFilter, setClaimFilter] = useState<ClaimStatus | 'all'>('pending');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [rolePendingDelete, setRolePendingDelete] = useState<EmployeeRole | null>(null);
+  const [deletingRole, setDeletingRole] = useState(false);
+  const [employeePendingDelete, setEmployeePendingDelete] = useState<Employee | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState(false);
+  const [invitePendingDelete, setInvitePendingDelete] = useState<AdminOperator | null>(null);
+  const [deletingInvite, setDeletingInvite] = useState(false);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showAddRole, setShowAddRole] = useState(false);
@@ -291,20 +316,36 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
   const [claimDocumentPreview, setClaimDocumentPreview] = useState('');
   const [claimDocumentAnalysis, setClaimDocumentAnalysis] = useState<HrDocumentAnalysis | null>(null);
   const [claimDocumentLoading, setClaimDocumentLoading] = useState(false);
+  const [companyInvoices, setCompanyInvoices] = useState<CompanyInvoice[]>([]);
+  const [operators, setOperators] = useState<AdminOperator[]>([]);
+  const [showInviteOperator, setShowInviteOperator] = useState(false);
+  const [operatorSearch, setOperatorSearch] = useState('');
+  const [inviteForm, setInviteForm] = useState({ name: '', email: '', roleId: '' });
+  const [claimInvoiceSource, setClaimInvoiceSource] = useState<'internal' | 'external'>('internal');
+  const [selectedCompanyInvoiceId, setSelectedCompanyInvoiceId] = useState('');
 
   const loadAll = useCallback(async () => {
     setError('');
     try {
-      const [ov, roleList, empList, claimList] = await Promise.all([
+      const [ov, roleList, empList, claimList, invoiceList, operatorList, departmentList, holidayList] = await Promise.all([
         adminHrService.getOverview(),
         adminHrService.listRoles(),
         adminHrService.listEmployees(),
         adminHrService.listClaims(),
+        adminCompanySubscriptionsService.listInvoices().catch(() => []),
+        adminAccessService.listOperators().catch(() => []),
+        adminHrService.listDepartments().catch(() => []),
+        adminHrService.listHolidays().catch(() => []),
       ]);
       setOverview(ov);
       setRoles(roleList);
       setEmployees(empList);
       setClaims(claimList);
+      setCompanyInvoices(invoiceList.filter((invoice) => invoice.status === 'submitted'));
+      setOperators(operatorList);
+      setHolidays(holidayList);
+      setDepartments(departmentList.length ? departmentList : Array.from(new Set(roleList.map((role) => role.department))).sort().map((name) => ({ id: name, name, description: '', isActive: true })));
+      if (!inviteForm.roleId && roleList[0]) setInviteForm((current) => ({ ...current, roleId: roleList[0]!.id }));
       onPendingCountsChange?.({ leaves: ov.pendingLeaves, claims: ov.pendingClaims });
       if (!empForm.roleId && roleList[0]) {
         setEmpForm((f) => ({ ...f, roleId: roleList[0]!.id }));
@@ -338,6 +379,13 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
     if (claimFilter === 'all') return expenseOnly;
     return expenseOnly.filter((c) => c.status === claimFilter);
   }, [claims, claimFilter]);
+
+  const employeeDepartmentOptions = useMemo(
+    () => Array.from(new Set(
+      roles.map((role) => role.department.trim()).filter(Boolean),
+    )).sort((a, b) => a.localeCompare(b)),
+    [roles],
+  );
 
   const flash = (message: string) => {
     setNotice(message);
@@ -426,6 +474,7 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
         description: roleForm.description,
         department: roleForm.department,
         permissions: roleForm.permissions,
+        accessRules: roleForm.accessRules,
       });
       setShowAddRole(false);
       setRoleForm(emptyRoleForm());
@@ -434,6 +483,91 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create role');
     }
+  };
+
+  const confirmDeleteEmployee = async () => {
+    if (!employeePendingDelete) return;
+    const employee = employeePendingDelete;
+    setDeletingEmployee(true);
+    try {
+      await adminHrService.deleteEmployee(employee.id);
+      if (employeeModal?.id === employee.id) setEmployeeModal(null);
+      setEmployeePendingDelete(null);
+      flash('Employee deleted.');
+      await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete employee');
+    } finally {
+      setDeletingEmployee(false);
+    }
+  };
+
+  const handleInviteOperator = async () => {
+    if (!inviteForm.name.trim() || !inviteForm.email.trim() || !inviteForm.roleId) return;
+    try {
+      const result = await adminAccessService.inviteOperator(inviteForm);
+      setInviteForm({ name: '', email: '', roleId: roles[0]?.id ?? '' });
+      setShowInviteOperator(false);
+      flash(result.emailSent ? 'Onboarding invitation emailed.' : 'Invitation created. Email delivery is not configured.');
+      await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not invite admin user.');
+    }
+  };
+
+  const confirmDeleteInvite = async () => {
+    if (!invitePendingDelete) return;
+    const invite = invitePendingDelete;
+    setDeletingInvite(true);
+    try {
+      await adminAccessService.cancelInvite(invite.id);
+      setInvitePendingDelete(null);
+      flash(`Invitation for ${invite.name} deleted.`);
+      await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete invitation.');
+    } finally {
+      setDeletingInvite(false);
+    }
+  };
+
+  const handleResendInvite = async (operator: AdminOperator) => {
+    setResendingInviteId(operator.id);
+    try {
+      const result = await adminAccessService.resendInvite(operator.id);
+      flash(result.emailSent ? `New invitation emailed to ${operator.name}.` : `Invitation recreated for ${operator.name}. Email delivery is not configured.`);
+      await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend invitation.');
+    } finally {
+      setResendingInviteId(null);
+    }
+  };
+
+  const handleCreateDepartment = async () => {
+    if (!newDepartmentName.trim()) return;
+    setCreatingDepartment(true);
+    setError('');
+    try {
+      const created = await adminHrService.createDepartment({ name: newDepartmentName });
+      setDepartments((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setRoleForm((current) => ({ ...current, department: created.name }));
+      setEditRoleForm((current) => ({ ...current, department: created.name }));
+      setNewDepartmentName('');
+      setShowDepartmentCreator(false);
+      if (!roleModal || roleModal.mode !== 'edit') setShowAddRole(true);
+      flash('Department created.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create department.');
+    } finally {
+      setCreatingDepartment(false);
+    }
+  };
+
+  const closeDepartmentCreator = () => {
+    setError('');
+    setShowDepartmentCreator(false);
+    if (!roleModal || roleModal.mode !== 'edit') setShowAddRole(true);
   };
 
   const openRoleView = (role: EmployeeRole) => {
@@ -446,6 +580,7 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
       description: role.description,
       department: role.department,
       permissions: [...role.permissions],
+      accessRules: role.accessRules ?? {},
     });
     setRoleModal({ mode: 'edit', role });
   };
@@ -458,6 +593,7 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
         description: editRoleForm.description,
         department: editRoleForm.department,
         permissions: editRoleForm.permissions,
+        accessRules: editRoleForm.accessRules,
       });
       setRoleModal(null);
       flash('Role updated.');
@@ -467,29 +603,44 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
     }
   };
 
-  const handleDeleteRole = async (role: EmployeeRole) => {
+  const handleDeleteRole = (role: EmployeeRole) => {
     if (role.employeeCount > 0) {
       setError(`"${role.name}" has ${role.employeeCount} employee(s). Reassign them before deleting.`);
       return;
     }
-    if (!globalThis.confirm(`Delete "${role.name}"? This cannot be undone.`)) return;
+    setRolePendingDelete(role);
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!rolePendingDelete) return;
+    const role = rolePendingDelete;
+    setDeletingRole(true);
     try {
       await adminHrService.deleteRole(role.id);
       if (roleModal?.role.id === role.id) setRoleModal(null);
+      setRolePendingDelete(null);
       flash('Role deleted.');
       await loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete role');
+    } finally {
+      setDeletingRole(false);
     }
   };
 
-  const toggleEditPermission = (perm: string) => {
-    setEditRoleForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(perm)
-        ? f.permissions.filter((p) => p !== perm)
-        : [...f.permissions, perm],
-    }));
+  const toggleAccessRule = (module: string, action: string) => {
+    setEditRoleForm((current) => {
+      const currentActions = current.accessRules[module] ?? [];
+      return {
+        ...current,
+        accessRules: {
+          ...current.accessRules,
+          [module]: currentActions.includes(action)
+            ? currentActions.filter((value) => value !== action)
+            : [...currentActions, action],
+        },
+      };
+    });
   };
 
   const resetClaimDocument = useCallback(() => {
@@ -573,6 +724,14 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
   const handleAddClaim = async () => {
     if (!claimForm.employeeId || !claimForm.title.trim()) return;
     if (!isExpenseClaimType(claimForm.claimType)) return;
+    if (claimInvoiceSource === 'internal' && !selectedCompanyInvoiceId) {
+      setError('Select a submitted company invoice for this claim.');
+      return;
+    }
+    if (claimInvoiceSource === 'external' && !claimDocument) {
+      setError('Upload the external invoice before submitting this claim.');
+      return;
+    }
     if (claimDocumentAnalysis && !claimDocumentAnalysis.matchesClaimType && claimDocumentAnalysis.source === 'ai') {
       setError('Upload a document that matches this claim type, or change the claim type.');
       return;
@@ -590,10 +749,12 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
         attachmentFileName: claimDocument?.name,
         attachmentMimeType: claimDocument?.type,
         documentAnalysis: claimDocumentAnalysis ?? undefined,
+        companyInvoiceId: claimInvoiceSource === 'internal' ? selectedCompanyInvoiceId || undefined : undefined,
       });
       setShowAddClaim(false);
       resetClaimDocument();
       setClaimForm({ ...emptyExpenseForm(), employeeId: employees[0]?.id ?? '' });
+      setSelectedCompanyInvoiceId('');
       flash('Expense claim submitted.');
       await loadAll();
     } catch (err) {
@@ -611,13 +772,59 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
     }
   };
 
-  const togglePermission = (perm: string) => {
-    setRoleForm((f) => ({
-      ...f,
-      permissions: f.permissions.includes(perm)
-        ? f.permissions.filter((p) => p !== perm)
-        : [...f.permissions, perm],
-    }));
+  const handleAddHoliday = async (date: string, label: string) => {
+    const created = await adminHrService.createHoliday({ date, label });
+    setHolidays((current) => [...current, created].sort((a, b) => a.date.localeCompare(b.date)));
+    flash('Off day added to the company calendar.');
+  };
+
+  const handleRemoveHoliday = async (id: string) => {
+    await adminHrService.deleteHoliday(id);
+    setHolidays((current) => current.filter((holiday) => holiday.id !== id));
+    flash('Off day removed.');
+  };
+
+  const toggleCreateAccessRule = (module: string, action: string) => {
+    setRoleForm((current) => {
+      const actions = current.accessRules[module] ?? [];
+      return {
+        ...current,
+        accessRules: {
+          ...current.accessRules,
+          [module]: actions.includes(action)
+            ? actions.filter((value) => value !== action)
+            : [...actions, action],
+        },
+      };
+    });
+  };
+
+  const toggleCreateAccessColumn = (action: string) => {
+    setRoleForm((current) => {
+      const selectAll = !ADMIN_PERMISSION_PAGES.every((page) => (current.accessRules[page.id] ?? []).includes(action));
+      const accessRules = { ...current.accessRules };
+      ADMIN_PERMISSION_PAGES.forEach((page) => {
+        const actions = accessRules[page.id] ?? [];
+        accessRules[page.id] = selectAll
+          ? Array.from(new Set([...actions, action]))
+          : actions.filter((value) => value !== action);
+      });
+      return { ...current, accessRules };
+    });
+  };
+
+  const toggleEditAccessColumn = (action: string) => {
+    setEditRoleForm((current) => {
+      const selectAll = !ADMIN_PERMISSION_PAGES.every((page) => (current.accessRules[page.id] ?? []).includes(action));
+      const accessRules = { ...current.accessRules };
+      ADMIN_PERMISSION_PAGES.forEach((page) => {
+        const actions = accessRules[page.id] ?? [];
+        accessRules[page.id] = selectAll
+          ? Array.from(new Set([...actions, action]))
+          : actions.filter((value) => value !== action);
+      });
+      return { ...current, accessRules };
+    });
   };
 
   return (
@@ -701,10 +908,9 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
         ))}
       </nav>
 
-      <div className="admin-hr-hub__body">
+      <div className={`admin-hr-hub__body${showDepartmentCreator ? ' is-department-page' : ''}${showAddRole || roleModal?.mode === 'edit' ? ' is-role-page' : ''}${employeeModal ? ' is-employee-page' : ''}`}>
         {loading ? <p className="admin-hr-hub__muted">Loading…</p> : null}
         {error ? <p className="admin-hr-hub__error">{error}</p> : null}
-        {notice ? <p className="admin-hr-hub__notice">{notice}</p> : null}
 
         {tab === 'employees' && !loading ? (
           <section className="admin-hr-hub__section">
@@ -738,7 +944,14 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                   </label>
                   <label>
                     Role
-                    <select value={empForm.roleId} onChange={(e) => setEmpForm({ ...empForm, roleId: e.target.value })} required>
+                    <select
+                      value={empForm.roleId}
+                      onChange={(e) => {
+                        const role = roles.find((item) => item.id === e.target.value);
+                        setEmpForm({ ...empForm, roleId: e.target.value, department: role?.department ?? empForm.department });
+                      }}
+                      required
+                    >
                       {roles.map((role) => (
                         <option key={role.id} value={role.id}>
                           {role.name}
@@ -752,7 +965,12 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                   </label>
                   <label>
                     Department
-                    <input value={empForm.department} onChange={(e) => setEmpForm({ ...empForm, department: e.target.value })} />
+                    <select value={empForm.department} onChange={(e) => setEmpForm({ ...empForm, department: e.target.value })} required>
+                      <option value="">Select department</option>
+                      {employeeDepartmentOptions.map((department) => (
+                        <option key={department} value={department}>{department}</option>
+                      ))}
+                    </select>
                   </label>
                   <label>
                     Start date
@@ -804,7 +1022,10 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                         </span>
                       </td>
                       <td>
-                        <RoleIconButton label="Edit employee" kind="edit" onClick={() => openEmployeeEdit(emp)} />
+                        <div className="admin-hr-hub__role-card-v2__actions">
+                          <RoleIconButton label="Edit employee" kind="edit" onClick={() => openEmployeeEdit(emp)} />
+                          <RoleIconButton label="Delete employee" kind="delete" onClick={() => setEmployeePendingDelete(emp)} />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -815,6 +1036,75 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                       </td>
                     </tr>
                   ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        {tab === 'access' && !loading ? (
+          <section className="admin-hr-hub__section">
+            <div className="admin-hr-hub__section-head">
+              <div className="admin-hr-hub__section-title">
+                <h3>Admin user management</h3>
+                <p className="admin-hr-hub__section-sub">People permitted to sign in to the Lavey admin dashboard.</p>
+              </div>
+              <button type="button" className="admin-hr-hub__btn admin-hr-hub__btn--primary" onClick={() => setShowInviteOperator((value) => !value)}>
+                {showInviteOperator ? 'Cancel' : '+ Onboard employee'}
+              </button>
+            </div>
+            {showInviteOperator ? (
+              <form className="admin-hr-hub__form" onSubmit={(event) => { event.preventDefault(); void handleInviteOperator(); }}>
+                <div className="admin-hr-hub__form-grid">
+                  <label>Full name<input required value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} /></label>
+                  <label>Email address<input required type="email" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} /></label>
+                  <label>Dashboard role<select required value={inviteForm.roleId} onChange={(e) => setInviteForm({ ...inviteForm, roleId: e.target.value })}><option value="">Select role</option>{roles.filter((role) => role.isActive).map((role) => <option key={role.id} value={role.id}>{role.name} — {role.department}</option>)}</select></label>
+                </div>
+                <p className="admin-hr-hub__section-sub">They will receive a secure seven-day link to create their password and complete their employee profile.</p>
+                <button type="submit" className="admin-hr-hub__btn admin-hr-hub__btn--primary">Send onboarding invitation</button>
+              </form>
+            ) : null}
+            <div className="admin-hr-hub__section-head">
+              <input className="admin-hr-hub__search" placeholder="Search admin users…" value={operatorSearch} onChange={(e) => setOperatorSearch(e.target.value)} />
+              <span className="admin-hr-hub__section-sub">{operators.length} dashboard users</span>
+            </div>
+            <div className="admin-hr-hub__table-wrap">
+              <table className="admin-hr-hub__table">
+                <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {operators.filter((operator) => `${operator.name} ${operator.email} ${operator.roleName}`.toLowerCase().includes(operatorSearch.toLowerCase())).map((operator) => {
+                    const pendingInvite = operator.status === 'invited' || operator.status === 'in_progress';
+                    return (
+                    <tr key={operator.id}>
+                      <td><strong>{operator.name}</strong><span>{operator.employeeId ? 'Employee linked' : 'Onboarding pending'}</span></td>
+                      <td>{operator.email}</td>
+                      <td>{operator.roleName}</td>
+                      <td><span className={`admin-hr-hub__pill admin-hr-hub__pill--${operator.status.replace('_', '-')}`}>{operator.status.replace('_', ' ')}</span></td>
+                      <td>{operator.lastLoginAt ? new Date(operator.lastLoginAt).toLocaleString('en-ZA') : '—'}</td>
+                      <td>
+                        {pendingInvite ? (
+                          <div className="admin-hr-hub__row-actions">
+                            <button
+                              type="button"
+                              className="admin-hr-hub__btn"
+                              disabled={resendingInviteId === operator.id}
+                              onClick={() => void handleResendInvite(operator)}
+                            >
+                              {resendingInviteId === operator.id ? 'Resending…' : 'Resend'}
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-hr-hub__btn admin-hr-hub__btn--danger"
+                              onClick={() => setInvitePendingDelete(operator)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ) : null}
+                      </td>
+                    </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -836,49 +1126,62 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
             </div>
 
             {showAddRole ? (
-              <form
-                className="admin-hr-hub__form admin-hr-hub__form--role-create"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void handleAddRole();
-                }}
-              >
-                <div className="admin-hr-hub__form-grid">
-                  <label>
-                    Role name
-                    <input value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} required />
-                  </label>
-                  <label>
-                    Department
-                    <input value={roleForm.department} onChange={(e) => setRoleForm({ ...roleForm, department: e.target.value })} required />
-                  </label>
-                  <label className="admin-hr-hub__form-span">
-                    Description
-                    <textarea rows={2} value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
-                  </label>
+              <div className="admin-role-page-shell">
+                <div className="admin-role-page admin-hr-hub__role-modal--edit" aria-labelledby="create-role-title">
+                  <header className="admin-hr-hub__role-modal__head">
+                    <div><span className="admin-hr-hub__role-dept admin-hr-hub__role-dept--lg">Access control</span><h3 id="create-role-title">Create role</h3></div>
+                    <button type="button" className="admin-role-page__back" onClick={() => setShowAddRole(false)}>← Back to roles</button>
+                  </header>
+                  <form className="admin-hr-hub__role-modal__body" onSubmit={(e) => { e.preventDefault(); void handleAddRole(); }}>
+                    <div className="admin-hr-hub__form-grid">
+                      <label>Role name<input value={roleForm.name} onChange={(e) => setRoleForm({ ...roleForm, name: e.target.value })} required /></label>
+                      <label>Department
+                        <div className="admin-role-department-field">
+                          <select value={roleForm.department} onChange={(e) => setRoleForm({ ...roleForm, department: e.target.value })} required>
+                            <option value="">Select department</option>
+                            {departments.map((department) => <option key={department.id} value={department.name}>{department.name}</option>)}
+                          </select>
+                          <button type="button" onClick={() => { setError(''); setShowDepartmentCreator(true); setShowAddRole(false); }}>+ Create department</button>
+                        </div>
+                      </label>
+                      <label className="admin-hr-hub__form-span">Description<textarea rows={2} value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} /></label>
+                    </div>
+                    <div className="admin-access-matrix">
+                      <div><strong>Navigation permissions</strong><p>Select what this role can do on every dashboard page.</p></div>
+                      <div className="admin-access-matrix__scroll"><table>
+                        <thead><tr><th>Navigation page</th>{ADMIN_PERMISSION_ACTIONS.map((action) => <th key={action}><label className="admin-access-matrix__select-all"><input type="checkbox" aria-label={`Select all ${action} permissions`} checked={ADMIN_PERMISSION_PAGES.every((page) => (roleForm.accessRules[page.id] ?? []).includes(action))} onChange={() => toggleCreateAccessColumn(action)} /><span>{action}</span></label></th>)}</tr></thead>
+                        <tbody>{ADMIN_PERMISSION_PAGES.map((page) => <tr key={page.id}>
+                          <td><strong>{page.label}</strong><span>{page.menu}</span></td>
+                          {ADMIN_PERMISSION_ACTIONS.map((action) => <td key={action}><input type="checkbox" aria-label={`${page.label}: ${action}`} checked={(roleForm.accessRules[page.id] ?? []).includes(action)} onChange={() => toggleCreateAccessRule(page.id, action)} /></td>)}
+                        </tr>)}</tbody>
+                      </table></div>
+                    </div>
+                    <div className="admin-hr-hub__role-modal__actions">
+                      <button type="button" className="admin-hr-hub__btn" onClick={() => setShowAddRole(false)}>Cancel</button>
+                      <button type="submit" className="admin-hr-hub__btn admin-hr-hub__btn--primary">Create role</button>
+                    </div>
+                  </form>
                 </div>
-                <div className="admin-hr-hub__perms">
-                  <span>Permissions</span>
-                  <div>
-                    {PERMISSION_OPTIONS.map((perm) => (
-                      <button
-                        key={perm}
-                        type="button"
-                        className={roleForm.permissions.includes(perm) ? 'is-on' : ''}
-                        onClick={() => togglePermission(perm)}
-                      >
-                        {perm}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button type="submit" className="admin-hr-hub__btn admin-hr-hub__btn--primary">
-                  Create role
-                </button>
-              </form>
+              </div>
             ) : null}
 
-            <div className="admin-hr-hub__roles-grid">
+            <div className="admin-hr-hub__table-wrap">
+              <table className="admin-hr-hub__table">
+                <thead><tr><th>Role</th><th>Description</th><th>Users</th><th>Access</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>{roles.map((role) => (
+                  <tr key={role.id}>
+                    <td><strong>{role.name}</strong><span>{role.department} · {role.slug}</span></td>
+                    <td>{role.description || 'No description'}</td>
+                    <td>{role.employeeCount}</td>
+                    <td>{Object.keys(role.accessRules ?? {}).length ? `${Object.keys(role.accessRules).length} modules configured` : role.permissions.join(' · ') || 'No access configured'}</td>
+                    <td><span className={`admin-hr-hub__pill admin-hr-hub__pill--${role.isActive ? 'active' : 'inactive'}`}>{role.isActive ? 'Active' : 'Inactive'}</span></td>
+                    <td><div className="admin-hr-hub__role-card-v2__actions"><RoleIconButton label="View role" kind="view" onClick={() => openRoleView(role)} /><RoleIconButton label="Edit access matrix" kind="edit" onClick={() => openRoleEdit(role)} /><RoleIconButton label="Delete role" kind="delete" onClick={() => void handleDeleteRole(role)} /></div></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+
+            <div className="admin-hr-hub__roles-grid admin-hr-hub__roles-grid--legacy">
               {roles.map((role) => (
                 <article
                   key={role.id}
@@ -923,11 +1226,11 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
             </div>
 
             {roleModal ? (
-              <div className="admin-hr-hub__role-modal-backdrop" role="presentation" onClick={() => setRoleModal(null)}>
+              <div className={roleModal.mode === 'edit' ? 'admin-role-page-shell' : 'admin-hr-hub__role-modal-backdrop'} role={roleModal.mode === 'view' ? 'presentation' : undefined} onClick={() => roleModal.mode === 'view' && setRoleModal(null)}>
                 <div
-                  className={`admin-hr-hub__role-modal admin-hr-hub__role-modal--${roleModal.mode}`}
-                  role="dialog"
-                  aria-modal="true"
+                  className={roleModal.mode === 'edit' ? 'admin-role-page admin-hr-hub__role-modal--edit' : 'admin-hr-hub__role-modal admin-hr-hub__role-modal--view'}
+                  role={roleModal.mode === 'view' ? 'dialog' : undefined}
+                  aria-modal={roleModal.mode === 'view' ? true : undefined}
                   aria-labelledby="role-modal-title"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -936,7 +1239,7 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                       <span className={`admin-hr-hub__role-dept admin-hr-hub__role-dept--lg`}>{roleModal.role.department}</span>
                       <h3 id="role-modal-title">{roleModal.mode === 'view' ? roleModal.role.name : 'Edit role'}</h3>
                     </div>
-                    <button type="button" className="admin-hr-hub__role-modal__close" aria-label="Close" onClick={() => setRoleModal(null)}>
+                    <button type="button" className={roleModal.mode === 'edit' ? 'admin-role-page__back' : 'admin-hr-hub__role-modal__close'} aria-label={roleModal.mode === 'edit' ? 'Back to roles' : 'Close'} onClick={() => setRoleModal(null)}>
                       ×
                     </button>
                   </header>
@@ -1009,28 +1312,48 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                           Role name
                           <input value={editRoleForm.name} onChange={(e) => setEditRoleForm({ ...editRoleForm, name: e.target.value })} required />
                         </label>
-                        <label>
-                          Department
-                          <input value={editRoleForm.department} onChange={(e) => setEditRoleForm({ ...editRoleForm, department: e.target.value })} required />
+                        <label>Department
+                          <div className="admin-role-department-field">
+                            <select value={editRoleForm.department} onChange={(e) => setEditRoleForm({ ...editRoleForm, department: e.target.value })} required>
+                              <option value="">Select department</option>
+                              {departments.map((department) => <option key={department.id} value={department.name}>{department.name}</option>)}
+                            </select>
+                            <button type="button" onClick={() => { setError(''); setShowDepartmentCreator(true); }}>+ Create department</button>
+                          </div>
                         </label>
                         <label className="admin-hr-hub__form-span">
                           Description
                           <textarea rows={3} value={editRoleForm.description} onChange={(e) => setEditRoleForm({ ...editRoleForm, description: e.target.value })} />
                         </label>
                       </div>
-                      <div className="admin-hr-hub__perms">
-                        <span>Permissions</span>
+                      <div className="admin-access-matrix">
                         <div>
-                          {PERMISSION_OPTIONS.map((perm) => (
-                            <button
-                              key={perm}
-                              type="button"
-                              className={editRoleForm.permissions.includes(perm) ? 'is-on' : ''}
-                              onClick={() => toggleEditPermission(perm)}
-                            >
-                              {perm}
-                            </button>
-                          ))}
+                          <strong>Permissions matrix</strong>
+                          <p>Pages come from the dashboard side navigation. New shortcut menus are added here automatically.</p>
+                        </div>
+                        <div className="admin-access-matrix__scroll">
+                          <table>
+                            <thead>
+                              <tr><th>Navigation page</th>{ADMIN_PERMISSION_ACTIONS.map((action) => <th key={action}><label className="admin-access-matrix__select-all"><input type="checkbox" aria-label={`Select all ${action} permissions`} checked={ADMIN_PERMISSION_PAGES.every((page) => (editRoleForm.accessRules[page.id] ?? []).includes(action))} onChange={() => toggleEditAccessColumn(action)} /><span>{action}</span></label></th>)}</tr>
+                            </thead>
+                            <tbody>
+                              {ADMIN_PERMISSION_PAGES.map((page) => (
+                                <tr key={page.id}>
+                                  <td><strong>{page.label}</strong><span>{page.menu}</span></td>
+                                  {ADMIN_PERMISSION_ACTIONS.map((action) => (
+                                    <td key={action}>
+                                      <input
+                                        type="checkbox"
+                                        aria-label={`${page.label}: ${action}`}
+                                        checked={(editRoleForm.accessRules[page.id] ?? []).includes(action)}
+                                        onChange={() => toggleAccessRule(page.id, action)}
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                       <div className="admin-hr-hub__role-modal__actions">
@@ -1073,6 +1396,18 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                 {showAddLeave ? 'Cancel' : '+ New leave request'}
               </button>
             </div>
+
+            <div className="admin-hr-hub__section-title admin-hr-hub__section-title--sub">
+              <h3>Company off days</h3>
+              <p className="admin-hr-hub__section-sub">
+                Set global non-working days (public holidays, company shutdowns). These apply to every employee.
+              </p>
+            </div>
+            <AdminHolidayCalendar
+              holidays={holidays}
+              onAdd={handleAddHoliday}
+              onRemove={handleRemoveHoliday}
+            />
 
             <div className="admin-hr-hub__filters">
               {(['all', 'pending', 'approved', 'rejected'] as const).map((status) => (
@@ -1228,7 +1563,47 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                   void handleAddClaim();
                 }}
               >
-                <div className="admin-hr-hub__doc-upload admin-hr-hub__form-span">
+                <div className="admin-hr-hub__form-grid">
+                  <label>
+                    Invoice source
+                    <select value={claimInvoiceSource} onChange={(e) => {
+                      const source = e.target.value as 'internal' | 'external';
+                      setClaimInvoiceSource(source);
+                      if (source === 'external') setSelectedCompanyInvoiceId('');
+                    }}>
+                      <option value="internal">Internal company invoice</option>
+                      <option value="external">External uploaded invoice</option>
+                    </select>
+                  </label>
+                  {claimInvoiceSource === 'internal' ? (
+                    <label>
+                      Company invoice
+                      <select required value={selectedCompanyInvoiceId} onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedCompanyInvoiceId(id);
+                        const selectedInvoice = companyInvoices.find((invoice) => invoice.id === id);
+                        if (selectedInvoice) {
+                          setClaimForm((current) => ({
+                            ...current,
+                            title: `${selectedInvoice.vendor} — ${selectedInvoice.invoiceNumber}`,
+                            description: selectedInvoice.description,
+                            amount: String(selectedInvoice.amount),
+                            startDate: selectedInvoice.invoiceDate,
+                          }));
+                        }
+                      }}>
+                        <option value="">Select submitted invoice</option>
+                        {companyInvoices.map((invoice) => (
+                          <option key={invoice.id} value={invoice.id}>
+                            {invoice.invoiceNumber} — {invoice.vendor} — {formatMoney(invoice.amount, invoice.currency)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+                </div>
+
+                {claimInvoiceSource === 'external' ? <div className="admin-hr-hub__doc-upload admin-hr-hub__form-span">
                   <div className="admin-hr-hub__doc-upload-head">
                     <div>
                       <strong>Supporting document</strong>
@@ -1282,7 +1657,7 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                       Remove document
                     </button>
                   ) : null}
-                </div>
+                </div> : null}
 
                 <div className="admin-hr-hub__form-grid">
                   <label>
@@ -1348,6 +1723,9 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                       {claim.documentAnalysis?.documentType ? ` · ${claim.documentAnalysis.documentType}` : ''}
                     </p>
                   ) : null}
+                  {claim.companyInvoiceNumber ? (
+                    <p className="admin-hr-hub__claim-doc">Internal invoice: {claim.companyInvoiceNumber}</p>
+                  ) : null}
                   <div className="admin-hr-hub__claim-meta">
                     {claim.startDate ? <span>{claim.startDate}{claim.endDate ? ` → ${claim.endDate}` : ''}</span> : null}
                     {claim.daysRequested ? <span>{claim.daysRequested} days</span> : null}
@@ -1374,20 +1752,34 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
         ) : null}
       </div>
 
+      {showDepartmentCreator ? (
+        <div className="admin-department-page-shell">
+          <form className="admin-department-page" onSubmit={(e) => { e.preventDefault(); void handleCreateDepartment(); }}>
+            <div><span>Company structure</span><h3>Create department</h3><p>The new department becomes available for roles and employee onboarding.</p></div>
+            <label>Department name<input autoFocus required disabled={creatingDepartment} value={newDepartmentName} onChange={(e) => setNewDepartmentName(e.target.value)} placeholder="e.g. Legal & Compliance" /></label>
+            {error ? <p className="admin-department-page__error" role="alert">{error}</p> : null}
+            <div>
+              <button type="button" className="admin-hr-hub__btn" disabled={creatingDepartment} onClick={closeDepartmentCreator}>Cancel</button>
+              <button type="submit" className="admin-hr-hub__btn admin-hr-hub__btn--primary" disabled={creatingDepartment || !newDepartmentName.trim()}>
+                {creatingDepartment ? <><LogoLoader size="sm" label="Creating department" /> Creating…</> : 'Create department'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
       {employeeModal ? (
-        <div className="admin-hr-hub__role-modal-backdrop" role="presentation" onClick={() => setEmployeeModal(null)}>
+        <div className="admin-employee-page-shell">
           <div
-            className="admin-hr-hub__role-modal admin-hr-hub__role-modal--edit"
-            role="dialog"
+            className="admin-employee-page admin-hr-hub__role-modal--edit"
             aria-labelledby="employee-modal-title"
-            onClick={(e) => e.stopPropagation()}
           >
             <header className="admin-hr-hub__role-modal__head">
               <div>
                 <span className="admin-hr-hub__role-dept admin-hr-hub__role-dept--lg">{employeeModal.department}</span>
                 <h3 id="employee-modal-title">Edit {employeeModal.fullName}</h3>
               </div>
-              <button type="button" className="admin-hr-hub__role-modal__close" aria-label="Close" onClick={() => setEmployeeModal(null)}>
+              <button type="button" className="admin-employee-page__back" aria-label="Back to employees" onClick={() => setEmployeeModal(null)}>
                 ×
               </button>
             </header>
@@ -1413,7 +1805,14 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                 </label>
                 <label>
                   Role
-                  <select value={editEmpForm.roleId} onChange={(e) => setEditEmpForm({ ...editEmpForm, roleId: e.target.value })} required>
+                  <select
+                    value={editEmpForm.roleId}
+                    onChange={(e) => {
+                      const role = roles.find((item) => item.id === e.target.value);
+                      setEditEmpForm({ ...editEmpForm, roleId: e.target.value, department: role?.department ?? editEmpForm.department });
+                    }}
+                    required
+                  >
                     {roles.map((role) => (
                       <option key={role.id} value={role.id}>
                         {role.name}
@@ -1427,7 +1826,15 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
                 </label>
                 <label>
                   Department
-                  <input value={editEmpForm.department} onChange={(e) => setEditEmpForm({ ...editEmpForm, department: e.target.value })} />
+                  <select value={editEmpForm.department} onChange={(e) => setEditEmpForm({ ...editEmpForm, department: e.target.value })} required>
+                    {!employeeDepartmentOptions.includes(editEmpForm.department) && editEmpForm.department ? (
+                      <option value={editEmpForm.department}>{editEmpForm.department}</option>
+                    ) : null}
+                    <option value="">Select department</option>
+                    {employeeDepartmentOptions.map((department) => (
+                      <option key={department} value={department}>{department}</option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Status
@@ -1470,6 +1877,44 @@ export function AdminHrHub({ initialTab, openExpenseUpload = false, onPendingCou
           </div>
         </div>
       ) : null}
+      {loading ? <AdminHeartLoader label="Loading company people data" overlay /> : null}
+      <AdminConfirmDialog
+        open={Boolean(rolePendingDelete)}
+        title="Delete role?"
+        message={rolePendingDelete ? `Are you sure you want to delete “${rolePendingDelete.name}”? This action cannot be undone.` : ''}
+        confirmLabel="Delete role"
+        tone="danger"
+        busy={deletingRole}
+        onCancel={() => setRolePendingDelete(null)}
+        onConfirm={() => void confirmDeleteRole()}
+      />
+      <AdminConfirmDialog
+        open={Boolean(employeePendingDelete)}
+        title="Delete employee?"
+        message={employeePendingDelete ? `Are you sure you want to delete ${employeePendingDelete.fullName}? Their employee record and related HR records will be removed.` : ''}
+        confirmLabel="Delete employee"
+        tone="danger"
+        busy={deletingEmployee}
+        onCancel={() => setEmployeePendingDelete(null)}
+        onConfirm={() => void confirmDeleteEmployee()}
+      />
+      <AdminConfirmDialog
+        open={Boolean(invitePendingDelete)}
+        title="Delete invitation?"
+        message={invitePendingDelete ? `Are you sure you want to delete the pending invitation for ${invitePendingDelete.name}? Their onboarding link will stop working.` : ''}
+        confirmLabel="Delete invitation"
+        tone="danger"
+        busy={deletingInvite}
+        onCancel={() => setInvitePendingDelete(null)}
+        onConfirm={() => void confirmDeleteInvite()}
+      />
+      <AdminNotificationModal
+        open={Boolean(notice)}
+        message={notice}
+        tone="success"
+        autoCloseMs={4000}
+        onClose={() => setNotice('')}
+      />
     </section>
   );
 }

@@ -51,6 +51,20 @@ export interface HrOverview {
   monthlyPayroll: number;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface CompanyHoliday {
+  id: string;
+  date: string;
+  label: string;
+  createdAt: string;
+}
+
 export interface EmployeeRole {
   id: string;
   slug: string;
@@ -58,6 +72,7 @@ export interface EmployeeRole {
   description: string;
   department: string;
   permissions: string[];
+  accessRules: Record<string, string[]>;
   isActive: boolean;
   employeeCount: number;
 }
@@ -124,6 +139,8 @@ export interface EmployeeClaim {
   attachmentFileName: string | null;
   attachmentMimeType: string | null;
   documentAnalysis: HrDocumentAnalysis | null;
+  companyInvoiceId: string | null;
+  companyInvoiceNumber: string | null;
 }
 
 function adminHeaders(): HeadersInit {
@@ -184,6 +201,13 @@ async function adminFormRequest<T>(path: string, formData: FormData): Promise<T>
 }
 
 export const adminHrService = {
+  listDepartments(): Promise<Department[]> {
+    return adminRequest<ApiResponse<Department[]>>('GET', API_ENDPOINTS.admin.hrDepartments).then((r) => r.data);
+  },
+
+  createDepartment(input: { name: string; description?: string }): Promise<Department> {
+    return adminRequest<ApiResponse<Department>>('POST', API_ENDPOINTS.admin.hrDepartments, input).then((r) => r.data);
+  },
   getOverview(): Promise<HrOverview> {
     return adminRequest<ApiResponse<HrOverview>>('GET', API_ENDPOINTS.admin.hrOverview).then((r) => r.data);
   },
@@ -197,6 +221,7 @@ export const adminHrService = {
     description?: string;
     department: string;
     permissions?: string[];
+    accessRules?: Record<string, string[]>;
   }): Promise<EmployeeRole> {
     return adminRequest<ApiResponse<EmployeeRole>>('POST', API_ENDPOINTS.admin.hrRoles, input).then((r) => r.data);
   },
@@ -208,6 +233,7 @@ export const adminHrService = {
       description: string;
       department: string;
       permissions: string[];
+      accessRules: Record<string, string[]>;
       isActive: boolean;
     }>,
   ): Promise<EmployeeRole> {
@@ -260,6 +286,10 @@ export const adminHrService = {
     );
   },
 
+  deleteEmployee(id: string): Promise<void> {
+    return adminRequest<ApiResponse<{ id: string }>>('DELETE', API_ENDPOINTS.admin.hrEmployeeById(id)).then(() => undefined);
+  },
+
   listClaims(status?: ClaimStatus): Promise<EmployeeClaim[]> {
     return adminRequest<ApiResponse<EmployeeClaim[]>>(
       'GET',
@@ -281,6 +311,7 @@ export const adminHrService = {
     attachmentFileName?: string;
     attachmentMimeType?: string;
     documentAnalysis?: HrDocumentAnalysis;
+    companyInvoiceId?: string;
   }): Promise<EmployeeClaim> {
     return adminRequest<ApiResponse<EmployeeClaim>>('POST', API_ENDPOINTS.admin.hrClaims, input).then((r) => r.data);
   },
@@ -300,5 +331,17 @@ export const adminHrService = {
       status,
       adminNotes,
     }).then((r) => r.data);
+  },
+
+  listHolidays(): Promise<CompanyHoliday[]> {
+    return adminRequest<ApiResponse<CompanyHoliday[]>>('GET', API_ENDPOINTS.admin.hrHolidays).then((r) => r.data);
+  },
+
+  createHoliday(input: { date: string; label?: string }): Promise<CompanyHoliday> {
+    return adminRequest<ApiResponse<CompanyHoliday>>('POST', API_ENDPOINTS.admin.hrHolidays, input).then((r) => r.data);
+  },
+
+  deleteHoliday(id: string): Promise<void> {
+    return adminRequest<ApiResponse<{ id: string }>>('DELETE', API_ENDPOINTS.admin.hrHolidayById(id)).then(() => undefined);
   },
 };

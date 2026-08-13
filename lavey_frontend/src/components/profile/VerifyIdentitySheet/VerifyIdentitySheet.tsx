@@ -93,11 +93,27 @@ export function VerifyIdentitySheet({
     void completeVerification();
   }, [completeVerification]);
 
-  const handleMatchFail = useCallback((message: string, result: FaceCompareResult | null) => {
-    setFailMessage(message);
-    setMatchResult(result);
-    setStep('fail');
-  }, []);
+  const handleMatchFail = useCallback(
+    (message: string, result: FaceCompareResult | null) => {
+      setFailMessage(message);
+      setMatchResult(result);
+      setStep('fail');
+
+      if (referenceUrl && liveUrl) {
+        void verificationService
+          .submitForManualReview(referenceUrl, liveUrl)
+          .then(() => {
+            setFailMessage(
+              `${message} Our team has been notified and will review your photos manually.`,
+            );
+          })
+          .catch(() => {
+            /* Keep the original face-match message if the queue submit fails. */
+          });
+      }
+    },
+    [referenceUrl, liveUrl],
+  );
 
   const completeAfterSuccess = () => {
     onVerify();

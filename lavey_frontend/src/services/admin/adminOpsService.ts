@@ -12,6 +12,12 @@ export interface CommandOverview {
   pendingHrItems: number;
   activeAlgorithm: string | null;
   revenueAttributed30d: string;
+  websiteVisits: number;
+  websiteUniqueVisitors: number;
+  websiteDownloads: number;
+  websiteReferralVisits: number;
+  websiteReferredDownloads: number;
+  recentWebsiteDownloads: Array<{ id: string; visitorId: string; source: string; referralCode: string | null; downloadedAt: string }>;
 }
 
 export interface ActivityItem {
@@ -66,6 +72,11 @@ export interface AnalyticsSummary {
   monthlyRevenue: Array<{ month: string; amount: number }>;
   monthlyEngagement: Array<{ month: string; activeUsers: number; avgHours: number }>;
   dailyNewUsers: Array<{ day: number; users: number }>;
+}
+export interface AccessMode {
+  mode: 'premium_enabled' | 'all_free';
+  allFree: boolean;
+  updatedAt: string | null;
 }
 
 function adminHeaders(): HeadersInit {
@@ -123,6 +134,13 @@ function formatActivityTime(iso: string): string {
 }
 
 export const adminOpsService = {
+  getAccessMode(): Promise<AccessMode> {
+    return adminRequest<ApiResponse<AccessMode>>('GET', API_ENDPOINTS.admin.opsAccessMode).then((r) => r.data);
+  },
+
+  updateAccessMode(mode: AccessMode['mode']): Promise<AccessMode> {
+    return adminRequest<ApiResponse<AccessMode>>('PATCH', API_ENDPOINTS.admin.opsAccessMode, { mode }).then((r) => r.data);
+  },
   getCommandOverview(): Promise<CommandOverview> {
     return adminRequest<ApiResponse<CommandOverview>>('GET', API_ENDPOINTS.admin.opsOverview).then((r) => r.data);
   },

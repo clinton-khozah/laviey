@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import './EmailVerificationForm.css';
 
 export interface EmailVerificationFormProps {
@@ -24,90 +24,24 @@ export function EmailVerificationForm({
   statusMessage,
   errorMessage,
 }: EmailVerificationFormProps) {
-  const [digits, setDigits] = useState<string[]>(() => Array(CODE_LENGTH).fill(''));
+  const [code, setCode] = useState('');
   const [boxError, setBoxError] = useState(false);
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // A wrong/expired code should clear the boxes and put focus back on the first
-  // one so re-entering a fresh code doesn't require manually deleting each digit.
+  // A wrong/expired code should clear the field and put focus back on it so
+  // re-entering a fresh code doesn't require manually deleting the old one.
   useEffect(() => {
     if (!errorMessage) return;
     setBoxError(true);
-    setDigits(Array(CODE_LENGTH).fill(''));
+    setCode('');
     window.requestAnimationFrame(() => {
-      inputRefs.current[0]?.focus();
+      inputRef.current?.focus();
     });
   }, [errorMessage]);
 
-  const code = digits.join('');
-
-  const focusBox = (index: number) => {
-    inputRefs.current[index]?.focus();
-    inputRefs.current[index]?.select();
-  };
-
-  const handleChange = (index: number, rawValue: string) => {
+  const handleChange = (rawValue: string) => {
     setBoxError(false);
-    const value = rawValue.replace(/\D/g, '');
-    if (!value) {
-      setDigits((prev) => {
-        const next = [...prev];
-        next[index] = '';
-        return next;
-      });
-      return;
-    }
-
-    setDigits((prev) => {
-      const next = [...prev];
-      const chars = value.split('');
-      let cursor = index;
-      for (const char of chars) {
-        if (cursor >= CODE_LENGTH) break;
-        next[cursor] = char;
-        cursor += 1;
-      }
-      window.requestAnimationFrame(() => focusBox(Math.min(cursor, CODE_LENGTH - 1)));
-      return next;
-    });
-  };
-
-  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      if (digits[index]) {
-        setDigits((prev) => {
-          const next = [...prev];
-          next[index] = '';
-          return next;
-        });
-        return;
-      }
-      if (index > 0) {
-        e.preventDefault();
-        setDigits((prev) => {
-          const next = [...prev];
-          next[index - 1] = '';
-          return next;
-        });
-        focusBox(index - 1);
-      }
-      return;
-    }
-    if (e.key === 'ArrowLeft' && index > 0) {
-      e.preventDefault();
-      focusBox(index - 1);
-    }
-    if (e.key === 'ArrowRight' && index < CODE_LENGTH - 1) {
-      e.preventDefault();
-      focusBox(index + 1);
-    }
-  };
-
-  const handlePaste = (index: number, e: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '');
-    if (!pasted) return;
-    e.preventDefault();
-    handleChange(index, pasted);
+    setCode(rawValue.replace(/\D/g, '').slice(0, CODE_LENGTH));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -131,30 +65,23 @@ export function EmailVerificationForm({
 
       <div className="email-verify__field">
         <span className="email-verify__label">Verification code</span>
-        <div className="email-verify__boxes" role="group" aria-label="Verification code">
-          {digits.map((digit, index) => (
-            <input
-              key={index}
-              ref={(el) => {
-                inputRefs.current[index] = el;
-              }}
-              type="text"
-              inputMode="numeric"
-              autoComplete={index === 0 ? 'one-time-code' : 'off'}
-              pattern="[0-9]*"
-              maxLength={CODE_LENGTH}
-              className={`email-verify__box${boxError ? ' email-verify__box--error' : ''}`}
-              value={digit}
-              onChange={(e) => handleChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              onPaste={(e) => handlePaste(index, e)}
-              onFocus={(e) => e.target.select()}
-              required
-              disabled={disabled}
-              aria-label={`Digit ${index + 1}`}
-            />
-          ))}
-        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          pattern="[0-9]*"
+          maxLength={CODE_LENGTH}
+          className={`email-verify__input${boxError ? ' email-verify__input--error' : ''}`}
+          value={code}
+          onChange={(e) => handleChange(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          placeholder={'•'.repeat(CODE_LENGTH)}
+          required
+          disabled={disabled}
+          autoFocus
+          aria-label="Verification code"
+        />
       </div>
 
       {boxError && errorMessage && (

@@ -9,6 +9,7 @@ import {
 import { ErrorPage } from "@/features/errors";
 import { SubscriptionResultPage } from "@/features/subscription";
 import { AdminDashboardPage, AdminLoginPage } from "@/features/admin";
+import { AdminOnboardingPage } from "@/features/admin/pages/AdminOnboardingPage/AdminOnboardingPage";
 import { adminAuthService } from "@/services/admin/adminAuthService";
 import { useAuth } from "@/hooks";
 import {
@@ -24,6 +25,7 @@ import { hasOAuthReturnParams } from "@/utils/auth/oauthCallbackState";
 import { applyThemeToDocument, loadTheme } from "@/utils/theme/themeStorage";
 import { useEffect, useState } from "react";
 import { SignInRequiredPrompt } from "@/components/auth/SignInRequiredPrompt/SignInRequiredPrompt";
+import { LandingPage } from "@/features/landing";
 
 const ADMIN_ROOT_PATH = "/admin/19990808";
 const ADMIN_LOGIN_PATH = "/admin/19990808/adminlogin";
@@ -41,6 +43,7 @@ function App() {
 
   const isAdminRoute = path.startsWith(ADMIN_ROOT_PATH);
   const isAdminLoginRoute = path === ADMIN_LOGIN_PATH;
+  const isAdminOnboardingRoute = path === `${ADMIN_ROOT_PATH}/onboard`;
   const [adminSignedIn, setAdminSignedIn] = useState(false);
   const [adminAuthLoading, setAdminAuthLoading] = useState(() =>
     window.location.pathname.startsWith(ADMIN_ROOT_PATH),
@@ -128,6 +131,8 @@ function App() {
     content = <SubscriptionResultPage variant="cancel" onNavigate={navigateTo} />;
   } else if (path === "/auth/callback" || hasOAuthReturnParams()) {
     content = <AuthCallbackPage />;
+  } else if (isAdminOnboardingRoute) {
+    content = <AdminOnboardingPage onComplete={() => navigateTo(ADMIN_LOGIN_PATH)} />;
   } else if (isAdminRoute) {
     if (adminAuthLoading) {
       content = <AppLoader />;
@@ -155,6 +160,8 @@ function App() {
     }
   } else if (isLoading) {
     content = <AppLoader />;
+  } else if (!isAuthenticated && path === "/") {
+    content = <LandingPage />;
   } else if (!isAuthenticated) {
     content = <AuthPage />;
   } else if (needsOnboardingQuiz) {

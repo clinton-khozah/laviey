@@ -211,6 +211,17 @@
   color: #0f172a;
 }
 
+.admin-hr-hub__section-title--sub {
+  margin-bottom: 10px;
+}
+
+.admin-hr-hub__section-title--sub h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 .admin-hr-hub__btn {
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -238,6 +249,12 @@
   background: #fff;
   border-color: #fca5a5;
   color: #dc2626;
+}
+
+.admin-hr-hub__row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .admin-hr-hub__form {
@@ -1028,4 +1045,692 @@
   margin: 0 0 8px;
   font-size: 11px;
   color: #2563eb;
+}
+
+.admin-access-matrix{display:grid;gap:12px;margin-top:20px}.admin-access-matrix p{margin:4px 0 0;color:#64748b;font-size:12px}.admin-access-matrix__scroll{overflow:auto;border:1px solid #e2e8f0;border-radius:12px}.admin-access-matrix table{width:100%;border-collapse:collapse;min-width:680px}.admin-access-matrix th,.admin-access-matrix td{padding:11px 12px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px}.admin-access-matrix th{background:#f8fafc;color:#64748b;text-transform:capitalize}.admin-access-matrix th:first-child,.admin-access-matrix td:first-child{text-align:left;font-weight:700;color:#0f172a}.admin-access-matrix input{width:17px;height:17px;accent-color:#ef476f}.admin-hr-hub__search{min-width:280px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff}
+.admin-access-matrix td:first-child span{display:block;margin-top:3px;color:#94a3b8;font-size:10px;font-weight:500}
+.admin-hr-hub__roles-grid--legacy{display:none}
+.admin-hr-hub__body.is-department-page{display:none}
+.admin-hr-hub__body.is-role-page .admin-hr-hub__section--roles>:not(.admin-role-page-shell){display:none}
+.admin-hr-hub__body.is-employee-page{display:none}.admin-employee-page-shell{width:100%;padding:18px 16px 28px;box-sizing:border-box}.admin-employee-page{width:100%;height:auto;min-height:calc(100vh - 210px);max-height:none;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.06);overflow:hidden}.admin-employee-page__back{border:1px solid #cbd5e1;border-radius:9px;padding:9px 12px;background:#fff;color:#475569;font-size:0;font-weight:700;cursor:pointer}.admin-employee-page__back::before{content:"← Back to employees";font-size:12px}
+.admin-role-page__back{font-size:0}.admin-role-page__back::before{content:"← Back to roles";font-size:12px}
+
+/* Compact role-access page: keep the full action matrix visible at normal desktop widths. */
+.admin-role-page .admin-hr-hub__role-modal__head {
+  padding: 14px 20px 10px;
+}
+
+.admin-role-page .admin-hr-hub__role-modal__head h3 {
+  font-size: 17px;
+}
+
+.admin-role-page .admin-hr-hub__role-modal__body {
+  padding: 12px 20px 0;
+}
+
+.admin-role-page .admin-hr-hub__form-grid {
+  gap: 10px 14px;
+  margin-bottom: 0;
+  padding: 12px 14px;
+}
+
+.admin-role-page .admin-hr-hub__form-grid > label {
+  gap: 4px;
+  font-size: 10px;
+}
+
+.admin-role-page .admin-hr-hub__form-grid input,
+.admin-role-page .admin-hr-hub__form-grid select {
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.admin-role-page .admin-hr-hub__form-grid textarea {
+  min-height: 48px;
+  padding: 7px 9px;
+  font-size: 11px;
+}
+
+.admin-role-page .admin-role-department-field {
+  gap: 6px;
+}
+
+.admin-role-page .admin-role-department-field button {
+  height: 34px;
+  padding: 0 9px;
+  font-size: 9px;
+}
+
+.admin-role-page .admin-access-matrix {
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.admin-role-page .admin-access-matrix p {
+  margin-top: 2px;
+  font-size: 10px;
+}
+
+.admin-role-page .admin-access-matrix table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.admin-role-page .admin-access-matrix th,
+.admin-role-page .admin-access-matrix td {
+  height: 30px;
+  padding: 4px 5px;
+  font-size: 9px;
+}
+
+.admin-role-page .admin-access-matrix th:first-child,
+.admin-role-page .admin-access-matrix td:first-child {
+  width: 31%;
+  padding-left: 9px;
+}
+
+.admin-role-page .admin-access-matrix th:not(:first-child),
+.admin-role-page .admin-access-matrix td:not(:first-child) {
+  width: 11.5%;
+}
+
+.admin-role-page .admin-access-matrix td:first-child span {
+  display: inline;
+  margin: 0 0 0 6px;
+  font-size: 8px;
+}
+
+.admin-role-page .admin-access-matrix input {
+  width: 13px;
+  height: 13px;
+}
+
+.admin-role-page .admin-access-matrix__select-all {
+  gap: 3px;
+}
+
+.admin-role-page .admin-access-matrix__select-all span {
+  font-size: 8px;
+}
+
+.admin-role-page .admin-hr-hub__role-modal__actions {
+  margin-top: 10px;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+/* Compact employee editor so the complete employment record fits comfortably. */
+.admin-employee-page {
+  min-height: 0;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__head {
+  padding: 13px 18px 10px;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__head h3 {
+  font-size: 17px;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__body {
+  padding: 14px 18px 0;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin: 0;
+  padding: 14px;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid > label {
+  gap: 4px;
+  font-size: 10px;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid input,
+.admin-employee-page .admin-hr-hub__form-grid select,
+.admin-employee-page .admin-hr-hub__form-grid textarea {
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid textarea {
+  min-height: 48px;
+}
+
+.admin-employee-page .admin-hr-hub__form-span {
+  grid-column: 1 / -1;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__actions {
+  margin-top: 10px;
+  padding: 10px 18px;
+}
+
+@media (max-width: 980px) {
+  .admin-employee-page .admin-hr-hub__form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-employee-page .admin-hr-hub__form-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-employee-page .admin-hr-hub__form-span {
+    grid-column: auto;
+  }
+}
+
+/* Employee editor: compact the layout, not the typography. */
+.admin-employee-page-shell {
+  padding: 0 0 16px;
+}
+
+.admin-employee-page {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__head {
+  padding: 12px 16px 9px;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__head h3 {
+  font-size: 19px;
+}
+
+.admin-employee-page .admin-hr-hub__role-dept {
+  font-size: 11px;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__body {
+  padding: 10px 16px 0;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
+  padding: 10px;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid > label {
+  gap: 4px;
+  font-size: 12px;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid input,
+.admin-employee-page .admin-hr-hub__form-grid select,
+.admin-employee-page .admin-hr-hub__form-grid textarea {
+  min-height: 36px;
+  padding: 6px 9px;
+  font-size: 13px;
+}
+
+.admin-employee-page .admin-hr-hub__form-grid textarea {
+  min-height: 42px;
+  max-height: 60px;
+}
+
+.admin-employee-page .admin-hr-hub__form-span {
+  grid-column: 1 / -1;
+}
+
+.admin-employee-page .admin-hr-hub__role-modal__actions {
+  margin-top: 8px;
+  padding: 8px 16px;
+}
+
+@media (max-width: 1050px) {
+  .admin-employee-page .admin-hr-hub__form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .admin-employee-page .admin-hr-hub__form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-employee-page .admin-hr-hub__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-role-page-shell,.admin-department-page-shell{width:100%;padding:18px 16px 28px;box-sizing:border-box}.admin-role-page{width:100%;height:auto;min-height:calc(100vh - 210px);max-height:none;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.06)}.admin-role-page__back{border:1px solid #cbd5e1;border-radius:9px;padding:9px 12px;background:#fff;color:#475569;font-size:12px;font-weight:700;cursor:pointer}.admin-department-page{max-width:760px;margin:0 auto;display:grid;gap:22px;padding:28px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(15,23,42,.06)}.admin-department-page>div:first-child span{color:#ef476f;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.admin-department-page h3{margin:6px 0;font-size:24px}.admin-department-page p{margin:0;color:#64748b;font-size:13px}.admin-department-page label{display:grid;gap:8px;color:#334155;font-size:12px;font-weight:700}.admin-department-page input{padding:12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}.admin-department-page>div:last-child{display:flex;justify-content:flex-end;gap:8px}
+.admin-access-matrix__select-all{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}.admin-access-matrix__select-all span{font-size:10px;font-weight:800;text-transform:capitalize}.admin-access-matrix__select-all input{margin:0}
+
+/* Editing a role opens a near full-screen permissions workspace. */
+.admin-hr-hub__role-modal--edit {
+  width: min(1480px, 96vw);
+  height: min(920px, 94vh);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__head {
+  flex: 0 0 auto;
+  padding: 22px 28px 16px;
+  background: #fff;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__body {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 22px 28px 0;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: none;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 15px;
+  background: #f8fafc;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid input,
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid select,
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  outline: none;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid input:focus,
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid select:focus,
+.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid textarea:focus {
+  border-color: #fb7185;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, .11);
+}
+
+.admin-role-department-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+}
+
+.admin-role-department-field button {
+  height: 40px;
+  padding: 0 13px;
+  border: 1px solid #fda4af;
+  border-radius: 9px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-hr-hub__department-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+.admin-hr-hub__department-modal {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+}
+
+.admin-hr-hub__department-modal span {
+  color: #ef476f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-hr-hub__department-modal h3 { margin: 5px 0; font-size: 21px; }
+.admin-hr-hub__department-modal p { margin: 0; color: #64748b; font-size: 12px; line-height: 1.5; }
+.admin-hr-hub__department-modal label { display: grid; gap: 7px; color: #334155; font-size: 12px; font-weight: 700; }
+.admin-hr-hub__department-modal input { padding: 11px 12px; border: 1px solid #cbd5e1; border-radius: 9px; font: inherit; }
+.admin-hr-hub__department-modal > div:last-child { display: flex; justify-content: flex-end; gap: 8px; }
+
+.admin-hr-hub__role-modal--edit .admin-access-matrix {
+  margin-top: 26px;
+}
+
+.admin-hr-hub__role-modal--edit .admin-access-matrix table {
+  min-width: 920px;
+}
+
+.admin-hr-hub__role-modal--edit .admin-access-matrix th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.admin-hr-hub__role-modal--edit .admin-access-matrix th,
+.admin-hr-hub__role-modal--edit .admin-access-matrix td {
+  padding: 13px 16px;
+}
+
+.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 24px -28px 0;
+  padding: 16px 28px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 720px) {
+  .admin-hr-hub__role-modal-backdrop { padding: 8px; }
+  .admin-hr-hub__role-modal--edit {
+    width: 100%;
+    height: 96vh;
+    max-height: 96vh;
+    border-radius: 16px;
+  }
+  .admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__head { padding: 16px; }
+  .admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__body { padding: 16px 16px 0; }
+  .admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid { grid-template-columns: 1fr; }
+  .admin-role-department-field { grid-template-columns: 1fr; }
+  .admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__actions {
+    margin: 20px -16px 0;
+    padding: 14px 16px;
+  }
+}
+
+/* Keep these employee editor rules after the generic role editor rules.
+   Compact the layout through columns and spacing, without shrinking text. */
+.admin-employee-page.admin-hr-hub__role-modal--edit {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  margin: 0 auto;
+  overflow: visible;
+  border-radius: 12px;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__head {
+  min-height: 0;
+  padding: 16px 20px 12px;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__head h3 {
+  margin-top: 4px;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__body {
+  padding: 14px 20px 18px;
+  overflow: visible;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid > label {
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit
+  .admin-hr-hub__form-grid
+  :is(input, select, textarea) {
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit
+  .admin-hr-hub__form-grid
+  textarea {
+  min-height: 62px;
+  resize: vertical;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__field--wide {
+  grid-column: 1 / -1;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__actions {
+  position: static;
+  margin: 14px 0 0;
+  padding: 14px 0 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-employee-page__back {
+  width: auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0;
+}
+
+.admin-employee-page.admin-hr-hub__role-modal--edit .admin-employee-page__back::before {
+  content: "Back to employees";
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-employee-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Authoritative Create/Edit role page sizing.
+   This must stay after the generic edit-modal matrix rules above. */
+.admin-role-page-shell {
+  padding: 0 0 16px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit {
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  border-radius: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__head {
+  padding: 14px 18px 10px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__head h3 {
+  font-size: 18px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__body {
+  padding: 12px 18px 16px;
+  overflow: visible;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid {
+  gap: 10px 14px;
+  padding: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-hr-hub__form-grid > label {
+  gap: 6px;
+  font-size: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit
+  .admin-hr-hub__form-grid
+  :is(input, select, textarea) {
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-role-department-field button {
+  height: 38px;
+  padding: 0 11px;
+  font-size: 11px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix {
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix p {
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix table {
+  width: 100%;
+  min-width: 680px;
+  table-layout: fixed;
+  font-size: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix th,
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix td {
+  height: 36px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix th:first-child,
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix td:first-child {
+  width: 34%;
+  padding-left: 12px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix th:not(:first-child),
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix td:not(:first-child) {
+  width: 11%;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix td:first-child span {
+  display: block;
+  margin: 2px 0 0;
+  font-size: 11px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix input {
+  width: 15px;
+  height: 15px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix__select-all {
+  gap: 4px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-access-matrix__select-all span {
+  font-size: 10px;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-hr-hub__role-modal__actions {
+  position: static;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-role-page__back {
+  font-size: 0;
+}
+
+.admin-role-page.admin-hr-hub__role-modal--edit .admin-role-page__back::before {
+  content: "\2190  Back to roles";
+  font-size: 12px;
+}
+
+.admin-department-page__error {
+  margin: -8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #fecdd3;
+  border-radius: 9px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-department-page button:disabled,
+.admin-department-page input:disabled {
+  cursor: not-allowed;
+  opacity: .68;
+}
+
+.admin-department-page .admin-hr-hub__btn--primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 142px;
+}
+
+.admin-department-page .admin-hr-hub__btn--primary .logo-loader__mark {
+  width: 18px;
+  height: 18px;
 }

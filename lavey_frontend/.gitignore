@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 
+# Large mobile build artifacts — deploy separately or set VITE_ANDROID_DOWNLOAD_URL
+public/downloads/*.apk
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

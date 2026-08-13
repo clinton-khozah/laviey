@@ -123,11 +123,11 @@ export const TOOL_PAGE_META: ToolPageMeta[] = [
   },
   {
     id: 'invoices',
-    label: 'Invoices',
-    sub: 'Tax & supporting docs',
+    label: 'Subscriptions & invoices',
+    sub: 'Company billing',
     icon: 'download',
-    summary: 'Upload invoice, receipt, and supporting documents for SARS, reimbursements, or company records.',
-    breadcrumb: 'Admin / HR / Invoices',
+    summary: 'Manage company-paid subscriptions and generate pre-filled or once-off invoices.',
+    breadcrumb: 'Admin / Billing / Subscriptions & invoices',
   },
   {
     id: 'claims',

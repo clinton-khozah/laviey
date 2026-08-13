@@ -1,0 +1,22 @@
+.admin-marketing-page {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-marketing-page__head h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #261e24;
+}
+
+.admin-marketing-page__head p {
+  margin: 6px 0 0;
+  color: #81757d;
+  font-size: 13px;
+}
+
+.admin-marketing__empty {
+  margin: 0;
+  color: #81757d;
+  font-size: 12px;
+}

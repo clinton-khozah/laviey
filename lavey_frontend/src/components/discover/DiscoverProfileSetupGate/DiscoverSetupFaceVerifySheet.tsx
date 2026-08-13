@@ -73,6 +73,7 @@ export function DiscoverSetupFaceVerifySheet({
           `Faces didn't match closely enough (${result.confidencePercent}% confidence). Try again with better lighting.`,
         );
         setStep('fail');
+        void verificationService.submitForManualReview(referenceUrl, nextLiveUrl).catch(() => {});
         return;
       }
 

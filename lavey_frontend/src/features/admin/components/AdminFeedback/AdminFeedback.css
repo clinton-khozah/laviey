@@ -1,0 +1,199 @@
+.admin-feedback__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(7px);
+}
+
+.admin-feedback__dialog {
+  position: relative;
+  width: min(460px, 100%);
+  padding: 22px 26px 26px;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 28px 85px rgba(15, 23, 42, 0.3);
+  text-align: center;
+  animation: admin-feedback-in 180ms ease-out;
+}
+
+.admin-feedback__dialog::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, #ef476f, #fb7185);
+}
+
+.admin-feedback__dialog.is-success::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.admin-feedback__brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.admin-feedback__brand img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.admin-feedback__icon {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  box-shadow: 0 0 0 8px #f8fafc;
+}
+
+.admin-feedback__icon svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-feedback__dialog.is-danger .admin-feedback__icon,
+.admin-feedback__dialog.is-error .admin-feedback__icon {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.admin-feedback__dialog.is-success .admin-feedback__icon {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.admin-feedback__dialog h2 {
+  margin: 0;
+  font-size: 21px;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+
+.admin-feedback__dialog p {
+  max-width: 350px;
+  margin: 10px auto 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.admin-feedback__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.admin-feedback__actions button {
+  width: 100%;
+  min-width: 0;
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.admin-feedback__actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #94a3b8;
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.1);
+}
+
+.admin-feedback__actions button.is-primary {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.admin-feedback__actions button.is-danger {
+  border-color: #e11d48;
+  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(225, 29, 72, 0.2);
+}
+
+.admin-feedback__actions button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.admin-feedback__actions button .logo-loader {
+  margin-right: 7px;
+  vertical-align: middle;
+}
+
+.admin-feedback__actions button .logo-loader__mark {
+  width: 19px;
+  height: 19px;
+}
+
+.admin-feedback__dialog--notice .admin-feedback__actions {
+  grid-template-columns: minmax(130px, 190px);
+  justify-content: center;
+}
+
+.admin-heart-loader {
+  min-height: 160px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-heart-loader.is-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  min-height: 100vh;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(3px);
+}
+
+@keyframes admin-feedback-in {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 520px) {
+  .admin-feedback__dialog { padding: 20px 18px 22px; }
+  .admin-feedback__actions { grid-template-columns: 1fr; }
+}

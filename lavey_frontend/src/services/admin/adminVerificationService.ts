@@ -16,6 +16,11 @@ export interface VerificationQueueItem {
   ageLabel: string;
 }
 
+export interface VerificationNotificationSettings {
+  notificationEmail: string;
+  updatedAt: string | null;
+}
+
 function adminHeaders(): HeadersInit {
   const token = getAdminSession()?.token;
   if (!token) return {};
@@ -33,7 +38,7 @@ async function parseError(response: Response): Promise<never> {
   throw new Error(message);
 }
 
-async function adminRequest<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+async function adminRequest<T>(method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown): Promise<T> {
   const base = path.startsWith('/') ? path : `/${path}`;
   const response = await fetch(`${apiConfig.baseUrl}${base}`, {
     method,
@@ -53,6 +58,21 @@ async function adminRequest<T>(method: 'GET' | 'POST', path: string, body?: unkn
 }
 
 export const adminVerificationService = {
+  getNotificationSettings(): Promise<VerificationNotificationSettings> {
+    return adminRequest<ApiResponse<VerificationNotificationSettings>>(
+      'GET',
+      API_ENDPOINTS.admin.verificationSettings,
+    ).then((res) => res.data);
+  },
+
+  updateNotificationSettings(notificationEmail: string): Promise<VerificationNotificationSettings> {
+    return adminRequest<ApiResponse<VerificationNotificationSettings>>(
+      'PATCH',
+      API_ENDPOINTS.admin.verificationSettings,
+      { notificationEmail },
+    ).then((res) => res.data);
+  },
+
   listQueue(): Promise<VerificationQueueItem[]> {
     return adminRequest<ApiResponse<VerificationQueueItem[]>>('GET', API_ENDPOINTS.admin.verificationQueue).then(
       (res) => res.data,

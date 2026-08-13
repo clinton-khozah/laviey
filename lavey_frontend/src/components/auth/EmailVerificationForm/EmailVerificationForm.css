@@ -41,20 +41,14 @@
   text-transform: uppercase;
 }
 
-.email-verify__boxes {
-  display: flex;
-  gap: 6px;
-  justify-content: space-between;
-}
-
-.email-verify__box {
+.email-verify__input {
   width: 100%;
-  aspect-ratio: 1 / 1;
-  min-width: 0;
-  padding: 0;
-  border-radius: 11px;
-  font-size: 20px;
+  height: 54px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 22px;
   font-weight: 800;
+  letter-spacing: 0.4em;
   text-align: center;
   color: var(--text-primary);
   background: var(--input-bg);
@@ -62,17 +56,17 @@
   outline: none;
 }
 
-.email-verify__box:focus {
+.email-verify__input:focus {
   border-color: rgba(124, 58, 237, 0.45);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
 }
 
-.email-verify__box--error {
+.email-verify__input--error {
   border-color: rgba(239, 68, 68, 0.6);
   animation: email-verify-shake 0.35s ease;
 }
 
-.email-verify__box--error:focus {
+.email-verify__input--error:focus {
   border-color: rgba(239, 68, 68, 0.6);
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
 }

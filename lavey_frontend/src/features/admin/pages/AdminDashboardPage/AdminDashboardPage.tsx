@@ -5,16 +5,21 @@ import { adminAuthService } from '@/services/admin/adminAuthService';
 import type { AdminAccount } from '@/types/domain/adminAuth.types';
 import { PageTransitionSplash } from '@/components/ui/PageTransitionSplash/PageTransitionSplash';
 import { AdminAlgorithmOverseer } from '@/features/admin/components/AdminAlgorithmOverseer';
+import { AdminAiCompanions } from '@/features/admin/components/AdminAiCompanions';
 import { AdminExperimentAnalytics } from '@/features/admin/components/AdminExperimentAnalytics';
 import { AdminSupportInbox } from '@/features/admin/components/AdminSupportInbox';
 import { AdminContentModeration } from '@/features/admin/components/AdminContentModeration';
 import { AdminVerificationQueue } from '@/features/admin/components/AdminVerificationQueue';
+import { AdminVerificationSettings } from '@/features/admin/components/AdminVerificationSettings';
 import { AdminUserManagement } from '@/features/admin/components/AdminUserManagement';
 import { AdminQuickToolsPage, getToolPageMeta, isHrQuickTool, isOpsQuickTool, isQuickToolView, hrTabFromTool, TOOL_PAGE_META, type QuickToolId } from '@/features/admin/components/AdminQuickToolsPanel';
 import { AdminHrHub } from '@/features/admin/components/AdminHrHub';
+import { AdminCompanySubscriptions } from '@/features/admin/components/AdminCompanySubscriptions';
+import { AdminPayments } from '@/features/admin/components/AdminPayments';
+import { AdminWebsiteMarketing } from '@/features/admin/components/AdminWebsiteMarketing';
 import { adminHrService } from '@/services/admin/adminHrService';
 import { adminModerationService } from '@/services/admin/adminModerationService';
-import { adminOpsService, type CommandOverview, type MonetizationWallet } from '@/services/admin/adminOpsService';
+import { adminOpsService, type AccessMode, type CommandOverview, type MonetizationWallet } from '@/services/admin/adminOpsService';
 import { adminSupportService } from '@/services/admin/adminSupportService';
 import './AdminDashboardPage.css';
 import '@/features/admin/components/AdminQuickToolsPanel/AdminQuickToolsPanel.css';
@@ -34,6 +39,7 @@ type AdminSectionId =
   | 'comms'
   | 'monetization'
   | 'experiments'
+  | 'marketing'
   | 'ai';
 
 interface ModuleCard {
@@ -136,6 +142,19 @@ const MODULES: ModuleCard[] = [
     ],
   },
   {
+    id: 'marketing',
+    label: 'Website marketing',
+    sub: 'Landing & APK downloads',
+    icon: 'megaphone',
+    summary: 'First-party visits and consented Lavey APK downloads from the public website.',
+    capabilities: [
+      'Total visits and unique visitor counts',
+      'APK download totals including historical baseline',
+      'Referral visits and referred downloads (24h)',
+      'Recent anonymous download activity',
+    ],
+  },
+  {
     id: 'ai',
     label: 'AI Overseer',
     sub: 'Matching Algorithms',
@@ -220,6 +239,7 @@ function sectionBreadcrumb(id: AdminSectionId): string {
   if (id === 'comms') return 'Admin / Communication Hub';
   if (id === 'monetization') return 'Admin / Monetization';
   if (id === 'experiments') return 'Admin / Experimentation';
+  if (id === 'marketing') return 'Admin / Website marketing';
   return 'Admin / AI Overseer';
 }
 
@@ -287,6 +307,7 @@ const SECTION_PATHS: Record<AdminSectionId, string> = {
   comms: `${ADMIN_BASE}/communication-hub`,
   monetization: `${ADMIN_BASE}/monetization-lab`,
   experiments: `${ADMIN_BASE}/experimentation-lab`,
+  marketing: `${ADMIN_BASE}/website-marketing`,
   ai: `${ADMIN_BASE}/ai-overseer`,
 };
 
@@ -554,18 +575,28 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
   const [adminOperator, setAdminOperator] = useState<AdminAccount | null>(
     () => getAdminSession()?.admin ?? null,
   );
+  const [monetizationSubTab, setMonetizationSubTab] = useState<'wallets' | 'payments'>('wallets');
   const [monetizationSearch, setMonetizationSearch] = useState('');
   const [monetizationNotice, setMonetizationNotice] = useState('');
   const [giftPanelUserId, setGiftPanelUserId] = useState<string | null>(null);
   const [giftAmount, setGiftAmount] = useState('100');
   const [monetizationWallets, setMonetizationWallets] = useState<MonetizationWalletRow[]>([]);
   const [monetizationLoading, setMonetizationLoading] = useState(false);
+  const [accessMode, setAccessMode] = useState<AccessMode['mode']>('premium_enabled');
+  const [accessModeSaving, setAccessModeSaving] = useState(false);
+  const [pendingAccessMode, setPendingAccessMode] = useState<AccessMode['mode'] | null>(null);
   const [commandOverview, setCommandOverview] = useState<CommandOverview | null>(null);
+  const [commandOverviewLoading, setCommandOverviewLoading] = useState(false);
   const [experimentHead, setExperimentHead] = useState({ activeUsers30d: 0, avgHours: 0 });
   const [attentionCount, setAttentionCount] = useState(0);
   const [pendingHrLeaves, setPendingHrLeaves] = useState(0);
   const [pendingHrClaims, setPendingHrClaims] = useState(0);
   const pageMeta = getViewMeta(activeView);
+
+  useEffect(() => {
+    if (activeView !== 'monetization') return;
+    void adminOpsService.getAccessMode().then((result) => setAccessMode(result.mode)).catch(() => {});
+  }, [activeView]);
 
   useEffect(() => {
     setActiveView(viewFromPath(adminPath));
@@ -618,8 +649,9 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
   }, [activeView]);
 
   useEffect(() => {
-    if (activeView !== 'command') return;
+    if (activeView !== 'command' && activeView !== 'marketing') return;
     let cancelled = false;
+    setCommandOverviewLoading(true);
     void adminOpsService
       .getCommandOverview()
       .then((overview) => {
@@ -627,6 +659,9 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       })
       .catch(() => {
         if (!cancelled) setCommandOverview(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCommandOverviewLoading(false);
       });
     return () => {
       cancelled = true;
@@ -705,11 +740,13 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
   };
 
   const renderSectionBody = () => {
+    if (activeView === 'invoices') {
+      return <AdminCompanySubscriptions />;
+    }
     if (isQuickToolView(activeView) && isHrQuickTool(activeView)) {
       return (
         <AdminHrHub
           initialTab={hrTabFromTool(activeView)}
-          openExpenseUpload={activeView === 'invoices'}
           onPendingCountsChange={({ leaves, claims }) => {
             setPendingHrLeaves(leaves);
             setPendingHrClaims(claims);
@@ -757,6 +794,11 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
           </div>
 
           <div className="admin-surface-card admin-settings__card">
+            <h4>Identity verification</h4>
+            <AdminVerificationSettings />
+          </div>
+
+          <div className="admin-surface-card admin-settings__card">
             <h4>Workspace</h4>
             <p>Full-width mode and quick navigation are available from the top bar and right rail.</p>
             <div className="admin-settings__actions">
@@ -780,6 +822,7 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
               <li><code>046_hr_repair.sql</code> — column repairs</li>
               <li><code>047_hr_role_seeds.sql</code> — role catalog</li>
               <li><code>048_admin_ops.sql</code> — broadcasts & monetization</li>
+              <li><code>049_verification_notification_settings.sql</code> — verification notification email</li>
             </ol>
           </div>
 
@@ -841,10 +884,15 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
       return <AdminSupportInbox />;
     }
 
+    if (activeView === 'marketing') {
+      return <AdminWebsiteMarketing overview={commandOverview} loading={commandOverviewLoading} />;
+    }
+
     if (activeView === 'ai') {
       return (
         <section className="admin-ai-overseer-shell">
           <AdminAlgorithmOverseer />
+          <AdminAiCompanions />
         </section>
       );
     }
@@ -941,6 +989,54 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
 
       return (
         <section className="admin-monetization-lab">
+          <div className="admin-monetization-lab__subtabs">
+            <button
+              type="button"
+              className={monetizationSubTab === 'wallets' ? 'is-active' : ''}
+              onClick={() => setMonetizationSubTab('wallets')}
+            >
+              Wallets &amp; gifts
+            </button>
+            <button
+              type="button"
+              className={monetizationSubTab === 'payments' ? 'is-active' : ''}
+              onClick={() => setMonetizationSubTab('payments')}
+            >
+              PayFast payments
+            </button>
+          </div>
+
+          {monetizationSubTab === 'payments' ? (
+            <AdminPayments />
+          ) : (
+            <>
+          <div className="admin-access-control">
+            <div className="admin-access-control__copy">
+              <span className="admin-access-control__icon" aria-hidden><MenuIcon kind="shield" /></span>
+              <div>
+              <strong>Global feature access</strong>
+              <span>
+                All free removes upgrade prompts and allows consent-based chat requests. Premium enabled restores payments and plan gates.
+              </span>
+              </div>
+            </div>
+            <div className="admin-access-control__switch" aria-label="Global feature access mode">
+              {([
+                ['all_free', 'All free'],
+                ['premium_enabled', 'Premium enabled'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={accessModeSaving}
+                  onClick={() => mode !== accessMode && setPendingAccessMode(mode)}
+                  className={`admin-access-control__option ${accessMode === mode ? 'is-active' : ''} ${mode === 'all_free' ? 'is-free' : 'is-premium'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <header className="admin-monetization-lab__head">
             <div>
               <h3>Monetization Lab</h3>
@@ -1103,6 +1199,8 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
           </div>
 
           {monetizationNotice && <p className="admin-monetization-lab__notice">{monetizationNotice}</p>}
+            </>
+          )}
         </section>
       );
     }
@@ -1294,6 +1392,42 @@ export function AdminDashboardPage({ adminPath, onNavigate, onLogout }: AdminDas
 
         {renderSideRail('right')}
       </div>
+      {pendingAccessMode ? (
+        <div className="admin-access-confirm" role="dialog" aria-modal="true" aria-labelledby="access-confirm-title">
+          <button className="admin-access-confirm__backdrop" type="button" aria-label="Cancel change" onClick={() => setPendingAccessMode(null)} />
+          <section className="admin-access-confirm__card">
+            <span className={`admin-access-confirm__icon ${pendingAccessMode === 'all_free' ? 'is-free' : 'is-premium'}`} aria-hidden>
+              <MenuIcon kind={pendingAccessMode === 'all_free' ? 'unlock' : 'wallet'} />
+            </span>
+            <p className="admin-access-confirm__eyebrow">Global access change</p>
+            <h2 id="access-confirm-title">Are you sure?</h2>
+            <p>
+              {pendingAccessMode === 'all_free'
+                ? 'This will hide upgrade prompts and make gated app features available without payment.'
+                : 'This will restore upgrade prompts, payments, and Platinum feature gates for members.'}
+            </p>
+            <div className="admin-access-confirm__actions">
+              <button type="button" className="is-cancel" disabled={accessModeSaving} onClick={() => setPendingAccessMode(null)}>Cancel</button>
+              <button
+                type="button"
+                className={pendingAccessMode === 'all_free' ? 'is-free' : 'is-premium'}
+                disabled={accessModeSaving}
+                onClick={() => {
+                  const mode = pendingAccessMode;
+                  setAccessModeSaving(true);
+                  void adminOpsService.updateAccessMode(mode).then((result) => {
+                    setAccessMode(result.mode);
+                    setMonetizationNotice(result.allFree ? 'All paid feature prompts are now hidden.' : 'Premium payments and upgrade prompts are enabled.');
+                    setPendingAccessMode(null);
+                  }).catch((error) => setMonetizationNotice(error instanceof Error ? error.message : 'Could not update access mode.')).finally(() => setAccessModeSaving(false));
+                }}
+              >
+                {accessModeSaving ? 'Applying…' : `Yes, enable ${pendingAccessMode === 'all_free' ? 'All free' : 'Premium'}`}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {isNavigating && <PageTransitionSplash />}
     </main>
   );
