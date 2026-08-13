@@ -3,6 +3,8 @@ import { apiConfig } from '@/config/api.config';
 const VISITOR_KEY = 'lavey:website-visitor-id';
 const REFERRAL_KEY = 'lavey:active-referral';
 const REFERRAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const APK_DOWNLOAD_FILENAME = 'Lavey.apk';
+export const APK_DOWNLOAD_URL = `${apiConfig.baseUrl}/marketing/apk`;
 
 function visitorId(): string {
   const existing = localStorage.getItem(VISITOR_KEY);

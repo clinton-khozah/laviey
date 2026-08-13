@@ -4,10 +4,8 @@ import { useEffect, useState } from 'react';
 import './LandingLegal.css';
 import './LandingLegalOverrides.css';
 import './LandingMarketing.css';
-import { marketingService } from '@/services/marketing/marketingService';
+import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL } from '@/services/marketing/marketingService';
 import { trackMarketingEvent } from '@/utils/analytics/googleAnalytics';
-
-const DEFAULT_APK_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || '/downloads/Lavey-v1.0.0.apk';
 
 function compactDownloadCount(count: number): string {
   if (count < 1_000) return `${count}+`;
@@ -22,7 +20,8 @@ export function LandingPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
-  const [apkUrl, setApkUrl] = useState(DEFAULT_APK_URL);
+  const [downloadReady, setDownloadReady] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   useEffect(() => {
     document.documentElement.classList.add('landing-document');
     document.body.classList.add('landing-document');
@@ -35,22 +34,49 @@ export function LandingPage() {
   useEffect(() => {
     void marketingService.recordVisit().catch(() => undefined);
     void marketingService.getStats().then((value) => setDownloadCount(value.downloadCount)).catch(() => undefined);
-    void marketingService.getApkDownloadUrl().then((url) => { if (url) setApkUrl(url); }).catch(() => undefined);
+    void marketingService.getApkDownloadUrl().then((url) => {
+      setDownloadReady(Boolean(url));
+    }).catch(() => undefined);
     const referralCode = new URLSearchParams(location.search).get('ref');
     if (referralCode) trackMarketingEvent('referral_visit', { referral_code: referralCode });
   }, []);
 
-  const requestDownload = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const requestDownload = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
+    if (downloading || !downloadReady) return;
+
+    setDownloading(true);
     trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
-    try { const result = await marketingService.recordDownload(); setDownloadCount(result.downloadCount); } catch { /* download remains available if analytics API is offline */ }
-    const link = document.createElement('a'); link.href = apkUrl; link.download = 'Lavey-v1.0.0-build7.apk'; document.body.appendChild(link); link.click(); link.remove();
+    void marketingService.recordDownload()
+      .then((result) => setDownloadCount(result.downloadCount))
+      .catch(() => undefined);
+
+    const link = document.createElement('a');
+    link.href = APK_DOWNLOAD_URL;
+    link.download = APK_DOWNLOAD_FILENAME;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => setDownloading(false), 4000);
   };
+
+  const navDownloadLabel = downloading ? 'Starting download…' : 'Get the App';
+  const heroDownloadLabel = downloading ? 'Preparing Lavey.apk…' : 'Download Lavey';
+  const stickyDownloadLabel = downloading ? 'Starting…' : 'Download';
 
   return <main className="landing">
     <nav className="landing__nav">
       <a className="landing__brand" href="#top" aria-label="Lavey home"><img src="/images/logo.png" alt=""/><span>Lavey</span></a>
-      <a className="landing__nav-download" href={apkUrl} onClick={requestDownload}>Get the App</a>
+      <a
+        className={`landing__nav-download${downloading ? ' landing__nav-download--busy' : ''}`}
+        href={APK_DOWNLOAD_URL}
+        onClick={requestDownload}
+        aria-busy={downloading}
+      >
+        {navDownloadLabel}
+      </a>
     </nav>
 
     <section className="landing__hero" id="top">
@@ -59,7 +85,15 @@ export function LandingPage() {
         <h1>Feel the vibe<br/>before you match.</h1>
         <p>Lavey is a free dating social app for meeting people nearby or connecting with someone anywhere in the world. Share your music, express your vibe and start conversations that feel easy from the first hello—no subscription needed.</p>
         <div className="landing__actions">
-          <a className="landing__download" href={apkUrl} onClick={requestDownload}><span>Download Lavey</span><small>Android APK · v1.0.0 build 7</small></a>
+          <a
+            className={`landing__download${downloading ? ' landing__download--busy' : ''}`}
+            href={APK_DOWNLOAD_URL}
+            onClick={requestDownload}
+            aria-busy={downloading}
+          >
+            <span>{heroDownloadLabel}</span>
+            <small>{downloading ? 'Check your downloads folder' : 'Android APK · Free'}</small>
+          </a>
           <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
           <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
         </div>
@@ -83,7 +117,27 @@ export function LandingPage() {
       <div className="landing__footer-meta"><span className="landing__footer-brand"><img src="/images/logo.png" alt=""/>© {new Date().getFullYear()} Lavey. All rights reserved.</span><span className="landing__legal-links"><button type="button" onClick={() => setShowTerms(true)}>Terms & Conditions</button><a href="mailto:support@lavey.co.za">support@lavey.co.za</a><button type="button" onClick={() => { trackMarketingEvent('referral_opened'); setShowReferral(true); }}>Refer a friend &amp; earn</button></span><span>Powered and developed by <strong>Brainstak</strong> · Registration no. 2026/492377/07</span></div>
     </footer>
 
-    <aside className="landing__sticky-download" aria-label="Download Lavey for Android"><img src="/images/logo.png" alt=""/><div><strong>Get Lavey</strong><small>Free Android download</small></div><a href={apkUrl} onClick={requestDownload}>Download</a></aside>
+    <aside className="landing__sticky-download" aria-label="Download Lavey for Android">
+      <img src="/images/logo.png" alt=""/>
+      <div><strong>Get Lavey</strong><small>Free Android download</small></div>
+      <a
+        className={downloading ? 'landing__sticky-download-btn--busy' : undefined}
+        href={APK_DOWNLOAD_URL}
+        onClick={requestDownload}
+        aria-busy={downloading}
+      >
+        {stickyDownloadLabel}
+      </a>
+    </aside>
+    {downloading ? (
+      <div className="landing-apk-download" role="status" aria-live="polite">
+        <div className="landing-apk-download__spinner" aria-hidden />
+        <div className="landing-apk-download__copy">
+          <strong>Downloading {APK_DOWNLOAD_FILENAME}</strong>
+          <small>Your install file should appear in your downloads any second now.</small>
+        </div>
+      </div>
+    ) : null}
     {showReferral ? <ReferralDialog onClose={() => setShowReferral(false)} /> : null}
     {showTerms ? <TermsDialog onClose={() => setShowTerms(false)} /> : null}
   </main>;
