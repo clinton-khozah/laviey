@@ -42,7 +42,6 @@ export function VerifyIdentitySheet({
 }: VerifyIdentitySheetProps) {
   const [step, setStep] = useState<VerifyFlowStep>('intro');
   const [referenceUrl, setReferenceUrl] = useState<string | null>(null);
-  const [liveUrl, setLiveUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -51,7 +50,6 @@ export function VerifyIdentitySheet({
     if (!open) {
       setStep('intro');
       setReferenceUrl(null);
-      setLiveUrl(null);
       setIsSubmitting(false);
       setSubmitSuccess(false);
       setSubmitError(null);
@@ -61,7 +59,6 @@ export function VerifyIdentitySheet({
   const handleClose = () => {
     setStep('intro');
     setReferenceUrl(null);
-    setLiveUrl(null);
     onClose();
   };
 
@@ -172,7 +169,6 @@ export function VerifyIdentitySheet({
             <LiveSelfieStep
               onBack={() => setStep('reference')}
               onCapture={(url) => {
-                setLiveUrl(url);
                 if (referenceUrl) void submitForReview(referenceUrl, url);
               }}
             />
