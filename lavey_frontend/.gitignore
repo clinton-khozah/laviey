@@ -13,8 +13,7 @@ dist-ssr
 *.local
 .env
 
-# Large mobile build artifacts — fetched at build time as public/Lavey.apk
-public/Lavey.apk
+# Large mobile build artifacts — synced from lavey_mobile/Lavey.apk at build time (tracked via Git LFS)
 public/downloads/*.apk
 
 # Editor directories and files

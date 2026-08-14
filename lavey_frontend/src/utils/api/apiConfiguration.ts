@@ -12,8 +12,8 @@ export function getApiConfigurationError(): string | null {
     return 'Sign-in needs a hosted backend, not /api on this site. Set VITE_API_BASE_URL on Netlify to your API URL, then redeploy.';
   }
 
-  if (!env.isDev && /localhost|127\.0\.0\.1/i.test(url)) {
-    return 'API still points to localhost. Update VITE_API_BASE_URL on Netlify to your public backend URL, then redeploy.';
+  if (!env.isDev && /localhost|127\.0\.0\.1|10\.0\.2\.2/i.test(url)) {
+    return 'API still points to localhost or the Android emulator host. Update VITE_API_BASE_URL on Netlify to your public backend URL, then redeploy.';
   }
 
   if (!env.isDev && /netlify\.app/i.test(url)) {

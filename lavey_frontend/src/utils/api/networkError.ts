@@ -10,7 +10,7 @@ export function networkErrorMessage(): string {
   if (/localhost|127\.0\.0\.1/i.test(base)) {
     return `Cannot reach the API at ${base}. Start the backend: open a terminal in lavey-backend and run npm run dev (port 5000).`;
   }
-  return 'Cannot reach the Lavey servers. Check your internet connection and try again.';
+  return 'Cannot reach the Lavey servers. The API may be waking up (Render free tier can take up to a minute) — wait and try again.';
 }
 
 export function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {

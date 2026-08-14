@@ -12,7 +12,6 @@
   VITE_USE_REAL_AUTH = "true"
   VITE_SUPABASE_URL = "https://wgyqotbvjnkafmwmhvbj.supabase.co"
   VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_F9_1U8m0og8iS3tQmBD6YQ_xV-AVFlL"
-  VITE_ANDROID_DOWNLOAD_URL = "https://expo.dev/artifacts/eas/92pkNvRXYyej8_t7dPdSSSdEEpedf0cNnYkSCAE1bv0.apk"
 
 [[headers]]
   for = "/Lavey.apk"
