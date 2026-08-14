@@ -12,6 +12,11 @@ function compactDownloadCount(count: number): string {
   return `${Math.floor(count / 1_000)}K+`;
 }
 
+function formatDownloadSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function PlayMark() {
   return <svg viewBox="0 0 48 52" aria-hidden="true"><path fill="#00d7fe" d="M4 3.7a5 5 0 0 0-1 3v38.6c0 1 .3 2 .9 2.8l22-22Z"/><path fill="#00ef77" d="m6.8 2.3 26.5 15.2-7.4 8.6-22-22c.8-1.2 1.8-2 2.9-1.8Z"/><path fill="#ffdf00" d="m33.3 17.5 8.8 5.1c2.6 1.5 2.6 3.9 0 5.4l-9.3 5.3-6.9-7.2Z"/><path fill="#ff3a44" d="m32.8 33.3-26 14.9c-1 .5-2-.1-2.9-1.1l22-21Z"/></svg>;
 }
@@ -21,6 +26,8 @@ export function LandingPage() {
   const [showReferral, setShowReferral] = useState(false);
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [downloadBytes, setDownloadBytes] = useState<{ loaded: number; total: number | null } | null>(null);
   useEffect(() => {
     document.documentElement.classList.add('landing-document');
     document.body.classList.add('landing-document');
@@ -42,19 +49,35 @@ export function LandingPage() {
     if (downloading) return;
 
     setDownloading(true);
+    setDownloadProgress(0);
+    setDownloadBytes(null);
     trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
     void marketingService.recordDownload()
       .then((result) => setDownloadCount(result.downloadCount))
       .catch(() => undefined);
 
-    void downloadApkFile().finally(() => {
-      window.setTimeout(() => setDownloading(false), 4000);
+    void downloadApkFile((progress) => {
+      if (progress.percent !== null) setDownloadProgress(progress.percent);
+      setDownloadBytes({ loaded: progress.loaded, total: progress.total });
+    }).finally(() => {
+      setDownloadProgress(100);
+      window.setTimeout(() => {
+        setDownloading(false);
+        setDownloadProgress(null);
+        setDownloadBytes(null);
+      }, 1800);
     });
   };
 
-  const navDownloadLabel = downloading ? 'Starting download…' : 'Get the App';
-  const heroDownloadLabel = downloading ? 'Preparing Lavey.apk…' : 'Download Lavey';
-  const stickyDownloadLabel = downloading ? 'Starting…' : 'Download';
+  const progressSuffix = downloadProgress !== null ? ` · ${downloadProgress}%` : '';
+  const navDownloadLabel = downloading ? `Downloading${progressSuffix}` : 'Get the App';
+  const heroDownloadLabel = downloading ? `Downloading Lavey.apk${progressSuffix}` : 'Download Lavey';
+  const stickyDownloadLabel = downloading ? `${downloadProgress ?? 0}%` : 'Download';
+  const downloadStatusLine = downloadBytes
+    ? downloadBytes.total
+      ? `${formatDownloadSize(downloadBytes.loaded)} of ${formatDownloadSize(downloadBytes.total)}`
+      : `${formatDownloadSize(downloadBytes.loaded)} downloaded`
+    : 'Connecting to download…';
 
   return <main className="landing">
     <nav className="landing__nav">
@@ -84,7 +107,7 @@ export function LandingPage() {
             aria-busy={downloading}
           >
             <span>{heroDownloadLabel}</span>
-            <small>{downloading ? 'Check your downloads folder' : 'Android APK · Free'}</small>
+            <small>{downloading ? downloadStatusLine : 'Android APK · Free'}</small>
           </a>
           <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
           <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
@@ -123,11 +146,20 @@ export function LandingPage() {
       </a>
     </aside>
     {downloading ? (
-      <div className="landing-apk-download" role="status" aria-live="polite">
-        <div className="landing-apk-download__spinner" aria-hidden />
+      <div className="landing-apk-download" role="status" aria-live="polite" aria-valuenow={downloadProgress ?? 0} aria-valuemin={0} aria-valuemax={100}>
+        {downloadProgress !== null ? (
+          <div className="landing-apk-download__percent" aria-hidden>{downloadProgress}%</div>
+        ) : (
+          <div className="landing-apk-download__spinner" aria-hidden />
+        )}
         <div className="landing-apk-download__copy">
-          <strong>Downloading {APK_DOWNLOAD_FILENAME}</strong>
-          <small>Your install file should appear in your downloads any second now.</small>
+          <strong>Downloading {APK_DOWNLOAD_FILENAME}{downloadProgress !== null ? ` · ${downloadProgress}%` : ''}</strong>
+          <small>{downloadProgress === 100 ? 'Saving to your downloads folder…' : downloadStatusLine}</small>
+          <progress
+            className="landing-apk-download__bar"
+            value={downloadProgress ?? 0}
+            max={100}
+          />
         </div>
       </div>
     ) : null}

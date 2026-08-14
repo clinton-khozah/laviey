@@ -10,6 +10,11 @@
 .landing-apk-download__copy strong{font:700 13px 'Manrope',sans-serif}
 .landing-apk-download__copy small{color:#d8d0d6;font-size:10px;line-height:1.45}
 .landing-apk-download__spinner{width:22px;height:22px;border:2px solid rgba(255,255,255,.24);border-top-color:#fff;border-radius:50%;animation:landing-apk-download-spin .75s linear infinite;flex:0 0 22px}
+.landing-apk-download__percent{flex:0 0 38px;display:grid;place-items:center;font:800 10px 'Manrope',sans-serif;line-height:1}
+.landing-apk-download__bar{width:100%;height:6px;margin-top:6px;border:0;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.16);accent-color:#fff}
+.landing-apk-download__bar::-webkit-progress-bar{background:rgba(255,255,255,.16);border-radius:999px}
+.landing-apk-download__bar::-webkit-progress-value{background:#fff;border-radius:999px}
+.landing-apk-download__bar::-moz-progress-bar{background:#fff;border-radius:999px}
 @keyframes landing-apk-download-spin{to{transform:rotate(360deg)}}
 @keyframes landing-apk-download-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:640px){.landing-apk-download{right:10px;bottom:86px;left:10px;max-width:none}}
