@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { ProfileSheet } from '@/components/profile/ProfileSheet';
 import {
   DISCOVER_AGE,
+  DISCOVER_DISTANCE_GLOBAL_KM,
   DISCOVER_DISTANCE_KM,
   DISCOVER_GENDER_OPTIONS,
 } from '@/constants/discoverFilter';
 import type { DiscoverFilters, DiscoverGender } from '@/types';
+import { ensureNonBinaryIncluded } from '@/utils/discover/forYouFeedFilters';
 import './DiscoverFilterSheet.css';
 
 interface DiscoverFilterSheetProps {
@@ -42,7 +44,7 @@ export function DiscoverFilterSheet({
   const handleApply = () => {
     const ageMin = Math.min(draft.ageMin, draft.ageMax);
     const ageMax = Math.max(draft.ageMin, draft.ageMax);
-    onApply({ ...draft, ageMin, ageMax });
+    onApply({ ...draft, ageMin, ageMax, genders: ensureNonBinaryIncluded(draft.genders) });
     onClose();
   };
 
@@ -51,36 +53,50 @@ export function DiscoverFilterSheet({
     onClose();
   };
 
+  const distanceLabel =
+    draft.maxDistanceKm >= DISCOVER_DISTANCE_GLOBAL_KM ||
+    draft.maxDistanceKm >= DISCOVER_DISTANCE_KM.max
+      ? 'Anyone globally'
+      : `${draft.maxDistanceKm} km`;
+  const ageLabel =
+    draft.ageMin <= DISCOVER_AGE.min && draft.ageMax >= DISCOVER_AGE.max
+      ? 'Any age'
+      : `${draft.ageMin} – ${draft.ageMax}`;
+
   return (
     <ProfileSheet open={open} title="Filters" onClose={onClose} compact hideHandle>
       <div className="discover-filter-sheet">
         <section className="discover-filter-sheet__section">
           <div className="discover-filter-sheet__row">
             <h3 className="discover-filter-sheet__label">Maximum distance</h3>
-            <span className="discover-filter-sheet__value">{draft.maxDistanceKm} km</span>
+            <span className="discover-filter-sheet__value">{distanceLabel}</span>
           </div>
           <input
             type="range"
             className="discover-filter-sheet__range"
             min={DISCOVER_DISTANCE_KM.min}
             max={DISCOVER_DISTANCE_KM.max}
-            value={draft.maxDistanceKm}
+            value={Math.min(draft.maxDistanceKm, DISCOVER_DISTANCE_KM.max)}
             onChange={(e) =>
-              setDraft((prev) => ({ ...prev, maxDistanceKm: Number(e.target.value) }))
+              setDraft((prev) => ({
+                ...prev,
+                maxDistanceKm:
+                  Number(e.target.value) >= DISCOVER_DISTANCE_KM.max
+                    ? DISCOVER_DISTANCE_GLOBAL_KM
+                    : Number(e.target.value),
+              }))
             }
             aria-label="Maximum distance in kilometers"
           />
           <div className="discover-filter-sheet__range-labels">
             <span>{DISCOVER_DISTANCE_KM.min} km</span>
-            <span>{DISCOVER_DISTANCE_KM.max} km</span>
+            <span>Anyone globally</span>
           </div>
         </section>
 
         <section className="discover-filter-sheet__section">
           <h3 className="discover-filter-sheet__label">Age range</h3>
-          <p className="discover-filter-sheet__hint">
-            {draft.ageMin} – {draft.ageMax}
-          </p>
+          <p className="discover-filter-sheet__hint">{ageLabel}</p>
           <div className="discover-filter-sheet__dual-range">
             <label className="discover-filter-sheet__dual-field">
               <span>Min</span>

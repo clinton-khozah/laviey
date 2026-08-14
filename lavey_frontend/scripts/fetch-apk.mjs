@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { copyFileSync, existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,10 +8,18 @@ const DEFAULT_APK_ARTIFACT_URL =
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outputPath = path.join(rootDir, 'public', 'Lavey.apk');
+const mobileApkPath = path.join(rootDir, '..', 'lavey_mobile', 'Lavey.apk');
 const sourceUrl = process.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || DEFAULT_APK_ARTIFACT_URL;
 
-if (!process.env.NETLIFY && !process.env.CI && existsSync(outputPath)) {
+if (existsSync(outputPath)) {
   console.info('[fetch-apk] public/Lavey.apk already exists — skipping download.');
+  process.exit(0);
+}
+
+if (existsSync(mobileApkPath)) {
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  copyFileSync(mobileApkPath, outputPath);
+  console.info('[fetch-apk] Copied lavey_mobile/Lavey.apk to public/Lavey.apk');
   process.exit(0);
 }
 

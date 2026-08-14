@@ -11,6 +11,7 @@ import type {
   OnboardingOrientation,
   OnboardingQuizAnswers,
 } from "@/types/domain/onboardingQuiz.types";
+import { ensureNonBinaryIncluded } from "@/utils/discover/forYouFeedFilters";
 
 const AGE_BOUNDS: Record<
   OnboardingAgePreference,
@@ -74,10 +75,10 @@ export function gendersFromInterestedIn(
   if (interestedIn.includes("men")) genders.push("man");
   if (interestedIn.includes("nonbinary")) genders.push("nonbinary");
 
-  if (genders.length > 0) return genders;
+  if (genders.length > 0) return ensureNonBinaryIncluded(genders);
 
   if (gender && orientation) {
-    return inferGendersFromIdentity(gender, orientation);
+    return ensureNonBinaryIncluded(inferGendersFromIdentity(gender, orientation));
   }
 
   return DEFAULT_DISCOVER_FILTERS.genders;
@@ -115,8 +116,6 @@ export function ageRangeFromPreferences(
 export function discoverFiltersFromOnboarding(
   answers: OnboardingQuizAnswers,
 ): DiscoverFilters {
-  const { ageMin, ageMax } = ageRangeFromPreferences(answers.agePreference);
-
   return {
     ...DEFAULT_DISCOVER_FILTERS,
     genders: gendersFromInterestedIn(
@@ -124,7 +123,5 @@ export function discoverFiltersFromOnboarding(
       answers.gender,
       answers.orientation,
     ),
-    ageMin,
-    ageMax,
   };
 }

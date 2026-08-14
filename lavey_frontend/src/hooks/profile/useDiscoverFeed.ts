@@ -4,7 +4,11 @@ import { syncAppliedAlgorithmFromFeed } from '@/features/admin/algorithm/algorit
 import type { DiscoverFilters, FeedFilter, Profile } from '@/types';
 import type { DiscoverFeedAlgorithm, ForYouTasteInsight } from '@/types/discoverIntelligence';
 import { FOR_YOU_TASTE_UPDATED_EVENT } from '@/types/discoverIntelligence';
-import { applyDiscoverDemographicFilters, applyForYouFeedFilters } from '@/utils/discover/applyDiscoverFilters';
+import { applyDiscoverDemographicFilters } from '@/utils/discover/applyDiscoverFilters';
+import {
+  applyForYouGenderFilters,
+  buildForYouApiFilters,
+} from '@/utils/discover/forYouFeedFilters';
 import { isProfileVerified } from '@/utils/profile/verificationStorage';
 import {
   defaultNearbyDistanceTier,
@@ -143,24 +147,34 @@ export function useDiscoverFeed(
       setError(null);
 
       try {
+        const forYouRequest =
+          activeFilter === 'for-you' ? buildForYouApiFilters(activeFilters) : null;
+
         const response = await profileService.getDiscoverFeed({
           filter: activeFilter,
           cursor: options.cursor ?? undefined,
-          distanceTierKm: expanded ? 'any' : tier !== null ? String(tier) : undefined,
-          expandDistance: expanded,
-          maxDistanceKm: activeFilters.maxDistanceKm,
-          ageMin: activeFilters.ageMin,
-          ageMax: activeFilters.ageMax,
-          verifiedOnly: activeFilters.verifiedOnly,
-          hasProfilePhoto: activeFilters.hasProfilePhoto,
-          genders: activeFilters.genders,
+          distanceTierKm: forYouRequest?.expandDistance
+            ? 'any'
+            : expanded
+              ? 'any'
+              : tier !== null
+                ? String(tier)
+                : undefined,
+          expandDistance: forYouRequest?.expandDistance ?? expanded,
+          maxDistanceKm: forYouRequest?.maxDistanceKm ?? activeFilters.maxDistanceKm,
+          ageMin: forYouRequest?.ageMin ?? activeFilters.ageMin,
+          ageMax: forYouRequest?.ageMax ?? activeFilters.ageMax,
+          verifiedOnly: forYouRequest?.verifiedOnly ?? activeFilters.verifiedOnly,
+          hasProfilePhoto:
+            forYouRequest?.hasProfilePhoto ?? activeFilters.hasProfilePhoto,
+          genders: forYouRequest?.genders ?? activeFilters.genders,
         });
 
         const demographic = enrichVerifiedStatus(
           response.isRecycling
-            ? applyForYouFeedFilters(response.profiles, activeFilters)
+            ? applyForYouGenderFilters(response.profiles, activeFilters)
             : activeFilter === 'for-you'
-              ? applyForYouFeedFilters(response.profiles, activeFilters)
+              ? applyForYouGenderFilters(response.profiles, activeFilters)
               : applyDiscoverDemographicFilters(response.profiles, activeFilters),
         );
 
@@ -172,7 +186,7 @@ export function useDiscoverFeed(
             return demographic;
           }
           if (activeFilter === 'for-you') {
-            return applyForYouFeedFilters(mergeProfiles(prev, demographic), activeFilters);
+            return applyForYouGenderFilters(mergeProfiles(prev, demographic), activeFilters);
           }
           return mergeProfiles(prev, demographic);
         });
@@ -243,8 +257,9 @@ export function useDiscoverFeed(
       activeFilter === 'nearby'
         ? defaultNearbyDistanceTier(filtersRef.current.maxDistanceKm)
         : null;
+    const startExpanded = activeFilter === 'for-you';
     setDistanceTierKm(tier);
-    setExpandedDistance(false);
+    setExpandedDistance(startExpanded);
     setNextCursor(null);
     setCanExpandDistance(false);
     setIsFeedRecycling(false);
@@ -252,9 +267,9 @@ export function useDiscoverFeed(
     setFeedAlgorithm(null);
     setTasteInsight(null);
     distanceTierRef.current = tier;
-    expandedRef.current = false;
+    expandedRef.current = startExpanded;
     setFeedPool([]);
-    await loadFeed({ replace: true, distanceTier: tier, expanded: false });
+    await loadFeed({ replace: true, distanceTier: tier, expanded: startExpanded });
   }, [loadFeed]);
 
   const refetch = useCallback(async () => {
@@ -275,13 +290,14 @@ export function useDiscoverFeed(
       setFilterState(next);
       const tier =
         next === 'nearby' ? defaultNearbyDistanceTier(filtersRef.current.maxDistanceKm) : null;
+      const startExpanded = next === 'for-you';
       setDistanceTierKm(tier);
-      setExpandedDistance(false);
+      setExpandedDistance(startExpanded);
       setNextCursor(null);
       filterRef.current = next;
       distanceTierRef.current = tier;
-      expandedRef.current = false;
-      void loadFeed({ replace: true, distanceTier: tier, expanded: false });
+      expandedRef.current = startExpanded;
+      void loadFeed({ replace: true, distanceTier: tier, expanded: startExpanded });
     },
     [loadFeed],
   );

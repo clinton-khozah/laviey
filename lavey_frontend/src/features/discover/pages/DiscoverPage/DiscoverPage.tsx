@@ -38,7 +38,7 @@ import { subscribeAlgorithmChange } from "@/features/admin/algorithm/algorithmCo
 import type { Profile } from "@/types";
 import { hasPremiumAccess } from "@/config/features";
 import { navigateAppTo, openChatWithProfile } from "@/utils/navigation/appNav";
-import { applyForYouFeedFilters } from "@/utils/discover/applyDiscoverFilters";
+import { applyForYouGenderFilters } from "@/utils/discover/forYouFeedFilters";
 import { resolveForYouFeedProfiles } from "@/utils/discover/forYouFeedProfiles";
 import { PLATINUM_UPDATED_EVENT } from "@/utils/subscription/platinumUpdatedEvent";
 import { consumePlatinumWelcomePending } from "@/utils/subscription/platinumWelcomeStorage";
@@ -179,7 +179,7 @@ export function DiscoverPage() {
   const forYouPool = useMemo(() => {
     const pool = feedPool.length > 0 ? feedPool : profiles;
     if (filter !== "for-you") return pool;
-    return applyForYouFeedFilters(pool, filters);
+    return applyForYouGenderFilters(pool, filters);
   }, [feedPool, profiles, filter, filters]);
 
   const mergedLikedIds = useMemo(() => {

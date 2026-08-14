@@ -1,7 +1,7 @@
 # Netlify — build from repo root (leave Base directory EMPTY in Netlify UI).
 
 [build]
-  command = "npm install --prefix lavey_frontend --no-audit --no-fund && npm run build"
+  command = "npm install --prefix lavey_frontend --no-audit --no-fund && npm run build --prefix lavey_frontend"
   publish = "lavey_frontend/dist"
 
 [build.environment]
@@ -11,7 +11,15 @@
   VITE_USE_REAL_AUTH = "true"
   VITE_SUPABASE_URL = "https://wgyqotbvjnkafmwmhvbj.supabase.co"
   VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_F9_1U8m0og8iS3tQmBD6YQ_xV-AVFlL"
-  SECRETS_SCAN_OMIT_KEYS = "PORT,API_PREFIX,FRONTEND_URL,CORS_ORIGIN,VITE_API_BASE_URL,VITE_SUPABASE_PUBLISHABLE_KEY"
+  VITE_ANDROID_DOWNLOAD_URL = "https://expo.dev/artifacts/eas/92pkNvRXYyej8_t7dPdSSSdEEpedf0cNnYkSCAE1bv0.apk"
+  SECRETS_SCAN_OMIT_KEYS = "PORT,API_PREFIX,FRONTEND_URL,CORS_ORIGIN,VITE_API_BASE_URL,VITE_SUPABASE_PUBLISHABLE_KEY,VITE_ANDROID_DOWNLOAD_URL"
+
+[[headers]]
+  for = "/Lavey.apk"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment; filename=\"Lavey.apk\""
+    Cache-Control = "public, max-age=300"
 
 [[redirects]]
   from = "/*"

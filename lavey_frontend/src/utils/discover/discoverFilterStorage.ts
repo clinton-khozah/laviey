@@ -1,5 +1,7 @@
 import { DEFAULT_DISCOVER_FILTERS, type DiscoverFilters } from '@/types';
+import { DISCOVER_AGE, DISCOVER_DISTANCE_GLOBAL_KM, DISCOVER_DISTANCE_KM } from '@/constants/discoverFilter';
 import { discoverFiltersFromOnboarding } from '@/utils/discover/discoverFiltersFromOnboarding';
+import { ensureNonBinaryIncluded } from '@/utils/discover/forYouFeedFilters';
 import { loadOnboardingQuizAnswers } from '@/utils/onboarding/onboardingQuizStorage';
 
 const STORAGE_KEY = 'lavey_discover_filters';
@@ -119,12 +121,25 @@ export function resolveDiscoverFilters(userId?: string): DiscoverFilters {
   const fromQuiz = discoverFiltersFromOnboarding(quiz);
   return {
     ...stored,
-    genders: fromQuiz.genders,
-    ageMin: fromQuiz.ageMin,
-    ageMax: fromQuiz.ageMax,
+    maxDistanceKm: DEFAULT_DISCOVER_FILTERS.maxDistanceKm,
+    ageMin: DEFAULT_DISCOVER_FILTERS.ageMin,
+    ageMax: DEFAULT_DISCOVER_FILTERS.ageMax,
+    genders: ensureNonBinaryIncluded(fromQuiz.genders),
+    hasProfilePhoto: DEFAULT_DISCOVER_FILTERS.hasProfilePhoto,
   };
 }
 
 export function discoverFiltersAreDefault(filters: DiscoverFilters): boolean {
-  return JSON.stringify(filters) === JSON.stringify(DEFAULT_DISCOVER_FILTERS);
+  const distanceIsGlobal =
+    filters.maxDistanceKm >= DISCOVER_DISTANCE_GLOBAL_KM ||
+    filters.maxDistanceKm >= DISCOVER_DISTANCE_KM.max;
+  const ageIsOpen =
+    filters.ageMin <= DISCOVER_AGE.min && filters.ageMax >= DISCOVER_AGE.max;
+
+  return (
+    distanceIsGlobal &&
+    ageIsOpen &&
+    !filters.verifiedOnly &&
+    filters.hasProfilePhoto === DEFAULT_DISCOVER_FILTERS.hasProfilePhoto
+  );
 }

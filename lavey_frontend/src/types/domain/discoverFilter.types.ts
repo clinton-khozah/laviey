@@ -12,9 +12,9 @@ export interface DiscoverFilters {
 }
 
 export const DEFAULT_DISCOVER_FILTERS: DiscoverFilters = {
-  maxDistanceKm: 50,
+  maxDistanceKm: 500,
   ageMin: 18,
-  ageMax: 35,
+  ageMax: 55,
   genders: ['woman', 'man', 'nonbinary'],
   verifiedOnly: false,
   hasProfilePhoto: true,

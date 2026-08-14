@@ -1,0 +1,5 @@
+import { forwardRef } from 'react';
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { theme } from '../../constants/theme';
+export const InputField = forwardRef<TextInput, TextInputProps & { label: string; error?: string }>(({ label, error, ...props }, ref) => <View style={styles.wrap}><Text style={styles.label}>{label}</Text><TextInput ref={ref} {...props} placeholderTextColor={theme.colors.textMuted} style={[styles.input, error && styles.errorInput]} />{error ? <Text style={styles.error}>{error}</Text> : null}</View>);
+const styles = StyleSheet.create({ wrap: { gap: 6 }, label: { fontFamily: theme.typography.medium, fontSize: 13, color: theme.colors.textSecondary }, input: { minHeight: 52, borderRadius: theme.radii.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: 16, fontFamily: theme.typography.regular, fontSize: 15, color: theme.colors.text }, errorInput: { borderColor: theme.colors.danger }, error: { color: theme.colors.danger, fontFamily: theme.typography.regular, fontSize: 12 } });
