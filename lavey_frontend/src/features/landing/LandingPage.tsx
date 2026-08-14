@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import './LandingLegal.css';
 import './LandingLegalOverrides.css';
 import './LandingMarketing.css';
-import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL } from '@/services/marketing/marketingService';
+import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL, downloadApkFile } from '@/services/marketing/marketingService';
 import { trackMarketingEvent } from '@/utils/analytics/googleAnalytics';
 
 function compactDownloadCount(count: number): string {
@@ -47,8 +47,9 @@ export function LandingPage() {
       .then((result) => setDownloadCount(result.downloadCount))
       .catch(() => undefined);
 
-    window.location.assign(APK_DOWNLOAD_URL);
-    window.setTimeout(() => setDownloading(false), 4000);
+    void downloadApkFile().finally(() => {
+      window.setTimeout(() => setDownloading(false), 4000);
+    });
   };
 
   const navDownloadLabel = downloading ? 'Starting download…' : 'Get the App';
@@ -61,6 +62,7 @@ export function LandingPage() {
       <a
         className={`landing__nav-download${downloading ? ' landing__nav-download--busy' : ''}`}
         href={APK_DOWNLOAD_URL}
+        download={APK_DOWNLOAD_FILENAME}
         onClick={requestDownload}
         aria-busy={downloading}
       >
@@ -77,6 +79,7 @@ export function LandingPage() {
           <a
             className={`landing__download${downloading ? ' landing__download--busy' : ''}`}
             href={APK_DOWNLOAD_URL}
+            download={APK_DOWNLOAD_FILENAME}
             onClick={requestDownload}
             aria-busy={downloading}
           >
@@ -112,6 +115,7 @@ export function LandingPage() {
       <a
         className={downloading ? 'landing__sticky-download-btn--busy' : undefined}
         href={APK_DOWNLOAD_URL}
+        download={APK_DOWNLOAD_FILENAME}
         onClick={requestDownload}
         aria-busy={downloading}
       >

@@ -13,7 +13,8 @@ dist-ssr
 *.local
 .env
 
-# Large mobile build artifacts — deploy separately or set VITE_ANDROID_DOWNLOAD_URL
+# Large mobile build artifacts — fetched at build time as public/Lavey.apk
+public/Lavey.apk
 public/downloads/*.apk
 
 # Editor directories and files

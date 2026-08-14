@@ -11,8 +11,29 @@ export const APK_DOWNLOAD_FILENAME = 'Lavey.apk';
 export const APK_PROXY_DOWNLOAD_URL = `${apiConfig.baseUrl}/marketing/apk-url?download=1`;
 export const APK_DIRECT_DOWNLOAD_URL =
   import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || DEFAULT_APK_ARTIFACT_URL;
-/** Same-origin Netlify function — saves as Lavey.apk via Content-Disposition. */
+/** Same-origin static file baked into each Netlify build as Lavey.apk. */
 export const APK_DOWNLOAD_URL = '/Lavey.apk';
+
+export async function downloadApkFile(): Promise<void> {
+  try {
+    const response = await fetch(APK_DOWNLOAD_URL, { credentials: 'same-origin' });
+    if (!response.ok) throw new Error('Download unavailable');
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) throw new Error('APK not deployed yet');
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = APK_DOWNLOAD_FILENAME;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    window.location.assign(APK_DOWNLOAD_URL);
+  }
+}
 
 function visitorId(): string {
   const existing = localStorage.getItem(VISITOR_KEY);

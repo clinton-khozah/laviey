@@ -5,9 +5,6 @@
   command = "npm install --no-audit --no-fund && npm run build"
   publish = "dist"
 
-[functions]
-  directory = "../netlify/functions"
-
 [build.environment]
   NODE_VERSION = "22"
   VITE_API_BASE_URL = "https://laveybackend-3.onrender.com/api"
@@ -17,11 +14,12 @@
   VITE_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_F9_1U8m0og8iS3tQmBD6YQ_xV-AVFlL"
   VITE_ANDROID_DOWNLOAD_URL = "https://expo.dev/artifacts/eas/92pkNvRXYyej8_t7dPdSSSdEEpedf0cNnYkSCAE1bv0.apk"
 
-[[redirects]]
-  from = "/Lavey.apk"
-  to = "/.netlify/functions/lavey-apk"
-  status = 200
-  force = true
+[[headers]]
+  for = "/Lavey.apk"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment; filename=\"Lavey.apk\""
+    Cache-Control = "public, max-age=300"
 
 [[redirects]]
   from = "/*"
