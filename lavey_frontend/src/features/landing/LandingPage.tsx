@@ -7,31 +7,6 @@ import './LandingMarketing.css';
 import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL } from '@/services/marketing/marketingService';
 import { trackMarketingEvent } from '@/utils/analytics/googleAnalytics';
 
-const DIRECT_APK_URL = import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || '';
-
-function triggerFileDownload(url: string): void {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = APK_DOWNLOAD_FILENAME;
-  link.rel = 'noopener';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
-
-async function resolveDownloadTarget(remoteApkUrl: string | null): Promise<string | null> {
-  try {
-    const probe = await fetch(APK_DOWNLOAD_URL, { method: 'HEAD' });
-    const contentType = probe.headers.get('content-type') || '';
-    if (probe.ok && contentType.includes('android.package-archive')) {
-      return APK_DOWNLOAD_URL;
-    }
-  } catch {
-    // Proxy unavailable — fall back to the direct Expo artifact URL.
-  }
-  return remoteApkUrl || DIRECT_APK_URL || null;
-}
-
 function compactDownloadCount(count: number): string {
   if (count < 1_000) return `${count}+`;
   return `${Math.floor(count / 1_000)}K+`;
@@ -45,8 +20,6 @@ export function LandingPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
-  const [remoteApkUrl, setRemoteApkUrl] = useState<string | null>(DIRECT_APK_URL || null);
-  const [downloadReady, setDownloadReady] = useState(Boolean(DIRECT_APK_URL));
   const [downloading, setDownloading] = useState(false);
   useEffect(() => {
     document.documentElement.classList.add('landing-document');
@@ -60,19 +33,13 @@ export function LandingPage() {
   useEffect(() => {
     void marketingService.recordVisit().catch(() => undefined);
     void marketingService.getStats().then((value) => setDownloadCount(value.downloadCount)).catch(() => undefined);
-    void marketingService.getApkDownloadUrl().then((url) => {
-      if (url) setRemoteApkUrl(url);
-      setDownloadReady(Boolean(url || DIRECT_APK_URL));
-    }).catch(() => {
-      setDownloadReady(Boolean(DIRECT_APK_URL));
-    });
     const referralCode = new URLSearchParams(location.search).get('ref');
     if (referralCode) trackMarketingEvent('referral_visit', { referral_code: referralCode });
   }, []);
 
   const requestDownload = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    if (downloading || !downloadReady) return;
+    if (downloading) return;
 
     setDownloading(true);
     trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
@@ -80,14 +47,8 @@ export function LandingPage() {
       .then((result) => setDownloadCount(result.downloadCount))
       .catch(() => undefined);
 
-    void resolveDownloadTarget(remoteApkUrl).then((targetUrl) => {
-      if (!targetUrl) {
-        setDownloading(false);
-        return;
-      }
-      triggerFileDownload(targetUrl);
-      window.setTimeout(() => setDownloading(false), 4000);
-    });
+    window.location.assign(APK_DOWNLOAD_URL);
+    window.setTimeout(() => setDownloading(false), 4000);
   };
 
   const navDownloadLabel = downloading ? 'Starting download…' : 'Get the App';

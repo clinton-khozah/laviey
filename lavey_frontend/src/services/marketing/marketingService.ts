@@ -3,9 +3,16 @@ import { apiConfig } from '@/config/api.config';
 const VISITOR_KEY = 'lavey:website-visitor-id';
 const REFERRAL_KEY = 'lavey:active-referral';
 const REFERRAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** Latest preview APK — used when Netlify env is missing so download never breaks. */
+const DEFAULT_APK_ARTIFACT_URL =
+  'https://expo.dev/artifacts/eas/92pkNvRXYyej8_t7dPdSSSdEEpedf0cNnYkSCAE1bv0.apk';
+
 export const APK_DOWNLOAD_FILENAME = 'Lavey.apk';
 export const APK_PROXY_DOWNLOAD_URL = `${apiConfig.baseUrl}/marketing/apk-url?download=1`;
-export const APK_DOWNLOAD_URL = APK_PROXY_DOWNLOAD_URL;
+export const APK_DIRECT_DOWNLOAD_URL =
+  import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || DEFAULT_APK_ARTIFACT_URL;
+/** Direct Expo artifact — reliable until backend proxy is deployed on Render. */
+export const APK_DOWNLOAD_URL = APK_DIRECT_DOWNLOAD_URL;
 
 function visitorId(): string {
   const existing = localStorage.getItem(VISITOR_KEY);
