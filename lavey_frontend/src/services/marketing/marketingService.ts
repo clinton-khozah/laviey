@@ -11,8 +11,8 @@ export const APK_DOWNLOAD_FILENAME = 'Lavey.apk';
 export const APK_PROXY_DOWNLOAD_URL = `${apiConfig.baseUrl}/marketing/apk-url?download=1`;
 export const APK_DIRECT_DOWNLOAD_URL =
   import.meta.env.VITE_ANDROID_DOWNLOAD_URL?.trim() || DEFAULT_APK_ARTIFACT_URL;
-/** Direct Expo artifact — reliable until backend proxy is deployed on Render. */
-export const APK_DOWNLOAD_URL = APK_DIRECT_DOWNLOAD_URL;
+/** Same-origin Netlify function — saves as Lavey.apk via Content-Disposition. */
+export const APK_DOWNLOAD_URL = '/Lavey.apk';
 
 function visitorId(): string {
   const existing = localStorage.getItem(VISITOR_KEY);
