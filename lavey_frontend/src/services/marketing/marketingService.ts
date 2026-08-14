@@ -14,71 +14,15 @@ export const APK_DIRECT_DOWNLOAD_URL =
 /** Same-origin static file baked into each Netlify build as Lavey.apk. */
 export const APK_DOWNLOAD_URL = "/Lavey.apk";
 
-export type ApkDownloadProgress = {
-  loaded: number;
-  total: number | null;
-  percent: number | null;
-};
-
-function triggerBlobDownload(blob: Blob): void {
-  const objectUrl = URL.createObjectURL(blob);
+/** Hand off to the browser download manager — continues even if this tab closes. */
+export function startNativeApkDownload(): void {
   const link = document.createElement("a");
-  link.href = objectUrl;
+  link.href = APK_DOWNLOAD_URL;
   link.download = APK_DOWNLOAD_FILENAME;
   link.rel = "noopener";
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(objectUrl);
-}
-
-async function readResponseWithProgress(
-  response: Response,
-  onProgress?: (progress: ApkDownloadProgress) => void,
-): Promise<Blob> {
-  if (!response.body) return response.blob();
-
-  const totalHeader = response.headers.get("content-length");
-  const total = totalHeader ? Number(totalHeader) : null;
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let loaded = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    loaded += value.byteLength;
-    const percent =
-      total && total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : null;
-    onProgress?.({ loaded, total, percent });
-  }
-
-  onProgress?.({ loaded, total: total ?? loaded, percent: 100 });
-  return new Blob(chunks, {
-    type:
-      response.headers.get("content-type") ||
-      "application/vnd.android.package-archive",
-  });
-}
-
-export async function downloadApkFile(
-  onProgress?: (progress: ApkDownloadProgress) => void,
-): Promise<void> {
-  try {
-    const response = await fetch(APK_DOWNLOAD_URL, {
-      credentials: "same-origin",
-    });
-    if (!response.ok) throw new Error("Download unavailable");
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("text/html"))
-      throw new Error("APK not deployed yet");
-
-    const blob = await readResponseWithProgress(response, onProgress);
-    triggerBlobDownload(blob);
-  } catch {
-    window.location.assign(APK_DOWNLOAD_URL);
-  }
 }
 
 function visitorId(): string {
@@ -150,15 +94,25 @@ export const marketingService = {
       (value) => value.downloadUrl?.trim() || null,
     );
   },
-  recordDownload(): Promise<{ downloadCount: number }> {
-    return request("/marketing/download", {
-      method: "POST",
-      body: JSON.stringify({
-        visitorId: visitorId(),
-        source: "landing-page",
-        referralCode: activeReferralCode(),
-      }),
+  recordDownload(): Promise<{ downloadCount: number } | null> {
+    const payload = JSON.stringify({
+      visitorId: visitorId(),
+      source: "landing-page",
+      referralCode: activeReferralCode(),
     });
+
+    return fetch(`${apiConfig.baseUrl}/marketing/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const body = (await response.json()) as { data: { downloadCount: number } };
+        return body.data;
+      })
+      .catch(() => null);
   },
   getReferral(
     displayName: string,

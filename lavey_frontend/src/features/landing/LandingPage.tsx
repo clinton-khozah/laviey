@@ -4,17 +4,12 @@ import { useEffect, useState } from 'react';
 import './LandingLegal.css';
 import './LandingLegalOverrides.css';
 import './LandingMarketing.css';
-import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL, downloadApkFile } from '@/services/marketing/marketingService';
+import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL, startNativeApkDownload } from '@/services/marketing/marketingService';
 import { trackMarketingEvent } from '@/utils/analytics/googleAnalytics';
 
 function compactDownloadCount(count: number): string {
   if (count < 1_000) return `${count}+`;
   return `${Math.floor(count / 1_000)}K+`;
-}
-
-function formatDownloadSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function PlayMark() {
@@ -25,9 +20,7 @@ export function LandingPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
-  const [downloadBytes, setDownloadBytes] = useState<{ loaded: number; total: number | null } | null>(null);
+  const [downloadStarted, setDownloadStarted] = useState(false);
   useEffect(() => {
     document.documentElement.classList.add('landing-document');
     document.body.classList.add('landing-document');
@@ -46,48 +39,33 @@ export function LandingPage() {
 
   const requestDownload = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    if (downloading) return;
+    if (downloadStarted) return;
 
-    setDownloading(true);
-    setDownloadProgress(0);
-    setDownloadBytes(null);
+    setDownloadStarted(true);
     trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
     void marketingService.recordDownload()
-      .then((result) => setDownloadCount(result.downloadCount))
+      .then((result) => {
+        if (result?.downloadCount !== undefined) setDownloadCount(result.downloadCount);
+      })
       .catch(() => undefined);
 
-    void downloadApkFile((progress) => {
-      if (progress.percent !== null) setDownloadProgress(progress.percent);
-      setDownloadBytes({ loaded: progress.loaded, total: progress.total });
-    }).finally(() => {
-      setDownloadProgress(100);
-      window.setTimeout(() => {
-        setDownloading(false);
-        setDownloadProgress(null);
-        setDownloadBytes(null);
-      }, 1800);
-    });
+    startNativeApkDownload();
+    window.setTimeout(() => setDownloadStarted(false), 8000);
   };
 
-  const progressSuffix = downloadProgress !== null ? ` · ${downloadProgress}%` : '';
-  const navDownloadLabel = downloading ? `Downloading${progressSuffix}` : 'Get the App';
-  const heroDownloadLabel = downloading ? `Downloading Lavey.apk${progressSuffix}` : 'Download Lavey';
-  const stickyDownloadLabel = downloading ? `${downloadProgress ?? 0}%` : 'Download';
-  const downloadStatusLine = downloadBytes
-    ? downloadBytes.total
-      ? `${formatDownloadSize(downloadBytes.loaded)} of ${formatDownloadSize(downloadBytes.total)}`
-      : `${formatDownloadSize(downloadBytes.loaded)} downloaded`
-    : 'Connecting to download…';
+  const navDownloadLabel = downloadStarted ? 'Download started' : 'Get the App';
+  const heroDownloadLabel = downloadStarted ? 'Download started' : 'Download Lavey';
+  const stickyDownloadLabel = downloadStarted ? 'Started' : 'Download';
 
   return <main className="landing">
     <nav className="landing__nav">
       <a className="landing__brand" href="#top" aria-label="Lavey home"><img src="/images/logo.png" alt=""/><span>Lavey</span></a>
       <a
-        className={`landing__nav-download${downloading ? ' landing__nav-download--busy' : ''}`}
+        className={`landing__nav-download${downloadStarted ? ' landing__nav-download--busy' : ''}`}
         href={APK_DOWNLOAD_URL}
         download={APK_DOWNLOAD_FILENAME}
         onClick={requestDownload}
-        aria-busy={downloading}
+        aria-busy={downloadStarted}
       >
         {navDownloadLabel}
       </a>
@@ -100,14 +78,14 @@ export function LandingPage() {
         <p>Lavey is a free dating social app for meeting people nearby or connecting with someone anywhere in the world. Share your music, express your vibe and start conversations that feel easy from the first hello—no subscription needed.</p>
         <div className="landing__actions">
           <a
-            className={`landing__download${downloading ? ' landing__download--busy' : ''}`}
+            className={`landing__download${downloadStarted ? ' landing__download--busy' : ''}`}
             href={APK_DOWNLOAD_URL}
             download={APK_DOWNLOAD_FILENAME}
             onClick={requestDownload}
-            aria-busy={downloading}
+            aria-busy={downloadStarted}
           >
             <span>{heroDownloadLabel}</span>
-            <small>{downloading ? downloadStatusLine : 'Android APK · Free'}</small>
+            <small>{downloadStarted ? 'Safe to close this tab — check your browser downloads' : 'Android APK · Free'}</small>
           </a>
           <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
           <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
@@ -136,30 +114,21 @@ export function LandingPage() {
       <img src="/images/logo.png" alt=""/>
       <div><strong>Get Lavey</strong><small>Free Android download</small></div>
       <a
-        className={downloading ? 'landing__sticky-download-btn--busy' : undefined}
+        className={downloadStarted ? 'landing__sticky-download-btn--busy' : undefined}
         href={APK_DOWNLOAD_URL}
         download={APK_DOWNLOAD_FILENAME}
         onClick={requestDownload}
-        aria-busy={downloading}
+        aria-busy={downloadStarted}
       >
         {stickyDownloadLabel}
       </a>
     </aside>
-    {downloading ? (
-      <div className="landing-apk-download" role="status" aria-live="polite" aria-valuenow={downloadProgress ?? 0} aria-valuemin={0} aria-valuemax={100}>
-        {downloadProgress !== null ? (
-          <div className="landing-apk-download__percent" aria-hidden>{downloadProgress}%</div>
-        ) : (
-          <div className="landing-apk-download__spinner" aria-hidden />
-        )}
+    {downloadStarted ? (
+      <div className="landing-apk-download" role="status" aria-live="polite">
+        <div className="landing-apk-download__spinner" aria-hidden />
         <div className="landing-apk-download__copy">
-          <strong>Downloading {APK_DOWNLOAD_FILENAME}{downloadProgress !== null ? ` · ${downloadProgress}%` : ''}</strong>
-          <small>{downloadProgress === 100 ? 'Saving to your downloads folder…' : downloadStatusLine}</small>
-          <progress
-            className="landing-apk-download__bar"
-            value={downloadProgress ?? 0}
-            max={100}
-          />
+          <strong>{APK_DOWNLOAD_FILENAME} is downloading</strong>
+          <small>Track progress in your browser&apos;s downloads. You can close this tab anytime.</small>
         </div>
       </div>
     ) : null}
