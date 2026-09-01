@@ -4,3 +4,9 @@
   box-shadow: none;
   font-size: 9px;
 }
+
+.landing .landing__legal-links a {
+  color: #522363;
+  font: 700 11px 'DM Sans';
+  text-decoration: underline;
+}

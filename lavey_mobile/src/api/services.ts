@@ -23,7 +23,10 @@ async function withNetworkRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<
 }
 
 export const authApi = {
-  google: async (idToken: string) => (await api.post<ApiResponse<AuthSession>>(endpoints.auth.google, { idToken })).data.data,
+  google: async (idToken: string) =>
+    withNetworkRetry(() =>
+      api.post<ApiResponse<AuthSession>>(endpoints.auth.google, { idToken }).then((response) => response.data.data),
+    ),
   login: async (email: string, password: string) => (await api.post<ApiResponse<AuthSession>>(endpoints.auth.login, { email, password })).data.data,
   register: async (displayName: string, email: string, password: string) => (await api.post<ApiResponse<AuthSession | { needsEmailVerification: true; email: string }>>(endpoints.auth.register, { displayName, email, password })).data.data,
   verifyOtp: async (email: string, code: string) => (await api.post<ApiResponse<AuthSession>>(endpoints.auth.verifyEmail, { email, code })).data.data,

@@ -7,14 +7,15 @@ import { GoogleLogoIcon } from '../../components/auth/GoogleLogoIcon';
 import { AuthLayout } from './AuthLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { isEmail } from '../../utils/validators';
-import { storage } from '../../utils/storage';
 import { theme } from '../../constants/theme';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import { getGoogleIdToken } from '../../config/googleAuth';
 import { googleSignInErrorMessage } from '../../utils/api/networkError';
 
+const GOOGLE_SIGN_IN_TIMEOUT_MS = 45_000;
+
 export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackParamList, 'Login'>) {
-  const { login, loginWithGoogle, signInPrompt, clearSignInPrompt } = useAuth();
+  const { session, login, loginWithGoogle, signInPrompt, clearSignInPrompt } = useAuth();
   const [sessionEnded, setSessionEnded] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,22 +37,29 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
   }));
 
   useEffect(() => {
-    // Drop any expired token before sign-in so login requests are not sent with stale auth headers.
-    void storage.clearSession();
-  }, []);
-
-  useEffect(() => {
     if (!signInPrompt) return;
     setSessionEnded(true);
     clearSignInPrompt();
   }, [clearSignInPrompt, signInPrompt]);
+
+  useEffect(() => {
+    if (session) setGoogleLoading(false);
+  }, [session]);
 
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
     try {
       const idToken = await getGoogleIdToken();
       if (!idToken) return;
-      await loginWithGoogle(idToken);
+      await Promise.race([
+        loginWithGoogle(idToken),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Sign-in is taking too long. Check your connection and try again.')),
+            GOOGLE_SIGN_IN_TIMEOUT_MS,
+          ),
+        ),
+      ]);
     } catch (error) {
       Alert.alert('Could not sign in with Google', googleSignInErrorMessage(error));
     } finally {

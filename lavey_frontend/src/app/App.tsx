@@ -26,6 +26,7 @@ import { applyThemeToDocument, loadTheme } from "@/utils/theme/themeStorage";
 import { useEffect, useState } from "react";
 import { SignInRequiredPrompt } from "@/components/auth/SignInRequiredPrompt/SignInRequiredPrompt";
 import { LandingPage } from "@/features/landing";
+import { PrivacyPolicyPage } from "@/features/legal";
 
 const ADMIN_ROOT_PATH = "/admin/19990808";
 const ADMIN_LOGIN_PATH = "/admin/19990808/adminlogin";
@@ -125,6 +126,8 @@ function App() {
         onNavigate={navigateTo}
       />
     );
+  } else if (path === "/privacy-policy" || path === "/privacy") {
+    content = <PrivacyPolicyPage />;
   } else if (path === "/subscription/success") {
     content = <SubscriptionResultPage variant="success" onNavigate={navigateTo} />;
   } else if (path === "/subscription/cancel") {

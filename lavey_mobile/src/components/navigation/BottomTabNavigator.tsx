@@ -14,7 +14,7 @@ import { useChat } from "../../context/ChatContext";
 import { chatApi, roomApi } from "../../api/services";
 
 export type MainTabParamList = {
-  Home: undefined;
+  Home: { openLikes?: boolean } | undefined;
   Discover: undefined;
   Matches: undefined;
   Chat: { conversationId?: string } | undefined;

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { AppState } from 'react-native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { authApi, onboardingApi } from '../api/services';
@@ -26,14 +26,23 @@ type AuthValue = {
 
 export const AuthContext = createContext<AuthValue | null>(null);
 
+const ONBOARDING_STATUS_TIMEOUT_MS = 8_000;
+const AUTH_SETTLE_MS = 12_000;
+
 async function resolveNeedsOnboardingQuiz(userId?: string): Promise<boolean> {
   if (userId && (await storage.getOnboardingComplete(userId))) return false;
   try {
-    const status = await onboardingApi.status();
+    const status = await Promise.race([
+      onboardingApi.status(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('onboarding-status-timeout')), ONBOARDING_STATUS_TIMEOUT_MS),
+      ),
+    ]);
     if (status.completed && userId) await storage.setOnboardingComplete(userId);
     return !status.completed;
   } catch {
-    return false;
+    // If the status check fails or times out, prefer showing onboarding over a dead-end loader.
+    return true;
   }
 }
 
@@ -51,16 +60,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [signInPrompt, setSignInPrompt] = useState(false);
   const [needsOnboardingQuiz, setNeedsOnboardingQuiz] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const authSettledUntilRef = useRef(0);
+
+  const markAuthSettled = useCallback(() => {
+    authSettledUntilRef.current = Date.now() + AUTH_SETTLE_MS;
+  }, []);
+
+  const refreshOnboardingState = useCallback(async (userId: string) => {
+    const cachedComplete = await storage.getOnboardingComplete(userId);
+    if (cachedComplete) {
+      setNeedsOnboardingQuiz(false);
+      return;
+    }
+
+    setNeedsOnboardingQuiz(true);
+    const needsQuiz = await resolveNeedsOnboardingQuiz(userId);
+    setNeedsOnboardingQuiz(needsQuiz);
+  }, []);
 
   const persist = useCallback(async (next: AuthSession) => {
+    markAuthSettled();
     await storage.setSession(next);
     setSignInPrompt(false);
     setSession(next);
-    const needsQuiz = await resolveNeedsOnboardingQuiz(next.user.id);
-    setNeedsOnboardingQuiz(needsQuiz);
-    setOnboardingChecked(true);
     setRestoring(false);
-  }, []);
+    setOnboardingChecked(true);
+
+    void refreshOnboardingState(next.user.id);
+  }, [markAuthSettled, refreshOnboardingState]);
 
   const trySilentGoogleRecovery = useCallback(async (): Promise<AuthSession | null> => {
     try {
@@ -112,6 +139,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(
     () =>
       sessionEvents.subscribe((payload) => {
+        if (Date.now() < authSettledUntilRef.current) return;
         void invalidateSession({ provider: payload?.provider, promptSignIn: false, silent: true });
       }),
     [invalidateSession],
@@ -126,17 +154,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
           .me()
           .then((user) => setSession({ ...renewed, user }))
           .catch((error) => {
+            if (Date.now() < authSettledUntilRef.current) return;
             if (isUnauthorizedError(error)) {
               void invalidateSession({ provider: stored.user.provider, promptSignIn: false, silent: true });
             }
           });
-        const onboardingDone = await storage.getOnboardingComplete(stored.user.id);
-        if (!onboardingDone) {
-          setNeedsOnboardingQuiz(await resolveNeedsOnboardingQuiz(stored.user.id));
-        }
         return;
       }
 
+      if (Date.now() < authSettledUntilRef.current) return;
       await invalidateSession({ provider: stored.user.provider, promptSignIn: false, silent: true });
     },
     [invalidateSession],
@@ -152,19 +178,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
           return;
         }
 
+        markAuthSettled();
         setSession(stored);
-        const onboardingDone = await storage.getOnboardingComplete(stored.user.id);
-        setNeedsOnboardingQuiz(!onboardingDone);
-        setOnboardingChecked(onboardingDone);
         setRestoring(false);
-
+        setOnboardingChecked(true);
+        void refreshOnboardingState(stored.user.id);
         void syncSessionFromStorage(stored);
       } catch {
         setOnboardingChecked(true);
         setRestoring(false);
       }
     })();
-  }, [syncSessionFromStorage]);
+  }, [markAuthSettled, refreshOnboardingState, syncSessionFromStorage]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
@@ -186,10 +211,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async (email: string, password: string) => persist(await authApi.login(email, password)),
     [persist],
   );
-  const loginWithGoogle = useCallback(
-    async (idToken: string) => persist(await authApi.google(idToken)),
-    [persist],
-  );
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    markAuthSettled();
+    const next = await authApi.google(idToken);
+    await persist(next);
+  }, [markAuthSettled, persist]);
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const result = await authApi.register(name, email, password);

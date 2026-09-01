@@ -38,7 +38,7 @@
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "versionCode": 10
+      "versionCode": 13
     },
     "web": {
       "favicon": "./assets/favicon.png"

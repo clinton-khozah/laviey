@@ -88,11 +88,14 @@ export function AppNavigator() {
     const data = notification.request.content.data ?? {};
     const conversationId = typeof data.conversationId === 'string' ? data.conversationId : null;
     const url = typeof data.url === 'string' ? data.url : '/messages';
+    const kind = typeof data.kind === 'string' ? data.kind : null;
     pendingNotification.current = null;
     if (conversationId) {
       navigationRef.navigate('ChatDetail', { conversationId });
     } else if (url === '/rooms') {
       navigationRef.navigate('Main', { screen: 'Discover' });
+    } else if (kind === 'like' || kind === 'post_like' || kind === 'crush' || url.includes('likes')) {
+      navigationRef.navigate('Main', { screen: 'Home', params: { openLikes: true } });
     } else {
       navigationRef.navigate('Main', { screen: 'Chat' });
     }

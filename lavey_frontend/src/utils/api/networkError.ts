@@ -10,7 +10,10 @@ export function networkErrorMessage(): string {
   if (/localhost|127\.0\.0\.1/i.test(base)) {
     return `Cannot reach the API at ${base}. Start the backend: open a terminal in lavey-backend and run npm run dev (port 5000).`;
   }
-  return 'Cannot reach the Lavey servers. The API may be waking up (Render free tier can take up to a minute) — wait and try again.';
+  if (/localhost|127\.0\.0\.1/i.test(base)) {
+    return `Cannot reach the API at ${base}. Start the backend in lavey-backend (npm run dev) or check that VITE_API_BASE_URL matches where the API is running.`;
+  }
+  return 'Cannot reach the Lavey servers. The API may be waking up (Render free tier can take up to a minute) — wait and try again. If you are on local dev, ensure the backend is running or use https://loviey.netlify.app for admin.';
 }
 
 export function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {

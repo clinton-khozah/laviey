@@ -85,6 +85,7 @@ function shuffleProfiles(profiles: Profile[]): Profile[] {
 }
 export function HomeScreen({
   navigation,
+  route,
 }: BottomTabScreenProps<MainTabParamList, "Home">) {
   const { session } = useAuth();
   const { profile: cachedProfile, refreshProfile } = useAppData();
@@ -174,6 +175,13 @@ export function HomeScreen({
   const [feedProfile, setFeedProfile] = useState<Profile | null>(null);
   const [clearDisplayKey, setClearDisplayKey] = useState<string | null>(null);
   const [likesSheetOpen, setLikesSheetOpen] = useState(false);
+  const [feedIndex, setFeedIndex] = useState(0);
+  useEffect(() => {
+    if (route.params?.openLikes) {
+      setLikesSheetOpen(true);
+      navigation.setParams({ openLikes: undefined });
+    }
+  }, [navigation, route.params?.openLikes]);
   const { profiles: likerProfiles, likedBackIds, count: likesBadgeCount, loading: likersLoading, refetch: refetchLikers } = useProfilesWhoLikedYou();
   const [actionToast, setActionToast] = useState<string | null>(null);
   const [segment, setSegment] = useState<"forYou" | "nearby">("forYou");
@@ -281,6 +289,22 @@ export function HomeScreen({
       setLoadingMore(false);
     }
   }, [filters, filtersReady, loading, loadingMore, web]);
+  const loadMoreRef = useRef(loadMore);
+  loadMoreRef.current = loadMore;
+  useEffect(() => {
+    if (!web || loading || loadingMore || feed.length === 0) return;
+    const remaining = feed.length - feedIndex - 1;
+    if (remaining <= 4) void loadMoreRef.current();
+  }, [web, loading, loadingMore, feed.length, feedIndex]);
+  const feedPrefetchedRef = useRef(false);
+  useEffect(() => {
+    feedPrefetchedRef.current = false;
+  }, [filters]);
+  useEffect(() => {
+    if (!web || loading || feed.length === 0 || feedPrefetchedRef.current) return;
+    feedPrefetchedRef.current = true;
+    void loadMoreRef.current();
+  }, [web, loading, feed.length]);
   useEffect(() => {
     if (!filtersReady || !session?.user.id) return;
     let cancelled = false;
@@ -458,6 +482,7 @@ export function HomeScreen({
   const onFeedViewableChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     const first = viewableItems[0];
     if (first && typeof first.key === "string") setActiveFeedKey(first.key);
+    if (first && typeof first.index === "number") setFeedIndex(first.index);
   }).current;
   const recordImpression = useCallback((post: ProfilePost, dwellMs: number) => {
     void contentApi.recordView(post.id, dwellMs);
@@ -550,10 +575,10 @@ export function HomeScreen({
           decelerationRate="fast"
           disableIntervalMomentum
           showsVerticalScrollIndicator={false}
-          initialNumToRender={2}
-          windowSize={3}
-          maxToRenderPerBatch={2}
-          removeClippedSubviews
+          initialNumToRender={4}
+          windowSize={7}
+          maxToRenderPerBatch={4}
+          removeClippedSubviews={false}
           getItemLayout={(_, itemIndex) => ({
             length: height - tabBarHeight,
             offset: (height - tabBarHeight) * itemIndex,
@@ -562,12 +587,12 @@ export function HomeScreen({
           refreshing={false}
           onRefresh={load}
           onEndReached={() => void loadMore()}
-          onEndReachedThreshold={1.2}
+          onEndReachedThreshold={0.35}
           viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
           onViewableItemsChanged={onFeedViewableChanged}
           ListEmptyComponent={
             <View style={{ height: height - tabBarHeight }}>
-              <LoadingIndicator label={t("Finding your best vibesâ€¦")} />
+              <LoadingIndicator fullScreen transparent />
             </View>
           }
         />
@@ -652,7 +677,6 @@ export function HomeScreen({
         {filtering ? (
           <View style={styles.filterOverlay} pointerEvents="none">
             <LoadingIndicator compact />
-            <Text style={styles.filterOverlayText}>{t("Updating your feed…")}</Text>
           </View>
         ) : null}
         <ThemeSongAutoPlayer track={playingThemeSong} />
@@ -842,7 +866,7 @@ export function HomeScreen({
         <Text style={styles.logo}>Lavey</Text>
       </View>
       {loading ? (
-        <LoadingIndicator />
+        <LoadingIndicator fullScreen transparent />
       ) : current ? (
         <>
           <View style={styles.deck}>

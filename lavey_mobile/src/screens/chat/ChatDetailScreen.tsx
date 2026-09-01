@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -67,10 +68,14 @@ export function ChatDetailScreen({
   const [requestBusy, setRequestBusy] = useState(false);
   const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const insets = useSafeAreaInsets();
-  const composerBottomPad = Math.max(insets.bottom, Platform.OS === "android" ? 10 : 8);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const composerBottomPad = keyboardVisible
+    ? 8
+    : Math.max(insets.bottom, Platform.OS === "android" ? 10 : 8);
   const incomingRequest = conversation?.conversationKind === "i_crush_incoming" || conversation?.conversationKind === "chat_request_incoming";
   const outgoingRequest = conversation?.conversationKind === "i_crush_outgoing" || conversation?.conversationKind === "chat_request_outgoing";
   // Defensive fallback: conversationId itself encodes a pending request ("icrush-<inviteId>")
@@ -124,6 +129,21 @@ export function ChatDetailScreen({
     const poll = setInterval(() => void load(true), 4000);
     return () => clearInterval(poll);
   }, [load, pendingRequest]);
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setKeyboardVisible(true);
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      });
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const changeText = (v: string) => {
     setText(v);
     void chatApi
@@ -293,69 +313,82 @@ export function ChatDetailScreen({
             blurRadius={Platform.OS === "android" ? 4 : 2}
           />
         </View>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 66 : 0}
-          style={styles.flex}
-        >
-          <View style={styles.messagesArea}>
-            {loading ? (
-              <View style={styles.loadingWrap}>
-                <LoadingIndicator label="Loading conversation…" />
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.flex}
-                contentContainerStyle={styles.messages}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="interactive"
-                showsVerticalScrollIndicator={false}
-                nestedScrollEnabled
-              >
-                {messages.map((item) => (
-                  <Bubble
-                    key={item.id}
-                    message={item}
-                    onLongPress={() => setSelectedMessage(item)}
-                  />
-                ))}
-                {conversation?.isTyping ? (
-                  <View style={styles.typingBubble}>
-                    <Text style={styles.typing}>typing…</Text>
-                  </View>
-                ) : null}
-              </ScrollView>
-            )}
-          </View>
-          {reply ? (
-            <View style={styles.replyBar}>
-              <View style={styles.replyBarText}>
-                <Text style={styles.replyName}>
-                  Replying to{" "}
-                  {reply.senderId === "me"
-                    ? "yourself"
-                    : conversation?.participantName}
-                </Text>
-                <Text numberOfLines={1} style={styles.replyText}>
-                  {reply.text}
-                </Text>
-              </View>
-              <Pressable onPress={() => setReply(null)}>
-                <Ionicons name="close" size={20} color="#8C3AE0" />
-              </Pressable>
-            </View>
-          ) : null}
-          {pendingRequest ? (
-            <View style={[styles.requestCard, { marginBottom: composerBottomPad }]}>
-              <Image source={{ uri: conversation?.participantAvatar }} style={styles.requestAvatar} />
-              <Text style={styles.requestTitle}>{incomingRequest ? (crushRequest ? `${conversation?.participantName} sent you a crush 💋` : `${conversation?.participantName} wants to chat`) : (crushRequest ? "Crush sent" : "Request sent")}</Text>
-              <Text style={styles.requestCopy}>{incomingRequest ? "View their profile above, then accept to open the conversation or decline." : `Waiting for ${conversation?.participantName} to accept. You can chat once they approve.`}</Text>
-              {incomingRequest ? <View style={styles.requestActions}>
-                <Pressable disabled={requestBusy} style={styles.requestDecline} onPress={() => void respondToRequest(false)}><Text style={styles.requestDeclineText}>Decline</Text></Pressable>
-                <Pressable disabled={requestBusy} style={styles.requestAccept} onPress={() => void respondToRequest(true)}><Text style={styles.requestAcceptText}>{requestBusy ? "Please wait…" : (crushRequest ? "Accept crush" : "Accept request")}</Text></Pressable>
-              </View> : null}
+        <View pointerEvents="none" style={styles.watermarkWrap}>
+          <Image
+            source={require("../../../assets/heart-tight.png")}
+            style={styles.watermarkImage}
+            contentFit="contain"
+            blurRadius={Platform.OS === "android" ? 4 : 2}
+          />
+        </View>
+        <View style={styles.messagesArea}>
+          {loading ? (
+            <View style={styles.loadingWrap}>
+              <LoadingIndicator label="Loading conversation…" />
             </View>
           ) : (
+            <ScrollView
+              ref={scrollRef}
+              style={styles.flex}
+              contentContainerStyle={styles.messages}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+              onContentSizeChange={() => {
+                if (keyboardVisible) {
+                  scrollRef.current?.scrollToEnd({ animated: false });
+                }
+              }}
+            >
+              {messages.map((item) => (
+                <Bubble
+                  key={item.id}
+                  message={item}
+                  onLongPress={() => setSelectedMessage(item)}
+                />
+              ))}
+              {conversation?.isTyping ? (
+                <View style={styles.typingBubble}>
+                  <Text style={styles.typing}>typing…</Text>
+                </View>
+              ) : null}
+            </ScrollView>
+          )}
+        </View>
+        {reply ? (
+          <View style={styles.replyBar}>
+            <View style={styles.replyBarText}>
+              <Text style={styles.replyName}>
+                Replying to{" "}
+                {reply.senderId === "me"
+                  ? "yourself"
+                  : conversation?.participantName}
+              </Text>
+              <Text numberOfLines={1} style={styles.replyText}>
+                {reply.text}
+              </Text>
+            </View>
+            <Pressable onPress={() => setReply(null)}>
+              <Ionicons name="close" size={20} color="#8C3AE0" />
+            </Pressable>
+          </View>
+        ) : null}
+        {pendingRequest ? (
+          <View style={[styles.requestCard, { marginBottom: composerBottomPad }]}>
+            <Image source={{ uri: conversation?.participantAvatar }} style={styles.requestAvatar} />
+            <Text style={styles.requestTitle}>{incomingRequest ? (crushRequest ? `${conversation?.participantName} sent you a crush 💋` : `${conversation?.participantName} wants to chat`) : (crushRequest ? "Crush sent" : "Request sent")}</Text>
+            <Text style={styles.requestCopy}>{incomingRequest ? "View their profile above, then accept to open the conversation or decline." : `Waiting for ${conversation?.participantName} to accept. You can chat once they approve.`}</Text>
+            {incomingRequest ? <View style={styles.requestActions}>
+              <Pressable disabled={requestBusy} style={styles.requestDecline} onPress={() => void respondToRequest(false)}><Text style={styles.requestDeclineText}>Decline</Text></Pressable>
+              <Pressable disabled={requestBusy} style={styles.requestAccept} onPress={() => void respondToRequest(true)}><Text style={styles.requestAcceptText}>{requestBusy ? "Please wait…" : (crushRequest ? "Accept crush" : "Accept request")}</Text></Pressable>
+            </View> : null}
+          </View>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "padding"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 66 : 0}
+          >
             <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
               <View style={styles.composer}>
                 <Pressable
@@ -392,6 +425,11 @@ export function ChatDetailScreen({
                     placeholderTextColor="#A79FB0"
                     style={styles.input}
                     textAlignVertical="center"
+                    onFocus={() => {
+                      requestAnimationFrame(() => {
+                        scrollRef.current?.scrollToEnd({ animated: true });
+                      });
+                    }}
                   />
                   <Pressable
                     style={styles.emojiButton}
@@ -416,8 +454,8 @@ export function ChatDetailScreen({
                 </Pressable>
               </View>
             </View>
-          )}
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        )}
       </View>
 
       <Assist

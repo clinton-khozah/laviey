@@ -20,7 +20,7 @@ export function networkErrorMessage(): string {
   if (/10\.0\.2\.2|localhost|127\.0\.0\.1/i.test(API_BASE_URL)) {
     return `Cannot reach the API at ${API_BASE_URL}. Make sure lavey-backend is running (npm run dev in lavey-backend) and reload the app.`;
   }
-  return 'Cannot reach the Lavey servers. Check your internet connection and try again.';
+  return 'Cannot reach the Lavey servers. The API may be waking up (Render free tier can take up to a minute) — wait and try again.';
 }
 
 export function googleSignInErrorMessage(error: unknown): string {
