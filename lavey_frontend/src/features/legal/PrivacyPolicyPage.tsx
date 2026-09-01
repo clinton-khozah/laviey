@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { APP_IMAGES } from '@/constants/images';
 import './PrivacyPolicyPage.css';
 
@@ -5,6 +6,15 @@ const EFFECTIVE_DATE = '1 September 2026';
 const SUPPORT_EMAIL = 'support@lavey.co.za';
 
 export function PrivacyPolicyPage() {
+  useEffect(() => {
+    document.documentElement.classList.add('legal-document');
+    document.body.classList.add('legal-document');
+    return () => {
+      document.documentElement.classList.remove('legal-document');
+      document.body.classList.remove('legal-document');
+    };
+  }, []);
+
   return (
     <main className="privacy-policy-page">
       <header className="privacy-policy-page__header">

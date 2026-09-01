@@ -5,6 +5,30 @@
   color: #3f3640;
 }
 
+html.legal-document,
+body.legal-document {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
+  background: #f8f4f7;
+}
+
+body.legal-document #root {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+body.legal-document .privacy-guard,
+body.legal-document .privacy-guard__content {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
 .privacy-policy-page__header {
   display: flex;
   align-items: center;
@@ -46,7 +70,6 @@
   border-radius: 20px;
   background: #fff;
   box-shadow: 0 24px 80px rgba(33, 25, 33, 0.12);
-  overflow: hidden;
 }
 
 .privacy-policy-page__intro {
