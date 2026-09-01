@@ -190,7 +190,10 @@ export function PrivacyPolicyPage() {
             <li>lodge a complaint with the Information Regulator (South Africa).</li>
           </ul>
           <p>
-            You can update many profile and privacy settings in the app. For other requests, contact us at{' '}
+            You can update many profile and privacy settings in the app. To delete your account, visit{' '}
+            <a href="/delete-account">our account deletion page</a> or use{' '}
+            <strong>Safety, privacy &amp; take a break → Delete my account permanently</strong> in the app.
+            For other requests, contact us at{' '}
             <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
           </p>
 
