@@ -1,0 +1,152 @@
+.child-safety-page {
+  min-height: 100vh;
+  padding: 24px 16px 48px;
+  background: linear-gradient(180deg, #f8f4f7 0%, #efe8ee 100%);
+  color: #3f3640;
+}
+
+.child-safety-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(860px, 100%);
+  margin: 0 auto 20px;
+}
+
+.child-safety-page__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #211921;
+  text-decoration: none;
+  font: 800 18px 'Manrope', system-ui, sans-serif;
+}
+
+.child-safety-page__brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.child-safety-page__back {
+  color: #9b236e;
+  font: 700 13px 'DM Sans', system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.child-safety-page__back:hover {
+  text-decoration: underline;
+}
+
+.child-safety-page__card {
+  width: min(860px, 100%);
+  margin: 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(33, 25, 33, 0.12);
+}
+
+.child-safety-page__intro {
+  padding: 28px 28px 18px;
+  border-bottom: 1px solid #ebe5e9;
+}
+
+.child-safety-page__eyebrow {
+  display: block;
+  color: #9b236e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.child-safety-page__intro h1 {
+  margin: 6px 0 4px;
+  color: #211921;
+  font: 800 32px 'Manrope', system-ui, sans-serif;
+}
+
+.child-safety-page__intro p {
+  margin: 0;
+  color: #8c8289;
+  font-size: 13px;
+}
+
+.child-safety-page__body {
+  padding: 24px 28px 12px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.child-safety-page__body > p,
+.child-safety-page__body > ul,
+.child-safety-page__body > ol {
+  margin: 0 0 16px;
+}
+
+.child-safety-page__body h2 {
+  margin: 28px 0 8px;
+  color: #211921;
+  font: 700 18px 'Manrope', system-ui, sans-serif;
+}
+
+.child-safety-page__body ul,
+.child-safety-page__body ol {
+  padding-left: 20px;
+}
+
+.child-safety-page__body li + li {
+  margin-top: 8px;
+}
+
+.child-safety-page__body a {
+  color: #9b236e;
+  font-weight: 700;
+}
+
+.child-safety-page__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 28px 24px;
+  border-top: 1px solid #ebe5e9;
+  background: #fbf9fa;
+  color: #8c8289;
+  font-size: 12px;
+}
+
+.child-safety-page__footer a {
+  color: #522363;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.child-safety-page__footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .child-safety-page {
+    padding: 16px 12px 32px;
+  }
+
+  .child-safety-page__header,
+  .child-safety-page__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .child-safety-page__intro,
+  .child-safety-page__body,
+  .child-safety-page__footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .child-safety-page__intro h1 {
+    font-size: 26px;
+  }
+}
