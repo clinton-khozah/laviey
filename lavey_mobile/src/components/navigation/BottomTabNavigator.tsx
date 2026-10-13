@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { AppState, View } from "react-native";
+import { useEffect } from "react";
+import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,10 +11,11 @@ import { ProfileScreen } from "../../screens/profile/ProfileScreen";
 import { theme } from "../../constants/theme";
 import { useAppearance } from "../../context/AppearanceContext";
 import { useChat } from "../../context/ChatContext";
-import { chatApi, roomApi } from "../../api/services";
+import { useAppData } from "../../context/AppDataContext";
+import { loadNotifications } from "../../utils/notificationInboxCache";
 
 export type MainTabParamList = {
-  Home: { openLikes?: boolean } | undefined;
+  Home: { openLikes?: boolean; openFilters?: boolean } | undefined;
   Discover: undefined;
   Matches: undefined;
   Chat: { conversationId?: string } | undefined;
@@ -40,35 +41,17 @@ const web: typeof classic = {
 export function BottomTabNavigator() {
   const { mode } = useAppearance();
   const { conversations } = useChat();
+  const { dates } = useAppData();
   const isWeb = mode === "web";
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 7);
   const baseHeight = isWeb ? 72 : 68;
-  const [notificationUnread, setNotificationUnread] = useState(0);
-  const [pendingDateInvites, setPendingDateInvites] = useState(0);
+  const dateCount = dates.length;
   const conversationUnread = conversations.reduce((total, item) => total + item.unreadCount, 0);
-  const chatBadge = conversationUnread + notificationUnread;
-
-  const refreshBadges = useCallback(async () => {
-    const [notifications, invites] = await Promise.all([
-      chatApi.notifications().catch(() => []),
-      roomApi.invites().catch(() => []),
-    ]);
-    setNotificationUnread(notifications.filter((item) => !item.read).length);
-    setPendingDateInvites(invites.filter((item) => item.status === "pending").length);
-  }, []);
-
+  const chatBadge = conversationUnread;
   useEffect(() => {
-    void refreshBadges();
-    const timer = setInterval(() => void refreshBadges(), 10_000);
-    const appStateSubscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void refreshBadges();
-    });
-    return () => {
-      clearInterval(timer);
-      appStateSubscription.remove();
-    };
-  }, [refreshBadges]);
+    void loadNotifications().catch(() => undefined);
+  }, []);
 
   const badgeStyle = {
     minWidth: 18,
@@ -138,7 +121,18 @@ export function BottomTabNavigator() {
         component={DiscoverScreen}
         options={{
           tabBarLabel: "Dates",
-          tabBarBadge: pendingDateInvites > 0 ? (pendingDateInvites > 99 ? "99+" : pendingDateInvites) : undefined,
+          tabBarBadge: dateCount > 0 ? dateCount : undefined,
+          tabBarBadgeStyle: {
+            minWidth: 14,
+            height: 14,
+            borderRadius: 7,
+            paddingHorizontal: 0,
+            backgroundColor: "#20C46A",
+            color: "#FFFFFF",
+            fontFamily: theme.typography.bold,
+            fontSize: 8,
+            lineHeight: 13,
+          },
         }}
       />
       <Tab.Screen name="Matches" component={MatchesScreen} options={{ tabBarLabel: isWeb ? "Post" : "Matches" }} />

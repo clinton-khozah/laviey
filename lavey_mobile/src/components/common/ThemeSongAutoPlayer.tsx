@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useAudioPlayer } from "expo-audio";
 import { WebView } from "react-native-webview";
 
@@ -40,15 +40,17 @@ export function ThemeSongAutoPlayer({ track }: { track: AutoPlayTrack | null }) 
   useEffect(() => () => { try { player.pause(); } catch { /* already released */ } }, [player]);
 
   return (
-    <WebView
-      ref={webviewRef}
-      source={{ html: persistentEmbedHtml }}
-      style={styles.hidden}
-      javaScriptEnabled
-      domStorageEnabled
-      mediaPlaybackRequiresUserAction={false}
-      allowsInlineMediaPlayback
-    />
+    <View pointerEvents="none" style={styles.hiddenHost}>
+      <WebView
+        ref={webviewRef}
+        source={{ html: persistentEmbedHtml }}
+        style={styles.hidden}
+        javaScriptEnabled
+        domStorageEnabled
+        mediaPlaybackRequiresUserAction={false}
+        allowsInlineMediaPlayback
+      />
+    </View>
   );
 }
 
@@ -110,5 +112,6 @@ const persistentEmbedHtml = `<!doctype html>
 </html>`;
 
 const styles = StyleSheet.create({
-  hidden: { width: 1, height: 1, opacity: 0, position: "absolute" },
+  hiddenHost: { position: "absolute", width: 0, height: 0, overflow: "hidden" },
+  hidden: { width: 1, height: 1, opacity: 0 },
 });

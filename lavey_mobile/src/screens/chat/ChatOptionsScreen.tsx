@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { chatApi, discoverApi } from "../../api/services";
+import { useChat } from "../../context/ChatContext";
 import { theme } from "../../constants/theme";
 import type { Profile } from "../../types";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
@@ -94,6 +95,9 @@ export function ChatOptionsScreen({
   navigation,
 }: NativeStackScreenProps<RootStackParamList, "ChatOptions">) {
   const { conversationId, conversation } = route.params;
+  const { setChatFlag } = useChat();
+  const pinned = Boolean(conversation?.isPinned);
+  const muted = Boolean(conversation?.isMuted);
   const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const name = conversation?.participantName || "Conversation";
@@ -119,7 +123,15 @@ export function ChatOptionsScreen({
       return;
     }
     if (id === "pin") {
-      void chatApi.pin(conversationId, true).then(() => Alert.alert("Chat pinned"));
+      const next = !pinned;
+      setChatFlag("pinned", conversationId, next);
+      void chatApi.pin(conversationId, next).catch(() => undefined);
+      navigation.goBack();
+      return;
+    }
+    if (id === "mute") {
+      setChatFlag("muted", conversationId, !muted);
+      navigation.goBack();
       return;
     }
     if (id === "delete") {
@@ -194,8 +206,16 @@ export function ChatOptionsScreen({
           <OptionRow
             key={item.id}
             icon={item.icon}
-            title={item.title}
-            subtitle={item.subtitle}
+            title={
+              item.id === "pin" ? (pinned ? "Unpin chat" : item.title)
+              : item.id === "mute" ? (muted ? "Unmute notifications" : item.title)
+              : item.title
+            }
+            subtitle={
+              item.id === "pin" ? (pinned ? "Remove it from the top of your chats" : item.subtitle)
+              : item.id === "mute" ? (muted ? "Turn alerts back on for this chat" : item.subtitle)
+              : item.subtitle
+            }
             danger={item.danger}
             warn={item.warn}
             onPress={() => onAction(item.id)}

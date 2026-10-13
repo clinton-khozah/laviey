@@ -8,6 +8,7 @@ import { isExpoGo } from "../utils/isExpoGo";
 const PRIMER_SHOWN_KEY = "@lavey/notif-primer-shown-v2";
 const PRIMER_ELIGIBLE_KEY = "@lavey/notif-primer-eligible-v1";
 const EAS_PROJECT_ID = "b3809907-3634-4825-8592-c25e8850322d";
+const TOKEN_REGISTRATION_ATTEMPTS = 3;
 
 const primerEligibleListeners = new Set<() => void>();
 
@@ -21,10 +22,21 @@ export async function registerPushToken(): Promise<void> {
 
   const Notifications = await import("expo-notifications");
   const { ensureAndroidNotificationChannels } = await import("../notifications/setupNotifications");
-  await ensureAndroidNotificationChannels();
-
-  const token = await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
-  await pushApi.subscribeExpo(token.data, Platform.OS);
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= TOKEN_REGISTRATION_ATTEMPTS; attempt += 1) {
+    try {
+      await ensureAndroidNotificationChannels();
+      const token = await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
+      await pushApi.subscribeExpo(token.data, Platform.OS);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < TOKEN_REGISTRATION_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1_000));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Could not register push notifications.");
 }
 
 /**
@@ -44,8 +56,8 @@ export function usePushRegistration(enabled: boolean) {
       if (existing.status === "granted") {
         await registerPushToken();
       }
-    } catch {
-      // Push registration is non-blocking when FCM or network setup is unavailable.
+    } catch (error) {
+      if (__DEV__) console.warn("[push] registration sync failed", error);
     }
   }, [pushSupported]);
 
@@ -67,8 +79,8 @@ export function usePushRegistration(enabled: boolean) {
       ]);
       if (alreadyPrimed || !eligible) return;
       setPrimerVisible(true);
-    } catch {
-      // Non-blocking when notification services are unavailable.
+    } catch (error) {
+      if (__DEV__) console.warn("[push] permission check failed", error);
     }
   }, [pushSupported, syncPushRegistration]);
 

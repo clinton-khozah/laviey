@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   interpolateColor,
@@ -31,7 +31,7 @@ export function AnimatedReactionButton({
   active = false,
   tone = "overlay",
 }: Props) {
-  const scale = useSharedValue(1);
+  const flash = useSharedValue(1);
   const fill = useSharedValue(active ? 1 : 0);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function AnimatedReactionButton({
   }, [active, fill]);
 
   const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    opacity: flash.value,
   }));
 
   const heartProps = useAnimatedProps(() => ({
@@ -52,22 +52,17 @@ export function AnimatedReactionButton({
         ),
   }));
 
-  const kissStyle = useAnimatedStyle(() => ({
-    opacity: 0.7 + fill.value * 0.3,
-    transform: [{ scale: scale.value }],
-  }));
+  const iconName = kind === "crushy" ? "flame" : tone === "plain" && !active ? "heart-outline" : "heart";
 
   const handlePress = useCallback(() => {
     if (disabled) return;
-    if (kind === "like") fill.value = 1;
-    // A clean pop on tap — no rotation wiggle, no springy overshoot.
-    scale.value = withSequence(
-      withTiming(0.85, { duration: 90 }),
-      withTiming(1.22, { duration: 150 }),
-      withTiming(1, { duration: 150 }),
+    fill.value = withTiming(1, { duration: 220 });
+    flash.value = withSequence(
+      withTiming(0.35, { duration: 90 }),
+      withTiming(1, { duration: 180 }),
     );
     onPress();
-  }, [disabled, fill, kind, onPress, scale]);
+  }, [disabled, fill, flash, onPress]);
 
   return (
     <Pressable
@@ -77,17 +72,13 @@ export function AnimatedReactionButton({
       accessibilityLabel={kind === "like" ? "Like profile" : "Send crushy"}
       style={({ pressed }) => [styles.pressable, large && styles.largePressable, pressed && styles.pressed]}
     >
-      {kind === "like" ? (
-        <Animated.View style={[styles.icon, large && styles.largeIcon, tone === "plain" && styles.plainIcon, iconStyle]}>
-          <AnimatedIonicons
-            name={tone === "plain" && !active ? "heart-outline" : "heart"}
-            size={large ? 34 : 26}
-            animatedProps={heartProps}
-          />
-        </Animated.View>
-      ) : (
-        <Animated.Text style={[styles.kiss, kissStyle]}>💋</Animated.Text>
-      )}
+      <Animated.View style={[styles.icon, large && styles.largeIcon, tone === "plain" && styles.plainIcon, iconStyle]}>
+        <AnimatedIonicons
+          name={iconName}
+          size={large ? 34 : 26}
+          animatedProps={heartProps}
+        />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -122,5 +113,4 @@ const styles = StyleSheet.create({
   plainIcon: {
     shadowOpacity: 0,
   },
-  kiss: { fontSize: 26, lineHeight: 30 },
 });

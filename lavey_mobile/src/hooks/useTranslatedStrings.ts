@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { translationApi, type AppLanguageCode } from "../api/services";
+import { useLanguage } from "../context/LanguageContext";
+import { hasUiPhrase, translatePhrase } from "../i18n/uiDictionary";
 
 /**
  * Translates a screen's curated list of static English strings into the given language,
@@ -8,13 +10,22 @@ import { translationApi, type AppLanguageCode } from "../api/services";
  * Fails open to the original English strings on any error — a translation hiccup should
  * never leave a screen blank or partially rendered.
  */
+function applyKnownPhrases(englishStrings: readonly string[], language: AppLanguageCode, extras: Record<string, string> = {}) {
+  return englishStrings.map((text) => extras[text] ?? translatePhrase(language, text));
+}
+
 export function useTranslatedStrings(englishStrings: readonly string[], language: AppLanguageCode) {
-  const [translated, setTranslated] = useState<string[]>(() => englishStrings.slice());
-  const stringsKey = englishStrings.join("");
+  const stringsKey = englishStrings.join("\u0001");
+  const [extras, setExtras] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (language === "en") {
-      setTranslated(englishStrings.slice());
+      setExtras({});
+      return;
+    }
+    const missing = englishStrings.filter((text) => !hasUiPhrase(language, text));
+    if (!missing.length) {
+      setExtras({});
       return;
     }
     let cancelled = false;
@@ -27,21 +38,25 @@ export function useTranslatedStrings(englishStrings: readonly string[], language
       } catch {
         cached = {};
       }
-
-      const missing = englishStrings.filter((s) => !(s in cached));
-      if (missing.length) {
+      const stillMissing = missing.filter((text) => !(text in cached));
+      if (stillMissing.length) {
         try {
-          const results = await translationApi.translateUi(missing, language);
-          missing.forEach((s, i) => {
-            if (results[i]) cached[s] = results[i];
+          const results = await translationApi.translateUi(stillMissing, language);
+          stillMissing.forEach((text, index) => {
+            if (results[index]) cached[text] = results[index];
           });
           void AsyncStorage.setItem(cacheKey, JSON.stringify(cached));
         } catch {
-          // Fail open — untranslated strings just fall back to English below.
+          // Known phrases stay translated. Anything still missing stays English.
         }
       }
-
-      if (!cancelled) setTranslated(englishStrings.map((s) => cached[s] ?? s));
+      if (!cancelled) {
+        const next: Record<string, string> = {};
+        missing.forEach((text) => {
+          if (cached[text]) next[text] = cached[text];
+        });
+        setExtras(next);
+      }
     })();
     return () => {
       cancelled = true;
@@ -49,13 +64,25 @@ export function useTranslatedStrings(englishStrings: readonly string[], language
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, stringsKey]);
 
-  const indexOf = useRef(new Map(englishStrings.map((s, i) => [s, i])));
-  indexOf.current = new Map(englishStrings.map((s, i) => [s, i]));
-
-  const t = (english: string): string => {
-    const index = indexOf.current.get(english);
-    return index === undefined ? english : (translated[index] ?? english);
-  };
-
-  return { t, strings: translated };
+  const strings = applyKnownPhrases(englishStrings, language, extras);
+  const t = (english: string): string => extras[english] ?? translatePhrase(language, english);
+  return { t, strings };
 }
+
+export function useT() {
+  const { language } = useLanguage();
+  return useCallback((english: string) => translatePhrase(language, english), [language]);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

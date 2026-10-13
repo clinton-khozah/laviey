@@ -3,21 +3,23 @@ import { ActivityIndicator, Alert, FlatList, Modal, Pressable, ScrollView, Style
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useAudioPlayer } from "expo-audio";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { profileApi, spotifyApi } from "../../api/services";
+import { useAppData } from "../../context/AppDataContext";
+import { LaveyMusicMark } from "../../components/common/LaveyMusicMark";
 import { theme } from "../../constants/theme";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import type { ThemeSong } from "../../types";
 
 type Track = { spotifyId: string; title: string; artist: string; albumArtUrl: string | null; previewUrl: string | null };
 const DEBOUNCE_MS = 400;
-const DARK = "#101018";
-const PAGE_BG = "#F3F2F5";
+const DARK = "#303034";
+const PAGE_BG = "#FFFFFF";
 
 export function SpotifyThemeSongScreen({ navigation }: NativeStackScreenProps<RootStackParamList, "SpotifyThemeSong">) {
+  const { setProfile } = useAppData();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Track[]>([]);
   const [location, setLocation] = useState<string | null>(null);
@@ -103,7 +105,15 @@ export function SpotifyThemeSongScreen({ navigation }: NativeStackScreenProps<Ro
         previewUrl: track.previewUrl || null,
         albumArtUrl: track.albumArtUrl || null,
       });
-      setCurrent(profile.themeSong ?? null);
+      const saved = profile.themeSong ?? {
+        spotifyId: track.spotifyId,
+        title: track.title,
+        artist: track.artist,
+        albumArtUrl: track.albumArtUrl,
+        previewUrl: track.previewUrl,
+      };
+      setCurrent(saved);
+      setProfile({ ...profile, themeSong: saved });
       try { player.pause(); } catch { /* Player may already be released. */ }
       setPreviewingId(null);
       setEmbeddedTrack(null);
@@ -117,20 +127,21 @@ export function SpotifyThemeSongScreen({ navigation }: NativeStackScreenProps<Ro
 
   const header = (
     <>
-      <LinearGradient colors={["#3D1F5C", "#7B2D5B", "#C44569"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+      <View style={styles.hero}>
         <View style={styles.heroIcon}>
-          <Ionicons name="musical-notes" size={22} color="#FFFFFF" />
+          <Ionicons name="musical-notes" size={22} color="#303034" />
         </View>
         <Text style={styles.eyebrow}>Your profile sound</Text>
         <Text style={styles.heroTitle}>Find your theme song</Text>
         <Text style={styles.heroCopy}>Choose the track people hear when they discover you.</Text>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#8C8798" />
+          <Ionicons name="search" size={18} color="#81818D" />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Song, artist or mood"
-            placeholderTextColor="#A09AA5"
+            placeholderTextColor="#A1A1AA"
+            selectionColor="#303034"
             style={styles.searchInput}
             returnKeyType="search"
             onSubmitEditing={() => void load(query)}
@@ -141,7 +152,7 @@ export function SpotifyThemeSongScreen({ navigation }: NativeStackScreenProps<Ro
             </Pressable>
           ) : null}
         </View>
-      </LinearGradient>
+      </View>
 
       {current ? (
         <View style={styles.currentCard}>
@@ -159,7 +170,11 @@ export function SpotifyThemeSongScreen({ navigation }: NativeStackScreenProps<Ro
           </View>
           <Pressable
             style={styles.remove}
-            onPress={async () => setCurrent((await profileApi.clearThemeSong()).themeSong ?? null)}
+            onPress={async () => {
+              const next = await profileApi.clearThemeSong();
+              setCurrent(next.themeSong ?? null);
+              setProfile(next);
+            }}
           >
             <Ionicons name="trash-outline" size={17} color="#888888" />
           </Pressable>
@@ -254,7 +269,7 @@ export function SpotifyThemeSongScreen({ navigation }: NativeStackScreenProps<Ro
                   ? <Image source={{ uri: embeddedTrack.albumArtUrl }} style={styles.playerArt} />
                   : <View style={[styles.playerArt, styles.fallback]}><Ionicons name="musical-notes" size={52} color="#FFFFFF" /></View>}
               </View>
-              <View style={styles.spotifyBadge}><Ionicons name="musical-note" size={13} color="#1ED760" /><Text style={styles.spotifyBadgeText}>Spotify preview</Text></View>
+              <View style={styles.spotifyBadge}><LaveyMusicMark size={16} /><Text style={styles.spotifyBadgeText}>Theme song</Text></View>
               <Text style={styles.playerTitle} numberOfLines={2}>{embeddedTrack?.title}</Text>
               <Text style={styles.playerArtist} numberOfLines={1}>{embeddedTrack?.artist}</Text>
               {embeddedTrack ? (
@@ -301,34 +316,37 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 16,
-    borderRadius: 20,
+    borderRadius: 10,
     padding: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D7D7DC",
   },
   heroIcon: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,.12)",
+    backgroundColor: "#F4F4F5",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 14,
   },
   eyebrow: {
-    color: "rgba(255,255,255,.78)",
-    fontFamily: theme.typography.medium,
-    fontSize: 11,
-    letterSpacing: 0.4,
+    color: "#81818D",
+    fontFamily: theme.typography.semibold,
+    fontSize: 10,
+    letterSpacing: 0.35,
     textTransform: "uppercase",
   },
   heroTitle: {
-    color: "#FFFFFF",
+    color: "#18181B",
     fontFamily: theme.typography.bold,
     fontSize: 24,
     marginTop: 4,
     letterSpacing: -0.3,
   },
   heroCopy: {
-    color: "rgba(255,255,255,.72)",
+    color: "#5F5F68",
     fontFamily: theme.typography.regular,
     fontSize: 13,
     lineHeight: 18,
@@ -337,8 +355,10 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     height: 48,
-    borderRadius: 14,
+    borderRadius: 10,
     backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D7D7DC",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
@@ -346,21 +366,21 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: DARK,
-    fontFamily: theme.typography.medium,
+    color: "#08080D",
+    fontFamily: theme.typography.regular,
     fontSize: 14,
   },
   currentCard: {
     marginHorizontal: 16,
     marginBottom: 16,
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 10,
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#ECECEC",
+    borderWidth: 1,
+    borderColor: "#D7D7DC",
   },
   currentArt: { width: 54, height: 54, borderRadius: 12 },
   currentLabel: {
@@ -416,13 +436,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 8,
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 10,
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#ECECEC",
+    borderWidth: 1,
+    borderColor: "#D7D7DC",
   },
   rank: {
     width: 22,
@@ -446,16 +466,16 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: 10,
     backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#D8D4DC",
+    borderWidth: 1,
+    borderColor: "#D7D7DC",
     alignItems: "center",
     justifyContent: "center",
   },
   addBtnSelected: {
-    backgroundColor: DARK,
-    borderColor: DARK,
+    backgroundColor: "#303034",
+    borderColor: "#303034",
   },
   error: {
     marginHorizontal: 16,
@@ -596,11 +616,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   setFromPlayer: {
-    height: 50,
+    height: 48,
     marginTop: 14,
     marginHorizontal: 4,
-    borderRadius: 16,
-    backgroundColor: DARK,
+    borderRadius: 10,
+    backgroundColor: "#303034",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

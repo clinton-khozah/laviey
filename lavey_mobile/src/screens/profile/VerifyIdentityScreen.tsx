@@ -19,7 +19,7 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 
 const DARK = "#101018";
 const MUTED = "#8C8798";
-const QUIZ_PROGRESS = ["#7c3aed", "#ff8a5c"] as const;
+const QUIZ_PROGRESS = ["#303034", "#303034"] as const;
 const IMAGE_MEDIA_TYPES: ImagePicker.MediaType[] = ["images"];
 
 type Step = "intro" | "reference" | "live" | "review" | "submitting" | "already" | "pending";
@@ -105,6 +105,7 @@ export function VerifyIdentityScreen({ route, navigation }: NativeStackScreenPro
     if (!permission.granted) return Alert.alert("Permission needed", "Allow photo access to choose a reference photo.");
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: IMAGE_MEDIA_TYPES,
+      legacy: true,
       quality: 0.9,
       allowsEditing: true,
       aspect: [1, 1],
@@ -312,7 +313,7 @@ export function VerifyIdentityScreen({ route, navigation }: NativeStackScreenPro
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#FAFAFC" },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  stepPillActive: { backgroundColor: "#EDE9FE" },
+  stepPillActive: { backgroundColor: "#F4F4F5" },
   stepPillDone: { backgroundColor: QUIZ_PROGRESS[0] },
   stepPillText: { fontFamily: theme.typography.bold, fontSize: 11, color: MUTED },
   stepPillTextActive: { color: QUIZ_PROGRESS[0] },
@@ -353,9 +354,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#F3EEFF",
+    backgroundColor: "#F4F4F5",
     borderWidth: 1,
-    borderColor: "#E9DFFC",
+    borderColor: "#D7D7DC",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
@@ -365,9 +366,9 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#F3EEFF",
+    backgroundColor: "#F4F4F5",
     borderWidth: 1,
-    borderColor: "#E9DFFC",
+    borderColor: "#D7D7DC",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
@@ -394,7 +395,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#FFFFFF",
     backgroundColor: "#FFFFFF",
-    shadowColor: "#7c3aed",
+    shadowColor: "#303034",
     shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
@@ -432,11 +433,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginTop: 24,
-    minHeight: 50,
+    minHeight: 48,
     minWidth: 220,
-    borderRadius: 14,
+    borderRadius: 10,
     paddingHorizontal: 24,
-    backgroundColor: DARK,
+    backgroundColor: "#303034",
   },
   primaryBtnDisabled: { backgroundColor: "#D8D6DB", opacity: 1 },
   primaryBtnText: { fontFamily: theme.typography.bold, fontSize: 15, color: "#FFFFFF" },

@@ -5,6 +5,7 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type ReactNode,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -21,6 +22,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { NameInitialCircle } from "../../../components/common/NameInitialCircle";
+import { hasCustomProfileAvatar } from "../../../utils/discoverProfileReady";
 import { ThemeSongDisc } from "../../../components/common/ThemeSongDisc";
 import { theme } from "../../../constants/theme";
 import type { Profile, ProfilePost } from "../../../types";
@@ -87,8 +90,11 @@ export function ForYouProfileCard({
   onImpression,
   t,
 }: ForYouProfileCardProps) {
-  const { width } = useWindowDimensions();
-  const posts = profile.posts.filter((p) => Boolean(p.src));
+  const { width: windowWidth } = useWindowDimensions();
+  const [pageWidth, setPageWidth] = useState(windowWidth);
+  const avatarUri = hasCustomProfileAvatar(profile.avatar) ? profile.avatar : "";
+  const hasAvatar = Boolean(avatarUri);
+  const posts = profile.posts.filter((post) => Boolean(stillUri(post, avatarUri)));
   const hasPosts = posts.length > 0;
   const multiPhoto = posts.length > 1;
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -137,18 +143,29 @@ export function ForYouProfileCard({
   const matchMeta = formal
     ? `${profile.vibeScore}% match`
     : `${distanceLabel ? `${distanceLabel}　` : ""}${profile.vibeScore}% vibe match`;
+  const anchoredHeightRef = useRef(0);
+  if (height > 0 && anchoredHeightRef.current === 0) anchoredHeightRef.current = height;
+  const textLift = Math.max(0, anchoredHeightRef.current - height);
   const pillTop = 108 + topContentInset;
   const gradientColors = formal
-    ? (["rgba(0,0,0,.12)", "transparent", "rgba(0,0,0,.62)"] as const)
-    : (["rgba(0,0,0,.01)", "transparent", "rgba(0,0,0,.58)"] as const);
+    ? (["rgba(0,0,0,0)", "rgba(0,0,0,0)", "rgba(0,0,0,.62)"] as const)
+    : (["rgba(0,0,0,0)", "rgba(0,0,0,0)", "rgba(0,0,0,.58)"] as const);
 
   return (
-    <View style={[styles.page, { height }]}>
+    <View
+      style={[styles.page, { height }]}
+      onLayout={(event) => {
+        const next = event.nativeEvent.layout.width;
+        if (next > 0) setPageWidth((current) => (Math.abs(current - next) < 0.5 ? current : next));
+      }}
+    >
+      <View style={StyleSheet.absoluteFill}>
       {hasPosts ? (
         <PhotoPager
           posts={posts}
-          width={width}
+          width={pageWidth}
           height={height}
+          fallbackUri={avatarUri}
           hideCrush={hideCrush}
           onIndexChange={handlePhotoIndexChange}
           onLikePost={onLikePost}
@@ -157,7 +174,8 @@ export function ForYouProfileCard({
         />
       ) : (
         <ReactionPhoto
-          uri={profile.avatar}
+          uri={avatarUri}
+          fallback={hasAvatar ? undefined : <NameInitialCircle name={profile.name} />}
           style={StyleSheet.absoluteFill}
           hideCrush={hideCrush}
           onDoubleTap={onLikeProfile}
@@ -165,6 +183,7 @@ export function ForYouProfileCard({
           onLongPress={onMoreOptions}
         />
       )}
+      </View>
       {!clearDisplay ? (
         <>
           <LinearGradient
@@ -188,7 +207,7 @@ export function ForYouProfileCard({
               <Text style={styles.matchPillText}>{t("You matched")}</Text>
             </View>
           ) : null}
-          <View pointerEvents="none" style={styles.info}>
+          <View pointerEvents="none" style={[styles.info, textLift > 0 && { bottom: 96 - textLift }]}>
             <View style={styles.cardNameRow}>
               <Text style={[styles.name, formal && styles.nameFormal]}>
                 {profile.name}, {profile.age}
@@ -203,6 +222,11 @@ export function ForYouProfileCard({
               ) : null}
               {(profile.isOnline ?? isOnlineNow(profile.lastActiveAt)) ? (
                 <View style={styles.cardOnlineDot} />
+              ) : null}
+              {profile.createdAt && Date.now() - new Date(profile.createdAt).getTime() < 21 * 24 * 60 * 60 * 1000 ? (
+                <View style={styles.newPill}>
+                  <Text style={styles.newPillText}>{t("New")}</Text>
+                </View>
               ) : null}
             </View>
             <Text style={[styles.meta, formal && styles.metaFormal]}>{matchMeta}</Text>
@@ -226,10 +250,16 @@ export function ForYouProfileCard({
               </Text>
             ) : null}
           </View>
-          <View style={styles.rail}>
+          <View style={[styles.rail, textLift > 0 && { bottom: 112 - textLift }]}>
             {!hideProfileEntry ? (
               <Pressable onPress={onViewProfile}>
-                <Image source={{ uri: profile.avatar }} style={styles.railAvatar} />
+                {hasAvatar ? (
+                  <Image source={{ uri: avatarUri }} style={styles.railAvatar} contentFit="cover" />
+                ) : (
+                  <View style={styles.railAvatar}>
+                    <NameInitialCircle name={profile.name} size={40} />
+                  </View>
+                )}
               </Pressable>
             ) : null}
             <AnimatedReactionButton kind="like" active={liked} onPress={onLike} disabled={liked} />
@@ -276,6 +306,7 @@ export function ForYouProfileCard({
 
 function ReactionPhoto({
   uri,
+  fallback,
   style,
   hideCrush = false,
   onDoubleTap,
@@ -283,6 +314,7 @@ function ReactionPhoto({
   onLongPress,
 }: {
   uri: string;
+  fallback?: ReactNode;
   style?: StyleProp<ViewStyle>;
   hideCrush?: boolean;
   onDoubleTap(): void;
@@ -321,11 +353,13 @@ function ReactionPhoto({
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .maxDuration(280)
+    .maxDistance(12)
     .onEnd(() => runOnJS(handleDoubleTap)());
 
   const tripleTap = Gesture.Tap()
     .numberOfTaps(3)
     .maxDuration(450)
+    .maxDistance(12)
     .onEnd(() => runOnJS(handleTripleTap)());
 
   if (!hideCrush) doubleTap.requireExternalGestureToFail(tripleTap);
@@ -333,6 +367,7 @@ function ReactionPhoto({
 
   const longPress = Gesture.LongPress()
     .minDuration(420)
+    .maxDistance(12)
     .onStart(() => {
       if (onLongPress) runOnJS(onLongPress)();
     });
@@ -346,7 +381,18 @@ function ReactionPhoto({
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={style}>
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+        {uri.trim() ? (
+          <Image
+            source={{ uri }}
+            recyclingKey={uri}
+            style={[StyleSheet.absoluteFill, styles.photo]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={0}
+          />
+        ) : (
+          fallback
+        )}
         <Animated.View pointerEvents="none" style={[styles.burstWrap, burstStyle]}>
           {burstKind === "crush" ? (
             <Text style={styles.burstKiss}>💋</Text>
@@ -359,10 +405,16 @@ function ReactionPhoto({
   );
 }
 
+function stillUri(post: ProfilePost, fallback: string): string {
+  if (post.type === "video") return post.poster || fallback;
+  return post.src || post.poster || fallback;
+}
+
 function PhotoPager({
   posts,
   width,
   height,
+  fallbackUri,
   hideCrush = false,
   onIndexChange,
   onLikePost,
@@ -372,6 +424,7 @@ function PhotoPager({
   posts: ProfilePost[];
   width: number;
   height: number;
+  fallbackUri: string;
   hideCrush?: boolean;
   onIndexChange(index: number): void;
   onLikePost(post: ProfilePost): void;
@@ -380,9 +433,12 @@ function PhotoPager({
 }) {
   const translateX = useSharedValue(0);
   const indexSV = useSharedValue(0);
+  const touchStartX = useSharedValue(0);
+  const touchStartY = useSharedValue(0);
   const burstScale = useSharedValue(0);
   const burstOpacity = useSharedValue(0);
   const [burstKind, setBurstKind] = useState<"like" | "crush" | null>(null);
+  const [brokenIds, setBrokenIds] = useState<Record<string, boolean>>({});
 
   const playBurst = useCallback(
     (kind: "like" | "crush") => {
@@ -414,8 +470,21 @@ function PhotoPager({
   }, [hideCrush, onCrushRequest, playBurst]);
 
   const pan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-12, 12])
+    .manualActivation(true)
+    .onTouchesDown((event) => {
+      const touch = event.allTouches[0];
+      if (!touch) return;
+      touchStartX.value = touch.absoluteX;
+      touchStartY.value = touch.absoluteY;
+    })
+    .onTouchesMove((event, state) => {
+      const touch = event.allTouches[0];
+      if (!touch) return;
+      const dx = Math.abs(touch.absoluteX - touchStartX.value);
+      const dy = Math.abs(touch.absoluteY - touchStartY.value);
+      if (dy > 8 && dy >= dx) state.fail();
+      else if (dx > 10 && dx > dy) state.activate();
+    })
     .onUpdate((e) => {
       translateX.value = -indexSV.value * width + e.translationX;
     })
@@ -433,6 +502,7 @@ function PhotoPager({
 
   const longPress = Gesture.LongPress()
     .minDuration(420)
+    .maxDistance(12)
     .onStart(() => {
       runOnJS(onLongPress)();
     });
@@ -440,11 +510,13 @@ function PhotoPager({
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .maxDuration(280)
+    .maxDistance(12)
     .onEnd(() => runOnJS(handleDoubleTap)(indexSV.value));
 
   const tripleTap = Gesture.Tap()
     .numberOfTaps(3)
     .maxDuration(450)
+    .maxDistance(12)
     .onEnd(() => runOnJS(handleTripleTap)());
 
   if (!hideCrush) doubleTap.requireExternalGestureToFail(tripleTap);
@@ -463,16 +535,37 @@ function PhotoPager({
   return (
     <GestureDetector gesture={composed}>
       <View style={{ width, height, overflow: "hidden" }}>
-        <Animated.View style={[{ flexDirection: "row", width: width * posts.length, height }, rowStyle]}>
-          {posts.map((post) => (
-            <Image
-              key={post.id}
-              source={{ uri: post.src }}
-              style={{ width, height }}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-            />
-          ))}
+        <Animated.View style={[{ width: width * posts.length, height }, rowStyle]}>
+          {posts.map((post, index) => {
+            const primary = stillUri(post, fallbackUri);
+            const uri = brokenIds[post.id] ? fallbackUri || primary : primary;
+            return (
+              <View key={post.id} style={[styles.slide, { left: index * width, width, height }]}>
+                {fallbackUri ? (
+                  <Image
+                    source={{ uri: fallbackUri }}
+                    recyclingKey={fallbackUri}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={0}
+                  />
+                ) : null}
+                <Image
+                  source={{ uri }}
+                  recyclingKey={`${post.id}:${uri}`}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={0}
+                  priority={index === 0 ? "high" : "normal"}
+                  onError={() => {
+                    if (uri !== fallbackUri) setBrokenIds((current) => (current[post.id] ? current : { ...current, [post.id]: true }));
+                  }}
+                />
+              </View>
+            );
+          })}
         </Animated.View>
         <Animated.View pointerEvents="none" style={[styles.burstWrap, burstStyle]}>
           {burstKind === "crush" ? (
@@ -488,6 +581,8 @@ function PhotoPager({
 
 const styles = StyleSheet.create({
   page: { width: "100%", overflow: "hidden", backgroundColor: "#111" },
+  slide: { position: "absolute", top: 0, overflow: "hidden", backgroundColor: "#111" },
+  photo: { backgroundColor: "#111" },
   burstWrap: {
     position: "absolute",
     top: 0,
@@ -559,7 +654,14 @@ const styles = StyleSheet.create({
   },
   photoDotActive: { backgroundColor: "white" },
   cardNameRow: { flexDirection: "row", alignItems: "center" },
-  name: { color: "white", fontFamily: theme.typography.bold, fontSize: 24 },
+  name: {
+    color: "white",
+    fontFamily: theme.typography.bold,
+    fontSize: 24,
+    textShadowColor: "rgba(0,0,0,.45)",
+    textShadowRadius: 8,
+    textShadowOffset: { width: 0, height: 1 },
+  },
   nameFormal: { fontSize: 25, letterSpacing: -0.3 },
   cardVerified: { marginLeft: 6 },
   cardOnlineDot: {
@@ -571,11 +673,30 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "white",
   },
+  newPill: {
+    marginLeft: 6,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.94)",
+  },
+  newPillText: {
+    color: "#1A1A1A",
+    fontFamily: theme.typography.semibold,
+    fontSize: 9,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
   meta: {
     color: "rgba(255,255,255,.9)",
     fontFamily: theme.typography.semibold,
     fontSize: 12,
     marginTop: 4,
+    textShadowColor: "rgba(0,0,0,.4)",
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 1 },
   },
   metaFormal: {
     fontFamily: theme.typography.medium,
@@ -604,16 +725,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 9,
+    textShadowColor: "rgba(0,0,0,.4)",
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 1 },
   },
   postCaptionFormal: {
     color: "rgba(255,255,255,.88)",
     lineHeight: 18,
   },
-  info: { position: "absolute", left: 18, right: 60, bottom: 30 },
+  info: { position: "absolute", left: 18, right: 78, bottom: 96, zIndex: 2 },
   rail: {
     position: "absolute",
     right: 8,
-    bottom: 50,
+    bottom: 112,
+    zIndex: 2,
     alignItems: "center",
     gap: 4,
   },
@@ -624,6 +749,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "white",
     marginBottom: 8,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3E8FF",
   },
   railLabel: {
     color: "white",

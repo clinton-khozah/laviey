@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import { createNavigationContainerRef, DefaultTheme, NavigationContainer, type NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabNavigator, type MainTabParamList } from '../components/navigation/BottomTabNavigator';
@@ -18,7 +18,6 @@ import { SupportScreen } from '../screens/profile/SupportScreen';
 import { VideoCallScreen } from '../screens/chat/VideoCallScreen';
 import type { Conversation, UserProfile } from '../types';
 import { AuthNavigator } from './AuthNavigator';
-import { DiscoveryProfilesScreen } from '../screens/discover/DiscoveryProfilesScreen';
 import { NearbyRadarScreen } from '../screens/nearby/NearbyRadarScreen';
 // Group chats disabled — re-enable when the feature ships.
 // import { GroupChatsScreen } from '../screens/groups/GroupChatsScreen';
@@ -34,12 +33,16 @@ import { NotificationPermissionSheet } from '../components/notifications/Notific
 import { useLanguageDetectionPrompt } from '../hooks/useLanguageDetectionPrompt';
 import { LanguageDetectionSheet } from '../components/language/LanguageDetectionSheet';
 import { isExpoGo } from '../utils/isExpoGo';
+import { chatApi } from '../api/services';
+import { LoadingIndicator } from '../components/common/LoadingIndicator';
+import { useSignInLoader } from '../components/auth/SignInHeartOverlay';
+import '../notifications/setupNotifications';
 
 type ExpoNotification = import('expo-notifications').Notification;
 
 export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
-  ChatDetail: { conversationId: string; conversation?: Conversation };
+  ChatDetail: { conversationId: string; conversation?: Conversation; profileId?: string };
   ChatOptions: { conversationId: string; conversation?: Conversation };
   EditProfile: { profile: UserProfile };
   Settings: undefined;
@@ -49,8 +52,7 @@ export type RootStackParamList = {
   BlockedUsers: undefined;
   Legal: { variant: 'terms' | 'guidelines' };
   Support: undefined;
-  VideoCall: { conversationId: string; conversation?: Conversation };
-  DiscoveryProfiles: { openFilters?: boolean } | undefined;
+  VideoCall: { conversationId: string; conversation?: Conversation; incoming?: boolean; callId?: string; autoAnswer?: boolean };
   Nearby: undefined;
   // Group chats disabled — re-enable when the feature ships.
   // GroupChats: undefined;
@@ -69,6 +71,7 @@ const navTheme = {
 
 export function AppNavigator() {
   const { session, isRestoring, needsOnboardingQuiz, onboardingChecked, completeOnboarding } = useAuth();
+  const { active: signInLoaderActive, finish: finishSignInLoader } = useSignInLoader();
   const pushPrompt = usePushRegistration(Boolean(session) && onboardingChecked && !needsOnboardingQuiz);
   useLocationSync(Boolean(session) && onboardingChecked && !needsOnboardingQuiz);
   const languagePrompt = useLanguageDetectionPrompt(Boolean(session) && onboardingChecked && !needsOnboardingQuiz);
@@ -80,19 +83,27 @@ export function AppNavigator() {
     return () => clearTimeout(timer);
   }, []);
 
-  const openNotification = useCallback((notification: ExpoNotification) => {
+  const openNotification = useCallback((notification: ExpoNotification, autoAnswer = false) => {
     if (!session || needsOnboardingQuiz || !navigationRef.isReady()) {
       pendingNotification.current = notification;
       return;
     }
     const data = notification.request.content.data ?? {};
     const conversationId = typeof data.conversationId === 'string' ? data.conversationId : null;
+    const actorUserId = typeof data.actorUserId === 'string' ? data.actorUserId : null;
     const url = typeof data.url === 'string' ? data.url : '/messages';
     const kind = typeof data.kind === 'string' ? data.kind : null;
+    const callId = typeof data.callId === 'string' ? data.callId : null;
     pendingNotification.current = null;
+    if (kind === 'call' && conversationId) {
+      navigationRef.navigate('VideoCall', { conversationId, incoming: true, callId: callId ?? undefined, autoAnswer });
+      return;
+    }
     if (conversationId) {
       navigationRef.navigate('ChatDetail', { conversationId });
-    } else if (url === '/rooms') {
+    } else if (kind === 'match' && actorUserId) {
+      navigationRef.navigate('ChatDetail', { conversationId: 'resolve', profileId: actorUserId });
+    } else if (kind === 'date_invite' || url === '/rooms') {
       navigationRef.navigate('Main', { screen: 'Discover' });
     } else if (kind === 'like' || kind === 'post_like' || kind === 'crush' || url.includes('likes')) {
       navigationRef.navigate('Main', { screen: 'Home', params: { openLikes: true } });
@@ -106,13 +117,40 @@ export function AppNavigator() {
     let subscription: { remove(): void } | undefined;
     void import('expo-notifications').then((Notifications) => {
       subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-        if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
-          openNotification(response.notification);
+        const action = response.actionIdentifier;
+        const data = response.notification.request.content.data ?? {};
+        const callId = typeof data.callId === 'string' ? data.callId : null;
+        if (action === 'decline' && callId) {
+          void chatApi.updateCall(callId, 'decline');
+          return;
+        }
+        if (action === 'answer' || action === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+          openNotification(response.notification, action === 'answer');
         }
       });
     }).catch(() => undefined);
     return () => subscription?.remove();
   }, [openNotification]);
+
+  useEffect(() => {
+    if (!session || needsOnboardingQuiz) return;
+    let seenCallId = "";
+    const look = async () => {
+      if (navigationRef.getCurrentRoute()?.name === "VideoCall") return;
+      try {
+        const call = await chatApi.activeCall();
+        if (!call || call.direction !== "incoming" || call.status !== "ringing" || call.id === seenCallId) return;
+        seenCallId = call.id;
+        if (!navigationRef.isReady()) return;
+        navigationRef.navigate("VideoCall", { conversationId: call.conversationId, incoming: true, callId: call.id });
+      } catch {
+        // The next check can show the call.
+      }
+    };
+    void look();
+    const timer = setInterval(() => void look(), 4000);
+    return () => clearInterval(timer);
+  }, [needsOnboardingQuiz, session]);
 
   const handleNavigationReady = useCallback(() => {
     if (isExpoGo()) return;
@@ -132,12 +170,12 @@ export function AppNavigator() {
     if (!session || needsOnboardingQuiz || !pendingNotification.current || !navigationRef.isReady()) return;
     openNotification(pendingNotification.current);
   }, [needsOnboardingQuiz, openNotification, session]);
-  if (isRestoring && !session && !bootTimedOut) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
-        <ActivityIndicator size="large" color="#EC4899" />
-      </View>
-    );
+  useEffect(() => {
+    if (signInLoaderActive && session && onboardingChecked && needsOnboardingQuiz) finishSignInLoader();
+  }, [finishSignInLoader, needsOnboardingQuiz, onboardingChecked, session, signInLoaderActive]);
+  if ((isRestoring || (session && !onboardingChecked)) && (!session ? !bootTimedOut : true)) {
+    if (signInLoaderActive) return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+    return <LoadingIndicator fullScreen />;
   }
 
   const authSurfaceKey = session ? 'app' : 'auth';
@@ -165,16 +203,15 @@ export function AppNavigator() {
             <Stack.Screen name="Main" component={BottomTabNavigator} options={{ headerShown: false, animation: 'fade' }} />
             <Stack.Screen name="ChatDetail" component={ChatDetailScreen} options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="ChatOptions" component={ChatOptionsScreen} options={{ headerShown: false, animation: 'slide_from_left', contentStyle: { backgroundColor: '#FAFAFC' } }} />
-            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit profile', headerShadowVisible: false, animation: 'slide_from_right' }} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit profile', headerShadowVisible: false, headerStyle: { backgroundColor: '#FFFFFF' }, contentStyle: { backgroundColor: '#FFFFFF' }, animation: 'slide_from_right' }} />
             <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false, animation: 'fade' }} />
-            <Stack.Screen name="SpotifyThemeSong" component={SpotifyThemeSongScreen} options={{ title: 'Theme song', headerShadowVisible: false, contentStyle: { backgroundColor: '#F3F2F5' } }} />
+            <Stack.Screen name="SpotifyThemeSong" component={SpotifyThemeSongScreen} options={{ title: 'Theme song', headerShadowVisible: false, headerStyle: { backgroundColor: '#FFFFFF' }, contentStyle: { backgroundColor: '#FFFFFF' } }} />
             <Stack.Screen name="VerifyIdentity" component={VerifyIdentityScreen} options={{ title: 'Verify identity', headerShadowVisible: false }} />
             <Stack.Screen name="SafetyPrivacy" component={SafetyPrivacyScreen} options={{ title: 'Safety and privacy', headerShadowVisible: false }} />
             <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked users', headerShadowVisible: false }} />
             <Stack.Screen name="Legal" component={LegalScreen} options={({ route }) => ({ title: route.params.variant === 'terms' ? 'Terms of service' : 'Community guidelines', headerShadowVisible: false })} />
             <Stack.Screen name="Support" component={SupportScreen} options={{ headerShown: false, animation: 'slide_from_right' }} />
             <Stack.Screen name="VideoCall" component={VideoCallScreen} options={{ headerShown: false, animation: 'fade' }} />
-            <Stack.Screen name="DiscoveryProfiles" component={DiscoveryProfilesScreen} options={{ headerShown: false, animation: 'slide_from_right', contentStyle: { backgroundColor: '#111' } }} />
             <Stack.Screen name="Nearby" component={NearbyRadarScreen} options={{ headerShown: false, animation: 'fade' }} />
             {/* Group chats disabled — re-enable when the feature ships.
             <Stack.Screen name="GroupChats" component={GroupChatsScreen} options={{ headerShown: false, animation: 'slide_from_right' }} />

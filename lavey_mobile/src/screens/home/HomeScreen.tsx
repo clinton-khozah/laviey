@@ -4,6 +4,7 @@ import {
   FlatList,
   Linking,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -25,12 +26,15 @@ import Animated, {
 } from "react-native-reanimated";
 import { setAudioModeAsync } from "expo-audio";
 import { ThemeSongAutoPlayer } from "../../components/common/ThemeSongAutoPlayer";
+import { LaveyMusicMark } from "../../components/common/LaveyMusicMark";
 import { ReceivedLikesSheet } from "./components/ReceivedLikesSheet";
 import { useProfilesWhoLikedYou } from "../../hooks/useProfilesWhoLikedYou";
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { chatApi, contentApi, discoverApi, profileApi, reportApi, settingsApi, type UserSettings } from "../../api/services";
+import { chatApi, contentApi, discoverApi, profileApi, reportApi, settingsApi } from "../../api/services";
+import { useLanguage } from "../../context/LanguageContext";
 import { LoadingIndicator } from "../../components/common/LoadingIndicator";
+import { useSignInLoader } from "../../components/auth/SignInHeartOverlay";
 import { theme } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import { useMatch } from "../../context/MatchContext";
@@ -44,24 +48,23 @@ import { SwipeCard } from "./components/SwipeCard";
 import { ForYouProfileCard } from "./components/ForYouProfileCard";
 import { ProfileFeedModal } from "./components/ProfileFeedModal";
 import { AnimatedReactionButton } from "./components/AnimatedReactionButton";
-import { CrushConfirmSheet } from "./components/CrushConfirmSheet";
 import {
   ProfileOptionsSheet,
   type ProfileOptionAction,
 } from "./components/ProfileOptionsSheet";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import type { MainTabParamList } from "../../components/navigation/BottomTabNavigator";
 import { FilterModal, type Filters } from "../discover/components/FilterModal";
 import { PaidChatSheet } from "../discover/components/PaidChatSheet";
 import { consumeFirstTimeHintsFlag } from "../../utils/discoverOnboardingPrefs";
 import { DEFAULT_DISCOVER_FILTERS } from "../../utils/discoverFiltersFromOnboarding";
 import {
+  hasManualDiscoverFilters,
   markDiscoverFiltersManual,
   resolveDiscoverFilters,
   saveDiscoverFilters,
 } from "../../utils/discoverFilterStorage";
-import { loadDiscoverFeedWithFallback } from "../../utils/discoverFeedLoader";
+import { consumePrefetchedForYouFeed, loadDiscoverFeedWithFallback } from "../../utils/discoverFeedLoader";
 import { appDataCache } from "../../utils/appDataCache";
 import { PlatinumModal } from "../../components/subscription/PlatinumModal";
 import { markNotificationPrimerEligible } from "../../hooks/usePushRegistration";
@@ -72,16 +75,42 @@ const initialFilters: Filters = DEFAULT_DISCOVER_FILTERS;
 type FeedEntry = { key: string; profile: Profile };
 
 function createFeedEntries(profiles: Profile[], cycle: number): FeedEntry[] {
-  return profiles.map((profile) => ({ key: `${cycle}-${profile.id}`, profile }));
+  const seen = new Set<string>();
+  const entries: FeedEntry[] = [];
+  profiles.forEach((profile, index) => {
+    if (!profile.id || seen.has(profile.id)) return;
+    seen.add(profile.id);
+    entries.push({ key: `${cycle}-${index}-${profile.id}`, profile });
+  });
+  return entries;
 }
-/** Fisherâ€“Yates shuffle (mutates copy). */
-function shuffleProfiles(profiles: Profile[]): Profile[] {
-  const next = [...profiles];
-  for (let i = next.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [next[i], next[j]] = [next[j]!, next[i]!];
+
+function feedImageUris(entries: FeedEntry[]): string[] {
+  const uris = new Set<string>();
+  for (const entry of entries) {
+    if (entry.profile.avatar) uris.add(entry.profile.avatar);
+    for (const post of entry.profile.posts) {
+      const still = post.type === "video" ? post.poster : post.src || post.poster;
+      if (still) uris.add(still);
+    }
   }
-  return next;
+  return [...uris];
+}
+
+function warmFirstCardImages(profiles: Profile[]): Promise<void> {
+  const uris: string[] = [];
+  for (const profile of profiles.slice(0, 2)) {
+    if (profile.avatar) uris.push(profile.avatar);
+    for (const post of profile.posts.slice(0, 4)) {
+      const still = post.type === "video" ? post.poster : post.src || post.poster;
+      if (still) uris.push(still);
+    }
+  }
+  if (!uris.length) return Promise.resolve();
+  return Promise.race([
+    Image.prefetch(uris).then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, 900)),
+  ]);
 }
 export function HomeScreen({
   navigation,
@@ -93,7 +122,7 @@ export function HomeScreen({
   const { mode } = useAppearance();
   const web = mode === "web";
   const { height } = useWindowDimensions();
-  const tabBarHeight = useBottomTabBarHeight();
+  const [pageHeight, setPageHeight] = useState(0);
   const [selfProfile, setSelfProfile] = useState<{ id: string; avatarUrl?: string; posts?: ProfilePost[] } | null>(null);
   const [gateProfile, setGateProfile] = useState<UserProfile | null>(null);
   const [verificationPending, setVerificationPending] = useState(false);
@@ -115,22 +144,32 @@ export function HomeScreen({
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const feedCycle = useRef(0);
+  const feedListRef = useRef<FlatList<FeedEntry>>(null);
+  const stickFeedToTop = useRef(false);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [filtering, setFiltering] = useState(false);
+  const { active: signInLoaderActive, finish: finishSignInLoader } = useSignInLoader();
+  const signInLoaderActiveRef = useRef(signInLoaderActive);
+  signInLoaderActiveRef.current = signInLoaderActive;
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState(initialFilters);
   const [draftFilters, setDraftFilters] = useState(initialFilters);
   const [filtersReady, setFiltersReady] = useState(false);
+  const [filtersManual, setFiltersManual] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [coinsProfile, setCoinsProfile] = useState<Profile | null>(null);
   useEffect(() => {
     let cancelled = false;
+    setFiltersReady(false);
     void (async () => {
-      const resolved = await resolveDiscoverFilters(session?.user.id);
+      const userId = session?.user.id;
+      const manual = userId ? await hasManualDiscoverFilters(userId) : false;
+      const resolved = userId ? await resolveDiscoverFilters(userId) : { ...DEFAULT_DISCOVER_FILTERS };
       if (cancelled) return;
-      setFilters(resolved);
-      setDraftFilters(resolved);
+      const next = manual ? resolved : { ...resolved, hasProfilePhoto: false };
+      setFiltersManual(manual);
+      setFilters(next);
+      setDraftFilters(next);
       setFiltersReady(true);
     })();
     return () => {
@@ -144,12 +183,13 @@ export function HomeScreen({
     if (setupGate.gatePhase !== "inactive") return;
     void consumeFirstTimeHintsFlag().then(setFirstTimeHints);
   }, [setupGate.gatePhase]);
-  const completeProfileSetup = useCallback(() => {
+  const completeProfileSetup = useCallback(async () => {
+    await refreshProfile(true);
     setupGate.continueToFeed();
     setFirstTimeHints(true);
     void consumeFirstTimeHintsFlag();
     void markNotificationPrimerEligible();
-  }, [setupGate.continueToFeed]);
+  }, [refreshProfile, setupGate.continueToFeed]);
 
   const openVerificationFromGate = useCallback(() => {
     const profile = gateProfile ?? cachedProfile;
@@ -165,8 +205,6 @@ export function HomeScreen({
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
   const [crushSentIds, setCrushSentIds] = useState<Set<string>>(new Set());
-  const [crushConfirmProfile, setCrushConfirmProfile] = useState<Profile | null>(null);
-  const [crushSending, setCrushSending] = useState(false);
   const [optionsProfile, setOptionsProfile] = useState<Profile | null>(null);
   // Tracks which specific feed card (not just which profile) the options sheet was opened
   // from â€” the same profile can recycle into multiple feed slots, and "Clear display"
@@ -175,24 +213,35 @@ export function HomeScreen({
   const [feedProfile, setFeedProfile] = useState<Profile | null>(null);
   const [clearDisplayKey, setClearDisplayKey] = useState<string | null>(null);
   const [likesSheetOpen, setLikesSheetOpen] = useState(false);
+  const [returnToLikes, setReturnToLikes] = useState(false);
   const [feedIndex, setFeedIndex] = useState(0);
+  useEffect(() => {
+    if (!stickFeedToTop.current) return;
+    stickFeedToTop.current = false;
+    setFeedIndex(0);
+    requestAnimationFrame(() => {
+      feedListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, [feed]);
   useEffect(() => {
     if (route.params?.openLikes) {
       setLikesSheetOpen(true);
       navigation.setParams({ openLikes: undefined });
     }
-  }, [navigation, route.params?.openLikes]);
-  const { profiles: likerProfiles, likedBackIds, count: likesBadgeCount, loading: likersLoading, refetch: refetchLikers } = useProfilesWhoLikedYou();
+    if (route.params?.openFilters) {
+      setFiltersOpen(true);
+      navigation.setParams({ openFilters: undefined });
+    }
+  }, [navigation, route.params?.openFilters, route.params?.openLikes]);
+  const { profiles: likerProfiles, likedBackIds, loading: likersLoading, refetch: refetchLikers } = useProfilesWhoLikedYou();
+  useFocusEffect(useCallback(() => {
+    void refetchLikers(true);
+  }, [refetchLikers]));
   const [actionToast, setActionToast] = useState<string | null>(null);
   const [segment, setSegment] = useState<"forYou" | "nearby">("forYou");
-  const [language, setLanguage] = useState<UserSettings["language"]>("en");
+  const { language } = useLanguage();
   const { t } = useTranslatedStrings(HOME_SCREEN_STRINGS, language);
   useFocusEffect(useCallback(() => setSegment("forYou"), []));
-  useFocusEffect(useCallback(() => {
-    void settingsApi.get().then((value) => {
-      setLanguage(value.language);
-    }).catch(() => undefined);
-  }, []));
   const [tabLayouts, setTabLayouts] = useState<{
     forYou?: { x: number; width: number };
     nearby?: { x: number; width: number };
@@ -233,69 +282,77 @@ export function HomeScreen({
   const load = useCallback(async () => {
     if (!filtersReady) return;
     const isRefilter = profilesRef.current.length > 0;
-    if (isRefilter) setFiltering(true);
-    else if (!profilesRef.current.length) setLoading(true);
+    setLoading(true);
+    if (isRefilter) {
+      profilesRef.current = [];
+      setProfiles([]);
+      setFeed([]);
+    }
     try {
-      const result = await loadDiscoverFeedWithFallback(filters);
+      const warmed = consumePrefetchedForYouFeed(filters, filtersManual);
+      const result = warmed ? await warmed : await loadDiscoverFeedWithFallback(filters, filtersManual);
       if (session?.user.id) {
         void appDataCache.setFeed(session.user.id, JSON.stringify(filters), result);
       }
       // Nothing new left (everyone's been liked/swiped) — keep the deck going
       // by looping back through profiles already seen instead of going empty.
-      const nextProfiles =
-        result.profiles.length > 0
-          ? result.profiles
-          : shuffleProfiles(profilesRef.current);
+      const nextProfiles = result.profiles;
       setProfiles(nextProfiles);
       feedCycle.current += 1;
       setFeed(createFeedEntries(nextProfiles, feedCycle.current));
       setIndex(0);
+      setFeedIndex(0);
       setError(null);
       if (result.myLikedProfileIds?.length) {
         const alreadyLiked = result.myLikedProfileIds;
         setLikedIds((prev) => new Set([...prev, ...alreadyLiked]));
       }
+      await warmFirstCardImages(nextProfiles);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load profiles.");
     } finally {
       setLoading(false);
-      setFiltering(false);
+      if (signInLoaderActiveRef.current) finishSignInLoader();
     }
-  }, [filters, filtersReady, session?.user.id]);
+  }, [filters, filtersManual, filtersReady, finishSignInLoader, session?.user.id]);
+  const loadingMoreRef = useRef(false);
   const loadMore = useCallback(async () => {
-    if (loadingMore || loading || !web || !filtersReady) return;
+    if (loadingMoreRef.current || loading || !web || !filtersReady) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
-      const result = await loadDiscoverFeedWithFallback(filters);
+      const result = await loadDiscoverFeedWithFallback(filters, filtersManual);
       feedCycle.current += 1;
       if (result.myLikedProfileIds?.length) {
         const alreadyLiked = result.myLikedProfileIds;
         setLikedIds((prev) => new Set([...prev, ...alreadyLiked]));
       }
       const nextEntries = createFeedEntries(result.profiles, feedCycle.current);
+      if (!nextEntries.length) return;
       setFeed((current) => {
-        if (nextEntries.length) return [...current, ...nextEntries];
-        return [
-          ...current,
-          ...current.map((entry, index) => ({
-            ...entry,
-            key: `${feedCycle.current}-replay-${index}-${entry.profile.id}`,
-          })),
-        ];
+        const seen = new Set(current.map((entry) => entry.profile.id));
+        const fresh = nextEntries.filter((entry) => !seen.has(entry.profile.id));
+        return fresh.length ? [...current, ...fresh] : current;
       });
     } catch {
       // Keep the current feed usable; pull-to-refresh remains available.
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [filters, filtersReady, loading, loadingMore, web]);
+  }, [filters, filtersManual, filtersReady, loading, web]);
   const loadMoreRef = useRef(loadMore);
   loadMoreRef.current = loadMore;
   useEffect(() => {
-    if (!web || loading || loadingMore || feed.length === 0) return;
+    if (!web || loading || loadingMore || feed.length === 0 || feedIndex > 0) return;
     const remaining = feed.length - feedIndex - 1;
     if (remaining <= 4) void loadMoreRef.current();
   }, [web, loading, loadingMore, feed.length, feedIndex]);
+  useEffect(() => {
+    if (!web || feed.length === 0) return;
+    const uris = feedImageUris(feed.slice(feedIndex, feedIndex + 2));
+    if (uris.length) void Image.prefetch(uris);
+  }, [web, feed, feedIndex]);
   const feedPrefetchedRef = useRef(false);
   useEffect(() => {
     feedPrefetchedRef.current = false;
@@ -312,10 +369,13 @@ export function HomeScreen({
       const cached = await appDataCache.getFeed(session.user.id, JSON.stringify(filters));
       if (cancelled) return;
       if (cached?.profiles.length) {
+        profilesRef.current = cached.profiles;
         setProfiles(cached.profiles);
         feedCycle.current += 1;
         setFeed(createFeedEntries(cached.profiles, feedCycle.current));
         setLoading(false);
+        await warmFirstCardImages(cached.profiles);
+        finishSignInLoader();
         if (cached.myLikedProfileIds?.length) {
           setLikedIds((prev) => new Set([...prev, ...cached.myLikedProfileIds!]));
         }
@@ -325,7 +385,7 @@ export function HomeScreen({
     return () => {
       cancelled = true;
     };
-  }, [load, filtersReady, session?.user.id, filters]);
+  }, [load, filtersReady, session?.user.id, session?.token, filters, finishSignInLoader]);
   useEffect(() => {
     // Post likes aren't included in the discover feed response (that only covers profile
     // likes), so restore the red-heart state for posts liked in past sessions separately.
@@ -335,16 +395,17 @@ export function HomeScreen({
       .catch(() => {});
   }, []);
   useEffect(() => {
-    if (loading || feed.length > 0) return;
+    const genderNarrowed = filters.genders.length > 0 && filters.genders.length < 3;
+    if (loading || feed.length > 0 || filtersManual || genderNarrowed) return;
     const timer = setTimeout(() => void load(), 4000);
     return () => clearTimeout(timer);
-  }, [loading, feed.length, load]);
+  }, [loading, feed.length, load, filters.genders, filtersManual]);
   const likeProfile = useCallback(
-    async (profile: Profile) => {
+    async (profile: Profile, options?: { showMatch?: boolean }) => {
       if (likedIds.has(profile.id)) return;
       setLikedIds((prev) => new Set(prev).add(profile.id));
       try {
-        await like(profile);
+        await like(profile, options);
       } catch (e) {
         setLikedIds((prev) => {
           const next = new Set(prev);
@@ -381,36 +442,25 @@ export function HomeScreen({
   );
   const crushProfile = useCallback(
     async (profile: Profile) => {
+      if (crushSentIds.has(profile.id)) return;
+      setCrushSentIds((prev) => new Set(prev).add(profile.id));
       try {
         await crush(profile);
-        // Matches trigger MatchAnimation via MatchContext; a one-sided crush
-        // gets no popup, just the "Sent" state on the button (matches web).
-        setCrushSentIds((prev) => new Set(prev).add(profile.id));
       } catch (e) {
+        setCrushSentIds((prev) => {
+          const next = new Set(prev);
+          next.delete(profile.id);
+          return next;
+        });
         Alert.alert("Crushy not sent", e instanceof Error ? e.message : "Please try again.");
       }
     },
-    [crush],
+    [crush, crushSentIds],
   );
   const showToast = useCallback((text: string) => {
     setActionToast(text);
     setTimeout(() => setActionToast(null), 2600);
   }, []);
-  const requestCrush = useCallback((profile: Profile) => {
-    if (crushSentIds.has(profile.id)) return;
-    setCrushConfirmProfile(profile);
-  }, [crushSentIds]);
-  const confirmCrush = useCallback(async () => {
-    if (!crushConfirmProfile) return;
-    const profile = crushConfirmProfile;
-    setCrushSending(true);
-    try {
-      await crushProfile(profile);
-    } finally {
-      setCrushSending(false);
-      setCrushConfirmProfile(null);
-    }
-  }, [crushConfirmProfile, crushProfile]);
   const handleOptionAction = useCallback(
     async (action: ProfileOptionAction, profile: Profile, reason?: string) => {
       if (action === "clear-display") {
@@ -538,16 +588,24 @@ export function HomeScreen({
     );
   }, [firstTimeHints, swipeBob]);
   const swipeBobStyle = useAnimatedStyle(() => ({ transform: [{ translateY: swipeBob.value }] }));
+  const cardHeight = pageHeight > 0 ? Math.round(pageHeight) : Math.round(Math.max(height, 1));
   if (web)
     return (
       <SafeAreaView style={styles.webRoot} edges={[]}>
+        <View style={styles.feedFrame}>
         <FlatList
-          data={feed}
+          ref={feedListRef}
+          style={[styles.feedList, feed.length === 0 && styles.filterFeed]}
+          data={pageHeight > 0 ? feed : []}
+          onLayout={(event) => {
+            const next = event.nativeEvent.layout.height;
+            if (next > 0) setPageHeight((current) => (Math.abs(current - next) < 0.5 ? current : next));
+          }}
           keyExtractor={(item) => item.key}
           renderItem={({ item }) => (
             <ForYouProfileCard
               profile={item.profile}
-              height={height - tabBarHeight}
+              height={cardHeight}
               isActive={item.key === activeFeedKey}
               t={t}
               profileLiked={likedIds.has(item.profile.id)}
@@ -559,7 +617,7 @@ export function HomeScreen({
               themeSongPlaying={!themeSongPaused && themeSongProfile?.id === item.profile.id}
               onLikeProfile={() => void likeProfile(item.profile)}
               onLikePost={(post) => void likePostAndTrack(item.profile, post)}
-              onCrushRequest={() => requestCrush(item.profile)}
+              onCrushRequest={() => void crushProfile(item.profile)}
               onChat={() => setCoinsProfile(item.profile)}
               onMoreOptions={() => {
                 setOptionsProfile(item.profile);
@@ -569,33 +627,39 @@ export function HomeScreen({
               onImpression={recordImpression}
             />
           )}
-          pagingEnabled
-          snapToInterval={height - tabBarHeight}
+          pagingEnabled={Platform.OS === "ios"}
+          snapToInterval={cardHeight}
           snapToAlignment="start"
-          decelerationRate="fast"
           disableIntervalMomentum
+          decelerationRate="fast"
+          bounces={false}
+          overScrollMode="never"
           showsVerticalScrollIndicator={false}
-          initialNumToRender={4}
-          windowSize={7}
-          maxToRenderPerBatch={4}
+          contentContainerStyle={feed.length === 0 ? styles.filterEmptyGrow : undefined}
+          initialNumToRender={2}
+          windowSize={5}
+          maxToRenderPerBatch={2}
           removeClippedSubviews={false}
           getItemLayout={(_, itemIndex) => ({
-            length: height - tabBarHeight,
-            offset: (height - tabBarHeight) * itemIndex,
+            length: cardHeight,
+            offset: cardHeight * itemIndex,
             index: itemIndex,
           })}
-          refreshing={false}
-          onRefresh={load}
           onEndReached={() => void loadMore()}
           onEndReachedThreshold={0.35}
           viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
           onViewableItemsChanged={onFeedViewableChanged}
           ListEmptyComponent={
-            <View style={{ height: height - tabBarHeight }}>
-              <LoadingIndicator fullScreen transparent />
+            <View style={[styles.filterEmpty, { minHeight: cardHeight }]}>
+              {loading || signInLoaderActive ? (
+                signInLoaderActive ? null : <LoadingIndicator fullScreen compact />
+              ) : (
+                <Text style={styles.filterEmptyText}>No people match these filters.</Text>
+              )}
             </View>
           }
         />
+        </View>
         <View style={styles.webTop}>
           <View style={styles.webTopSide}>
             <Pressable
@@ -621,7 +685,8 @@ export function HomeScreen({
                 end={{ x: 1, y: 1 }}
                 style={styles.upgrade}
               >
-                <Text style={styles.upgradeText}>â™› {t("UPGRADE")}</Text>
+                <MaterialCommunityIcons name="crown" size={13} color="#3F2A02" />
+                <Text style={styles.upgradeText}>{t("UPGRADE")}</Text>
               </LinearGradient>
             </Pressable> : null}
           </View>
@@ -654,16 +719,21 @@ export function HomeScreen({
             </View>
           </View>
           <View style={styles.webTopSide}>
-            <Pressable onPress={() => setLikesSheetOpen(true)}>
-              <Round icon="heart" coral badge={likesBadgeCount} />
+            <Pressable onPress={() => setLikesSheetOpen(true)} style={styles.likesNav} accessibilityRole="button" accessibilityLabel={`likes ${likerProfiles.length}`}>
+              <Round icon="heart" coral badge={likerProfiles.length} />
+              <Text style={styles.likesNavLabel}>likes</Text>
             </Pressable>
+            {/* Discovery location entry commented out
             <Pressable
-              onPress={() =>
-                navigation.getParent()?.navigate("DiscoveryProfiles")
-              }
+              onPress={() => {
+                setDraftFilters(filters);
+                setFiltersOpen(true);
+                setFirstTimeHints(false);
+              }}
             >
               <Round icon="location-outline" />
             </Pressable>
+            */}
           </View>
         </View>
         {firstTimeHints ? (
@@ -672,11 +742,6 @@ export function HomeScreen({
               <Ionicons name="chevron-down" size={30} color="white" />
             </Animated.View>
             <Text style={styles.scrollHintText}>{t("Swipe up for the next profile")}</Text>
-          </View>
-        ) : null}
-        {filtering ? (
-          <View style={styles.filterOverlay} pointerEvents="none">
-            <LoadingIndicator compact />
           </View>
         ) : null}
         <ThemeSongAutoPlayer track={playingThemeSong} />
@@ -709,9 +774,9 @@ export function HomeScreen({
               </Pressable>
               {themeSongProfile?.themeSong ? (
                 <>
-                  <View style={styles.spotifyBrandRow}>
-                    <Ionicons name="musical-notes" size={18} color="#1ED760" />
-                    <Text style={styles.spotifyBrand}>SPOTIFY PREVIEW</Text>
+                  <View style={styles.musicBrandRow}>
+                    <LaveyMusicMark size={22} />
+                    <Text style={styles.musicBrand}>THEME SONG</Text>
                   </View>
                   <Image
                     source={themeSongProfile.themeSong.albumArtUrl ? { uri: themeSongProfile.themeSong.albumArtUrl } : undefined}
@@ -726,7 +791,7 @@ export function HomeScreen({
                   </Text>
                   <Pressable
                     accessibilityRole="link"
-                    accessibilityLabel={`Open ${themeSongProfile.themeSong.title} in Spotify`}
+                    accessibilityLabel={`Open ${themeSongProfile.themeSong.title}`}
                     onPress={() => void Linking.openURL(`https://open.spotify.com/track/${themeSongProfile.themeSong?.spotifyId}`)}
                   >
                     <Text style={styles.songModalTitle}>{themeSongProfile.themeSong.title}</Text>
@@ -740,15 +805,15 @@ export function HomeScreen({
                     <Text style={styles.songTime}>0:30</Text>
                   </View>
                   <View style={styles.songControls}>
-                    <Ionicons name="shuffle" size={20} color="#1ED760" />
+                    <Ionicons name="shuffle" size={20} color="white" />
                     <Ionicons name="play-skip-back" size={25} color="white" />
                     <Pressable style={styles.songModalPlay} onPress={() => setThemeSongPaused((paused) => !paused)}>
                       <Ionicons name={themeSongPaused ? "play" : "pause"} size={30} color="#121212" />
                     </Pressable>
                     <Ionicons name="play-skip-forward" size={25} color="white" />
-                    <Ionicons name="repeat" size={20} color="#1ED760" />
+                    <Ionicons name="repeat" size={20} color="white" />
                   </View>
-                  <Text style={styles.openSpotifyHint}>Tap the title to open this track on Spotify</Text>
+                  <Text style={styles.openSpotifyHint}>Tap the title to open this track</Text>
                 </>
               ) : null}
             </Pressable>
@@ -757,18 +822,19 @@ export function HomeScreen({
         <ReceivedLikesSheet
           visible={likesSheetOpen}
           profiles={likerProfiles}
-          likedBackIds={likedBackIds}
+          likedBackIds={new Set([...likedBackIds, ...likedIds])}
           loading={likersLoading}
           onClose={() => setLikesSheetOpen(false)}
           onLikeBack={async (profile) => {
-            await likeProfile(profile);
-            void refetchLikers();
+            await likeProfile(profile, { showMatch: false });
+            void refetchLikers(true);
           }}
-          onOpenChat={(profile) => {
+          onSendStarter={async (profile, greeting) => {
+            await messageMatch(profile, greeting);
             setLikesSheetOpen(false);
-            void openChatWithProfile(profile);
           }}
           onViewProfile={(profile) => {
+            setReturnToLikes(true);
             setLikesSheetOpen(false);
             setFeedProfile(profile);
           }}
@@ -790,8 +856,12 @@ export function HomeScreen({
           filters={draftFilters}
           onChange={setDraftFilters}
           onClose={() => setFiltersOpen(false)}
-          onApply={() => {
+            onApply={() => {
+            stickFeedToTop.current = true;
+            setFeedIndex(0);
+            feedListRef.current?.scrollToOffset({ offset: 0, animated: false });
             setFilters(draftFilters);
+            setFiltersManual(true);
             setFiltersOpen(false);
             void saveDiscoverFilters(draftFilters, session?.user.id);
             void markDiscoverFiltersManual(session?.user.id);
@@ -801,13 +871,6 @@ export function HomeScreen({
           visible={platinumOpen}
           close={() => setPlatinumOpen(false)}
         /> : null}
-        <CrushConfirmSheet
-          visible={Boolean(crushConfirmProfile)}
-          profileName={crushConfirmProfile?.name ?? ""}
-          sending={crushSending}
-          onCancel={() => (crushSending ? null : setCrushConfirmProfile(null))}
-          onConfirm={() => void confirmCrush()}
-        />
         <ProfileOptionsSheet
           visible={Boolean(optionsProfile)}
           profile={optionsProfile}
@@ -820,7 +883,13 @@ export function HomeScreen({
           profileLiked={feedProfile ? likedIds.has(feedProfile.id) : false}
           crushSent={feedProfile ? crushSentIds.has(feedProfile.id) : false}
           likedPostIds={likedPostIds}
-          onClose={() => setFeedProfile(null)}
+          onClose={() => {
+            setFeedProfile(null);
+            if (returnToLikes) {
+              setReturnToLikes(false);
+              setLikesSheetOpen(true);
+            }
+          }}
           onLikeProfile={() => {
             if (feedProfile) void likeProfile(feedProfile);
           }}
@@ -828,7 +897,7 @@ export function HomeScreen({
             if (feedProfile) void likePostAndTrack(feedProfile, post);
           }}
           onCrushRequest={() => {
-            if (feedProfile) requestCrush(feedProfile);
+            if (feedProfile) void crushProfile(feedProfile);
           }}
           onChat={() => {
             if (feedProfile) setCoinsProfile(feedProfile);
@@ -866,7 +935,7 @@ export function HomeScreen({
         <Text style={styles.logo}>Lavey</Text>
       </View>
       {loading ? (
-        <LoadingIndicator fullScreen transparent />
+        signInLoaderActive ? <View style={{ flex: 1, backgroundColor: "#FDE7F0" }} /> : <LoadingIndicator fullScreen />
       ) : current ? (
         <>
           <View style={styles.deck}>
@@ -921,7 +990,7 @@ function Round({
   return (
     <View style={styles.round}>
       <Ionicons name={icon} size={18} color={coral ? "#FF536E" : "#14141B"} />
-      {badge ? (
+      {typeof badge === "number" ? (
         <View style={styles.roundBadge}>
           <Text style={styles.roundBadgeText}>{badge > 99 ? "99+" : badge}</Text>
         </View>
@@ -930,7 +999,20 @@ function Round({
   );
 }
 const styles = StyleSheet.create({
+  filterEmptyGrow: { flexGrow: 1 },
+  filterEmpty: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+    backgroundColor: "#FDE7F0",
+  },
+  filterEmptyText: { color: "#7E244E", textAlign: "center", fontSize: 16 },
   webRoot: { flex: 1, backgroundColor: "#111" },
+  feedFrame: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  feedList: { flex: 1, backgroundColor: "#111", overflow: "hidden" },
+  filterFeed: { backgroundColor: "#FDE7F0" },
   webTop: {
     position: "absolute",
     zIndex: 20,
@@ -945,6 +1027,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  likesNav: { alignItems: "center", marginTop: 2 },
+  likesNavLabel: {
+    marginTop: 8,
+    color: "#FFFFFF",
+    fontFamily: theme.typography.semibold,
+    fontSize: 10,
+    lineHeight: 12,
+    textShadowColor: "rgba(0,0,0,.55)",
+    textShadowRadius: 4,
+    textShadowOffset: { width: 0, height: 1 },
   },
   filterPulseRing: {
     position: "absolute",
@@ -987,8 +1080,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#181818",
   },
   songModalClose: { position: "absolute", top: 16, right: 16, zIndex: 1 },
-  spotifyBrandRow: { flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start", marginBottom: 20 },
-  spotifyBrand: { color: "#1ED760", fontFamily: theme.typography.bold, fontSize: 11, letterSpacing: 1.2 },
+  musicBrandRow: { flexDirection: "row", alignItems: "center", gap: 7, alignSelf: "flex-start", marginBottom: 20 },
+  musicBrand: { color: "#FFFFFF", fontFamily: theme.typography.bold, fontSize: 11, letterSpacing: 1.2 },
   songModalArtwork: { width: "100%", aspectRatio: 1, borderRadius: 6, backgroundColor: "#282828" },
   songModalEyebrow: { alignSelf: "flex-start", marginTop: 20, color: "#B3B3B3", fontFamily: theme.typography.medium, fontSize: 11 },
   songModalTitle: { alignSelf: "flex-start", marginTop: 5, color: "white", fontFamily: theme.typography.bold, fontSize: 22 },
@@ -1013,7 +1106,7 @@ const styles = StyleSheet.create({
   round: {
     width: 36,
     height: 36,
-    borderRadius: 19,
+    borderRadius: 18,
     backgroundColor: "rgba(255,255,255,.93)",
     alignItems: "center",
     justifyContent: "center",
@@ -1021,27 +1114,30 @@ const styles = StyleSheet.create({
   },
   roundBadge: {
     position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 17,
-    height: 17,
+    top: -6,
+    right: -6,
+    minWidth: 18,
+    height: 18,
     borderRadius: 9,
     paddingHorizontal: 4,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FF3860",
-    borderWidth: 1.5,
-    borderColor: "white",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
-  roundBadgeText: { color: "white", fontFamily: theme.typography.bold, fontSize: 9 },
+  roundBadgeText: { color: "white", fontFamily: theme.typography.bold, fontSize: 10, lineHeight: 12 },
   upgrade: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     borderRadius: 17,
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
   upgradeText: {
     fontFamily: theme.typography.bold,
-    fontSize: 8,
+    fontSize: 9,
     color: "#3F2A02",
   },
   segment: {
@@ -1113,20 +1209,5 @@ const styles = StyleSheet.create({
     fontFamily: theme.typography.semibold,
     fontSize: 12.5,
     textAlign: "center",
-  },
-  filterOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    zIndex: 40,
-  },
-  filterOverlayText: {
-    fontFamily: theme.typography.medium,
-    fontSize: 13,
-    color: "#FFFFFF",
-    textShadowColor: "rgba(0,0,0,0.45)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
   },
 });

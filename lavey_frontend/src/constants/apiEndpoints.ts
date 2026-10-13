@@ -146,6 +146,8 @@ export const API_ENDPOINTS = {
     moderationReportAction: (id: string) => `/admin/moderation/reports/${id}/action`,
     moderationPolicy: '/admin/moderation/policy',
     moderationRescan: '/admin/moderation/rescan',
+    moderationPosts: '/admin/moderation/posts',
+    moderationPostById: (id: string) => `/admin/moderation/posts/${id}`,
     verificationQueue: '/admin/verification/queue',
     verificationSettings: '/admin/verification/settings',
     verificationApprove: (id: string) => `/admin/verification/queue/${id}/approve`,

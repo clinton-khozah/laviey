@@ -10,10 +10,16 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { reportApi, settingsApi, type UserSettings } from "../../../api/services";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { chatApi, reportApi, settingsApi } from "../../../api/services";
+import { useLanguage } from "../../../context/LanguageContext";
+import type { RootStackParamList } from "../../../navigation/AppNavigator";
+import { PaidChatSheet } from "../../discover/components/PaidChatSheet";
 import { ThemeSongAutoPlayer } from "../../../components/common/ThemeSongAutoPlayer";
 import { useTranslatedStrings } from "../../../hooks/useTranslatedStrings";
 import type { Profile, ProfilePost } from "../../../types";
+import { hasCustomProfileAvatar } from "../../../utils/discoverProfileReady";
 import { ProfilePageView } from "../../profile/components/ProfilePageView";
 import { ProfileAvatarViewerModal } from "../../profile/components/ProfileAvatarViewerModal";
 import { ProfileMoreDetailsSheet } from "../../profile/components/ProfileMoreDetailsSheet";
@@ -53,13 +59,15 @@ export function ProfileFeedModal({
   onProfileRemoved?(profileId: string): void;
 }) {
   const { width: screenWidth } = useWindowDimensions();
-  const [language, setLanguage] = useState<UserSettings["language"]>("en");
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { language } = useLanguage();
   const { t } = useTranslatedStrings(HOME_SCREEN_STRINGS, language);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [themeSongPlaying, setThemeSongPlaying] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [chatRequestOpen, setChatRequestOpen] = useState(false);
   const [presented, setPresented] = useState(false);
   const profileSnapshot = useRef<Profile | null>(null);
   const translateX = useSharedValue(screenWidth);
@@ -72,8 +80,11 @@ export function ProfileFeedModal({
   };
 
   useEffect(() => {
+    if (profile) profileSnapshot.current = profile;
+  }, [profile]);
+
+  useEffect(() => {
     if (visible && profile) {
-      profileSnapshot.current = profile;
       closingRef.current = false;
       setPresented(true);
       translateX.value = screenWidth;
@@ -91,7 +102,7 @@ export function ProfileFeedModal({
         },
       );
     }
-  }, [visible, profile, presented, screenWidth, translateX]);
+  }, [visible, profile?.id, presented, screenWidth, translateX]);
 
   useEffect(() => {
     if (!visible) return;
@@ -100,7 +111,7 @@ export function ProfileFeedModal({
     setThemeSongPlaying(false);
     setOptionsOpen(false);
     setDetailsOpen(false);
-    void settingsApi.get().then((value) => setLanguage(value.language)).catch(() => undefined);
+    setChatRequestOpen(false);
   }, [visible, profile?.id]);
 
   const slideStyle = useAnimatedStyle(() => ({
@@ -122,7 +133,7 @@ export function ProfileFeedModal({
     );
   }, [onClose, screenWidth, translateX]);
 
-  const swipeSubmodalsOpen = optionsOpen || detailsOpen || viewerIndex !== null || avatarOpen;
+  const swipeSubmodalsOpen = optionsOpen || detailsOpen || viewerIndex !== null || avatarOpen || chatRequestOpen;
 
   const dismissSwipe = useMemo(
     () =>
@@ -182,6 +193,33 @@ export function ProfileFeedModal({
     [onClose, onProfileRemoved],
   );
 
+  const openMatchedChat = useCallback(async () => {
+    if (!activeProfile) return;
+    try {
+      const { conversationId } = await chatApi.conversationByProfile(activeProfile.id);
+      if (!conversationId) throw new Error("Your match chat is still being prepared. Please try again.");
+      onClose();
+      const parent = navigation.getParent();
+      if (parent) parent.navigate("ChatDetail", { conversationId });
+      else navigation.navigate("ChatDetail", { conversationId });
+    } catch (e) {
+      Alert.alert("Couldn't open chat", e instanceof Error ? e.message : "Please try again.");
+    }
+  }, [activeProfile, navigation, onClose]);
+
+  const onMessagePress = () => {
+    if (!activeProfile) return;
+    if (activeProfile.isMatch) {
+      void openMatchedChat();
+      return;
+    }
+    if (onChat) {
+      onChat();
+      return;
+    }
+    setChatRequestOpen(true);
+  };
+
   if (!presented || !activeProfile) return null;
 
   return (
@@ -206,46 +244,45 @@ export function ProfileFeedModal({
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <ProfilePageView
               profile={activeProfile}
-              onAvatarPress={() => setAvatarOpen(true)}
+              onAvatarPress={hasCustomProfileAvatar(activeProfile.avatar) ? () => setAvatarOpen(true) : undefined}
               onPostPress={setViewerIndex}
               onThemeSongPress={
                 activeProfile.themeSong ? () => setThemeSongPlaying((playing) => !playing) : undefined
               }
               themeSongPlaying={themeSongPlaying}
+              actions={
+                <View style={styles.actions}>
+                  <Pressable style={styles.messageButton} onPress={onMessagePress} accessibilityRole="button">
+                    <Text style={styles.messageText}>{t("Message")}</Text>
+                  </Pressable>
+                  {!hideCrush && onCrushRequest ? (
+                    <View style={styles.actionIcon}>
+                      <AnimatedReactionButton
+                        kind="crushy"
+                        tone="plain"
+                        active={crushSent}
+                        onPress={onCrushRequest}
+                        disabled={crushSent}
+                      />
+                      <Text style={styles.actionLabel}>{crushSent ? t("Sent") : "crushy"}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.actionIcon}>
+                    <AnimatedReactionButton
+                      kind="like"
+                      tone="plain"
+                      active={profileLiked}
+                      onPress={onLikeProfile ?? (() => {})}
+                      disabled={profileLiked}
+                    />
+                    <Text style={[styles.actionLabel, profileLiked && styles.actionLabelActive]}>
+                      {profileLiked ? t("Liked") : t("Like")}
+                    </Text>
+                  </View>
+                </View>
+              }
             />
           </ScrollView>
-
-          <View style={styles.footer}>
-            <Pressable style={styles.footerSide} onPress={onChat} hitSlop={8}>
-              <Ionicons name="chatbox-outline" size={26} color="#2A2A2A" />
-              <Text style={styles.footerLabel}>{t("Chat now")}</Text>
-            </Pressable>
-            {!hideCrush && onCrushRequest ? (
-              <View style={styles.footerSide}>
-                <AnimatedReactionButton
-                  kind="crushy"
-                  active={crushSent}
-                  onPress={onCrushRequest}
-                  disabled={crushSent}
-                />
-                <Text style={styles.footerLabel}>{crushSent ? t("Sent") : "crushy"}</Text>
-              </View>
-            ) : (
-              <View style={styles.footerSideSpacer} />
-            )}
-            <View style={styles.footerSide}>
-              <AnimatedReactionButton
-                kind="like"
-                tone="plain"
-                active={profileLiked}
-                onPress={onLikeProfile ?? (() => {})}
-                disabled={profileLiked}
-              />
-              <Text style={[styles.footerLabel, profileLiked && styles.footerLabelActive]}>
-                {profileLiked ? t("Liked") : t("Like")}
-              </Text>
-            </View>
-          </View>
 
           <ProfileAvatarViewerModal
             visible={avatarOpen}
@@ -277,6 +314,20 @@ export function ProfileFeedModal({
 
           <ThemeSongAutoPlayer
             track={themeSongPlaying && visible ? activeProfile.themeSong ?? null : null}
+          />
+          <PaidChatSheet
+            visible={chatRequestOpen}
+            profileId={activeProfile.id}
+            profileName={activeProfile.name}
+            profileAvatar={activeProfile.avatar}
+            onClose={() => setChatRequestOpen(false)}
+            onUnlocked={(conversationId) => {
+              setChatRequestOpen(false);
+              onClose();
+              const parent = navigation.getParent();
+              if (parent) parent.navigate("ChatDetail", { conversationId });
+              else navigation.navigate("ChatDetail", { conversationId });
+            }}
           />
         </SafeAreaView>
         </Animated.View>
@@ -313,31 +364,37 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingTop: 0,
-    paddingBottom: 110,
+    paddingBottom: 28,
   },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
+  actions: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    paddingTop: 12,
-    paddingBottom: 14,
-    paddingHorizontal: 24,
-    backgroundColor: "#FAFAFA",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E4E4E4",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
   },
-  footerSide: { alignItems: "center", gap: 6, minWidth: 58 },
-  footerSideSpacer: { width: 58 },
-  footerLabel: {
+  messageButton: {
+    flex: 1,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F1F1F2",
+    borderWidth: 1,
+    borderColor: "#161823",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  messageText: {
+    fontFamily: theme.typography.semibold,
+    fontSize: 15,
+    color: "#161823",
+  },
+  actionIcon: { alignItems: "center", minWidth: 52 },
+  actionLabel: {
     fontFamily: theme.typography.medium,
     fontSize: 10,
     color: "#888888",
+    marginTop: -2,
   },
-  footerLabelActive: {
+  actionLabelActive: {
     color: "#FF3860",
   },
 });

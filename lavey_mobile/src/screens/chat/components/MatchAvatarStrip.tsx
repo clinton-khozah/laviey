@@ -1,7 +1,9 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { NameInitialCircle } from "../../../components/common/NameInitialCircle";
 import { theme } from "../../../constants/theme";
+import { hasCustomProfileAvatar } from "../../../utils/discoverProfileReady";
 import type { Conversation, Profile } from "../../../types";
 
 type StripItem =
@@ -40,7 +42,11 @@ export function MatchAvatarStrip({
           onPress={() => (item.kind === "liked" ? onOpenLikedProfile(item.profile) : onOpenChat(item.conversation))}
         >
           <View style={[styles.ring, item.kind === "liked" && styles.ringLiked]}>
-            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+            {hasCustomProfileAvatar(item.avatar) ? (
+              <Image source={{ uri: item.avatar }} style={styles.avatar} />
+            ) : (
+              <NameInitialCircle name={item.name} size={54} />
+            )}
             {item.kind === "liked" ? (
               <View style={styles.heartBadge}>
                 <Ionicons name="heart" size={10} color="white" />
@@ -59,8 +65,8 @@ export function MatchAvatarStrip({
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 0 },
-  strip: { paddingHorizontal: 20, paddingBottom: 2, gap: 14 },
+  scroll: { flexGrow: 0, height: 104 },
+  strip: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10, gap: 14, alignItems: "flex-start" },
   item: { alignItems: "center", width: 62 },
   ring: {
     width: 62,
@@ -98,9 +104,13 @@ const styles = StyleSheet.create({
     borderColor: "white",
   },
   name: {
-    marginTop: 5,
+    marginTop: 6,
+    width: 62,
+    height: 16,
+    lineHeight: 14,
+    textAlign: "center",
     fontFamily: theme.typography.medium,
-    fontSize: 10.5,
+    fontSize: 11,
     color: "#4B4650",
   },
 });

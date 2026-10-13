@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { APP_IMAGES } from '@/constants/images';
+import { AdminContentBrowser } from './AdminContentBrowser';
 import {
   adminModerationService,
   type MemberReportItem,
@@ -843,6 +844,8 @@ export function AdminContentModeration() {
           )}
         </article>
       </div>
+
+      <AdminContentBrowser />
 
       {previewItem && (
         <div

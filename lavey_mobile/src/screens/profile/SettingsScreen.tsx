@@ -12,5 +12,5 @@ export function SettingsScreen({ navigation }: NativeStackScreenProps<RootStackP
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#FAFAFC" },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
 });

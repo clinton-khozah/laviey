@@ -13,6 +13,8 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { contentApi, profileApi } from "../../api/services";
+import { useAppData } from "../../context/AppDataContext";
+import { NameInitialCircle } from "../../components/common/NameInitialCircle";
 import { theme } from "../../constants/theme";
 import { hasCustomProfileAvatar } from "../../utils/discoverProfileReady";
 import type { ProfilePost } from "../../types";
@@ -39,12 +41,14 @@ export function ProfileSetupGateScreen({
   verificationPending = false,
   onVerify,
 }: {
-  onDone(): void;
+  onDone(): void | Promise<void>;
   verified?: boolean;
   verificationPending?: boolean;
   onVerify?(): void;
 }) {
+  const { refreshProfile } = useAppData();
   const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [avatarSync, setAvatarSync] = useState<SyncState>("idle");
@@ -54,7 +58,8 @@ export function ProfileSetupGateScreen({
     void (async () => {
       try {
         const profile = await profileApi.me();
-        setAvatarUrl(profile.avatarUrl);
+        setDisplayName(profile.displayName?.trim() ?? "");
+        setAvatarUrl(hasCustomProfileAvatar(profile.avatarUrl) ? profile.avatarUrl : undefined);
         setPosts(profile.posts ?? []);
       } catch {
         // Non-fatal — the gate just shows both steps as pending.
@@ -66,7 +71,7 @@ export function ProfileSetupGateScreen({
 
   const hasAvatar = hasCustomProfileAvatar(avatarUrl);
   const hasPost = posts.length >= 1;
-  const canFinish = hasAvatar && hasPost;
+  const canFinish = hasAvatar && hasPost && avatarSync !== "failed";
   const completedSteps = Number(hasAvatar) + Number(hasPost);
 
   const markPostPending = useCallback((id: string, pending: boolean) => {
@@ -85,11 +90,12 @@ export function ProfileSetupGateScreen({
       .then((result) => {
         if (result.avatarUrl) setAvatarUrl(result.avatarUrl);
         setAvatarSync("idle");
+        void refreshProfile(true);
       })
       .catch(() => {
         setAvatarSync("failed");
       });
-  }, []);
+  }, [refreshProfile]);
 
   const addPhoto = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -99,8 +105,7 @@ export function ProfileSetupGateScreen({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
+      legacy: true,
       quality: 0.85,
     });
     if (result.canceled) return;
@@ -118,6 +123,7 @@ export function ProfileSetupGateScreen({
         .createPost(uri)
         .then((post) => {
           setPosts((prev) => prev.map((item) => (item.id === tempId ? post : item)));
+          void refreshProfile(true);
         })
         .catch((e) => {
           setPosts((prev) => prev.filter((item) => item.id !== tempId));
@@ -127,7 +133,7 @@ export function ProfileSetupGateScreen({
           markPostPending(tempId, false);
         });
     },
-    [markPostPending],
+    [markPostPending, refreshProfile],
   );
 
   const addPosts = useCallback(async () => {
@@ -142,6 +148,7 @@ export function ProfileSetupGateScreen({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      legacy: true,
       allowsMultipleSelection: true,
       selectionLimit: remaining,
       quality: 0.85,
@@ -215,15 +222,8 @@ export function ProfileSetupGateScreen({
               {hasAvatar ? (
                 <Image source={{ uri: avatarUrl }} style={styles.avatarImage} contentFit="cover" />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person-outline" size={34} color="#8F8B93" />
-                </View>
+                <NameInitialCircle name={displayName || "You"} size={104} />
               )}
-              {avatarSync === "syncing" ? (
-                <View style={styles.avatarOverlay}>
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                </View>
-              ) : null}
             </View>
             <Text style={styles.avatarAction}>{hasAvatar ? "Change photo" : "Upload photo"}</Text>
           </Pressable>
@@ -254,11 +254,7 @@ export function ProfileSetupGateScreen({
                   {post ? (
                     <>
                       <Image source={{ uri: post.src }} style={styles.postSlotImage} contentFit="cover" />
-                      {pending ? (
-                        <View style={styles.postSlotOverlay}>
-                          <ActivityIndicator color="#FFFFFF" size="small" />
-                        </View>
-                      ) : (
+                      {pending ? null : (
                         <View style={styles.postSlotCheck}>
                           <Ionicons name="checkmark" size={14} color="#303034" />
                         </View>
@@ -328,7 +324,7 @@ export function ProfileSetupGateScreen({
             pressed && canFinish && styles.continueButtonPressed,
           ]}
           disabled={!canFinish}
-          onPress={onDone}
+          onPress={() => void onDone()}
         >
           <Text style={[styles.continueText, !canFinish && styles.continueTextDisabled]}>
             Continue to For You

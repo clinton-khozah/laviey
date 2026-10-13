@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   FadeIn,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -62,8 +63,18 @@ export function MatchAnimation({ onSendGreeting, onOpenChat }: Props) {
   }, [cardScale, leftRotate, leftX, logoScale, match, rightRotate, rightX, titleScale]);
 
   const cardStyle = useAnimatedStyle(() => ({ transform: [{ scale: cardScale.value }] }));
-  const leftStyle = useAnimatedStyle(() => ({ transform: [{ translateX: leftX.value }, { rotate: `${leftRotate.value}deg` }] }));
-  const rightStyle = useAnimatedStyle(() => ({ transform: [{ translateX: rightX.value }, { rotate: `${rightRotate.value}deg` }] }));
+  const leftStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: leftX.value },
+      { rotate: interpolate(leftRotate.value, [-180, 180], ["-180deg", "180deg"]) },
+    ],
+  }));
+  const rightStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: rightX.value },
+      { rotate: interpolate(rightRotate.value, [-180, 180], ["-180deg", "180deg"]) },
+    ],
+  }));
   const logoStyle = useAnimatedStyle(() => ({ transform: [{ scale: logoScale.value }] }));
   const titleStyle = useAnimatedStyle(() => ({ transform: [{ scale: titleScale.value }] }));
 

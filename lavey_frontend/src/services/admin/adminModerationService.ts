@@ -62,6 +62,19 @@ export interface ModerationPolicy {
   flagScamBio: boolean;
 }
 
+export interface AdminPostItem {
+  id: string;
+  userId: string;
+  userName: string;
+  userHandle: string;
+  type: 'image' | 'video';
+  src: string;
+  poster: string | null;
+  caption: string;
+  isVisible: boolean;
+  createdAt: string;
+}
+
 function adminHeaders(): HeadersInit {
   const token = getAdminSession()?.token;
   if (!token) return {};
@@ -80,7 +93,7 @@ async function parseError(response: Response): Promise<never> {
 }
 
 async function adminRequest<T>(
-  method: 'GET' | 'POST' | 'PATCH',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
   params?: Record<string, string>,
@@ -148,6 +161,22 @@ export const adminModerationService = {
       'POST',
       API_ENDPOINTS.admin.moderationReportAction(reportId),
       { action },
+    ).then(() => undefined);
+  },
+
+  listPosts(search?: string): Promise<AdminPostItem[]> {
+    return adminRequest<ApiResponse<AdminPostItem[]>>(
+      'GET',
+      API_ENDPOINTS.admin.moderationPosts,
+      undefined,
+      search ? { search } : undefined,
+    ).then((res) => res.data);
+  },
+
+  deletePost(postId: string): Promise<void> {
+    return adminRequest<ApiResponse<{ deleted: true }>>(
+      'DELETE',
+      API_ENDPOINTS.admin.moderationPostById(postId),
     ).then(() => undefined);
   },
 

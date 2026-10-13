@@ -31,24 +31,23 @@ export function sortProfilesNewestFirst(profiles: Profile[]): Profile[] {
   return [...profiles].sort((a, b) => profileCreatedMs(b) - profileCreatedMs(a));
 }
 
+function profileRecentMs(profile: Profile): number {
+  return Math.max(profileCreatedMs(profile), profileActiveMs(profile));
+}
+
 /**
- * For You feed — online members first, then new members, then everyone else
- * (most recently active / newest within each group).
+ * For You — people who joined recently come first (newest first).
+ * After that group, everyone else follows by most recent date.
  */
 export function sortForYouFeedProfiles(profiles: Profile[]): Profile[] {
   const now = Date.now();
   return [...profiles].sort((a, b) => {
-    const aOnline = isProfileOnlineNow(a, now);
-    const bOnline = isProfileOnlineNow(b, now);
-    if (aOnline !== bOnline) return Number(bOnline) - Number(aOnline);
-
     const aNew = isNewMemberProfile(a, now);
     const bNew = isNewMemberProfile(b, now);
     if (aNew !== bNew) return Number(bNew) - Number(aNew);
-
-    const activeDiff = profileActiveMs(b) - profileActiveMs(a);
-    if (activeDiff !== 0) return activeDiff;
-
+    if (aNew && bNew) return profileCreatedMs(b) - profileCreatedMs(a);
+    const recentDiff = profileRecentMs(b) - profileRecentMs(a);
+    if (recentDiff !== 0) return recentDiff;
     return profileCreatedMs(b) - profileCreatedMs(a);
   });
 }

@@ -9,10 +9,10 @@ The EAS **preview** build had **no `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`**, so the 
 In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) (same project as the Web client):
 
 1. **Web client** (already used by website + backend):  
-   `17132674984-klaq75k8d7k6kc0ke76d0dhp85bor8hd.apps.googleusercontent.com`
+   `932812160359-t7hnq6svmg97k4ro94re3h05l0c24qum.apps.googleusercontent.com`
 
 2. **Android OAuth client** — create or edit:
-   - Package name: `za.co.brightbyte.lavey`
+   - Package name: `co.za.lavey`
    - SHA-1: from your **EAS upload keystore** (not debug keystore)
 
 ### Get EAS SHA-1 fingerprint

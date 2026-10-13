@@ -12,6 +12,7 @@ import { discoverApi, profileApi, roomApi } from '../api/services';
 import { useAuth } from '../hooks/useAuth';
 import type { OnlineDate, Profile, UserProfile } from '../types';
 import { appDataCache } from '../utils/appDataCache';
+import { waitForLoginForYouFeed } from '../utils/discoverFeedLoader';
 
 type AppDataValue = {
   profile: UserProfile | null;
@@ -32,6 +33,7 @@ const AppDataContext = createContext<AppDataValue | null>(null);
 export function AppDataProvider({ children }: PropsWithChildren) {
   const { session, needsOnboardingQuiz } = useAuth();
   const userId = session?.user.id;
+  const sessionToken = session?.token;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [likers, setLikers] = useState<Profile[]>([]);
   const [likedBackIds, setLikedBackIds] = useState<Set<string>>(new Set());
@@ -71,7 +73,13 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       if (!userId) return null;
       try {
         const next = await profileApi.me();
-        setProfile(next);
+        setProfile((current) => {
+          const pending = current?.posts.filter((post) => post.id.startsWith("local-")) ?? [];
+          if (!pending.length) return next;
+          const known = new Set(next.posts.map((post) => post.src));
+          const stillLocal = pending.filter((post) => !known.has(post.src));
+          return stillLocal.length ? { ...next, posts: [...stillLocal, ...next.posts] } : next;
+        });
         void appDataCache.setProfile(userId, next);
         return next;
       } catch {
@@ -126,7 +134,10 @@ export function AppDataProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!userId || needsOnboardingQuiz) return;
+    let cancelled = false;
     void (async () => {
+      await waitForLoginForYouFeed();
+      if (cancelled) return;
       try {
         const next = await profileApi.me();
         setProfile(next);
@@ -158,7 +169,10 @@ export function AppDataProvider({ children }: PropsWithChildren) {
         // Keep cached dates.
       }
     })();
-  }, [userId, needsOnboardingQuiz]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, sessionToken, needsOnboardingQuiz]);
 
   const setDatesState = useCallback((next: OnlineDate[] | ((current: OnlineDate[]) => OnlineDate[])) => {
     setDates((current) => {
@@ -166,6 +180,11 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       if (userId) void appDataCache.setDates(userId, resolved);
       return resolved;
     });
+  }, [userId]);
+
+  const setProfileState = useCallback((next: UserProfile | null) => {
+    setProfile(next);
+    if (userId && next) void appDataCache.setProfile(userId, next);
   }, [userId]);
 
   const value = useMemo(
@@ -179,7 +198,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       refreshProfile,
       refreshLikers,
       refreshDates,
-      setProfile,
+      setProfile: setProfileState,
       setDates: setDatesState,
     }),
     [
@@ -192,6 +211,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       refreshProfile,
       refreshLikers,
       refreshDates,
+      setProfileState,
       setDatesState,
     ],
   );

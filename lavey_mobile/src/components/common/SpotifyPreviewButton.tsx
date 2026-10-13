@@ -48,7 +48,7 @@ export function SpotifyPreviewButton({
         onPress={toggle}
         style={[styles.btn, { width: size, height: size, borderRadius: size / 2 }]}
       >
-        <Ionicons name={playing ? "pause" : "play"} size={size * 0.44} color="#211A28" />
+        <Ionicons name={playing ? "pause" : "play"} size={size * 0.44} color="#FFFFFF" />
       </Pressable>
       {!previewUrl ? (
         <WebView
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   btn: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1ED760",
+    backgroundColor: "#303034",
     shadowColor: "#000",
     shadowOpacity: 0.3,
     shadowRadius: 8,

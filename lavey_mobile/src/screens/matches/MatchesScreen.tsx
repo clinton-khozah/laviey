@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { FontAwesome6, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { contentApi } from '../../api/services';
 import { theme } from '../../constants/theme';
@@ -14,12 +15,13 @@ import type { MainTabParamList } from '../../components/navigation/BottomTabNavi
 import type { RootStackParamList } from '../../navigation/AppNavigator';
 import type { ThemeSong } from '../../types';
 import { BackToForYouButton } from '../../components/navigation/BackToForYouButton';
+import { LaveyMusicMark } from '../../components/common/LaveyMusicMark';
 
 const DARK = '#101018';
 
 export function MatchesScreen({ navigation }: BottomTabScreenProps<MainTabParamList, 'Matches'>) {
   const { mode } = useAppearance();
-  const { profile } = useAppData();
+  const { profile, setProfile, refreshProfile } = useAppData();
   const [uri, setUri] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
   const [publishing, setPublishing] = useState(false);
@@ -38,6 +40,12 @@ export function MatchesScreen({ navigation }: BottomTabScreenProps<MainTabParamL
       setThemeSong(profile.themeSong ?? null);
     }
   }, [profile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProfile(true);
+    }, [refreshProfile]),
+  );
 
   const openThemeSongPicker = () => {
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate('SpotifyThemeSong');
@@ -68,33 +76,26 @@ export function MatchesScreen({ navigation }: BottomTabScreenProps<MainTabParamL
       return Alert.alert('Permission needed', `Allow ${camera ? 'camera' : 'photo'} access to create a post.`);
     }
     const result = camera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [3, 4] })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9, allowsEditing: true, aspect: [3, 4] });
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 })
+      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], legacy: true, quality: 0.9 });
     if (result.canceled) return;
 
     const pickedUri = result.assets[0].uri;
     complimentRequestRef.current += 1;
     setCompliment(null);
     setPublishError(null);
-    setCheckingPhoto(true);
-    try {
-      const check = await contentApi.checkPhoto(pickedUri);
-      if (!check.allowed) {
-        Alert.alert(
-          "Couldn't use this photo",
-          "This photo looks too explicit to post. A little cheeky is fine — just nothing fully explicit.",
-        );
-        return;
-      }
-      setUri(pickedUri);
-      void fetchCompliment(pickedUri);
-    } catch {
-      // AI unavailable — fail open, same as the backend does.
-      setUri(pickedUri);
-      void fetchCompliment(pickedUri);
-    } finally {
-      setCheckingPhoto(false);
-    }
+    setCheckingPhoto(false);
+    setUri(pickedUri);
+    void fetchCompliment(pickedUri);
+    void contentApi.checkPhoto(pickedUri).then((check) => {
+      if (check.allowed) return;
+      setUri((current) => (current === pickedUri ? null : current));
+      setCompliment(null);
+      Alert.alert(
+        "Couldn't use this photo",
+        "This photo looks too explicit to post. A little cheeky is fine — just nothing fully explicit.",
+      );
+    }).catch(() => undefined);
   };
 
   const clearPhoto = () => {
@@ -111,15 +112,30 @@ export function MatchesScreen({ navigation }: BottomTabScreenProps<MainTabParamL
   };
 
   const publish = async () => {
-    if (!uri) return;
+    if (!uri || !profile) return;
+    const localUri = uri;
+    const captionText = caption.trim();
+    const tempId = `local-${Date.now()}`;
+    setProfile({
+      ...profile,
+      posts: [{ id: tempId, type: "image", src: localUri }, ...profile.posts],
+    });
+    clearPhoto();
+    setCaption('');
+    setPosted(true);
     setPublishing(true);
     setPublishError(null);
     try {
-      await contentApi.createPost(uri, caption.trim() || undefined);
-      clearPhoto();
-      setCaption('');
-      setPosted(true);
+      const post = await contentApi.createPost(localUri, captionText || undefined);
+      setProfile({
+        ...profile,
+        posts: [post, ...profile.posts.filter((item) => item.id !== tempId)],
+      });
     } catch (e) {
+      setProfile(profile);
+      setPosted(false);
+      setUri(localUri);
+      setCaption(captionText);
       setPublishError(e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setPublishing(false);
@@ -196,10 +212,11 @@ export function MatchesScreen({ navigation }: BottomTabScreenProps<MainTabParamL
         </View>
 
         <Pressable style={styles.songCard} onPress={openThemeSongPicker}>
-          <View style={styles.spotifyIcon}>
-            <FontAwesome6 name="spotify" size={22} color="#FFF" />
-          </View>
-          {themeSong?.albumArtUrl ? <Image source={{ uri: themeSong.albumArtUrl }} style={styles.songArt} /> : null}
+          {themeSong?.albumArtUrl ? (
+            <Image source={{ uri: themeSong.albumArtUrl }} style={styles.songArt} />
+          ) : (
+            <LaveyMusicMark size={52} />
+          )}
           <View style={styles.songCopy}>
             <Text style={styles.songEyebrow}>Theme song · optional</Text>
             <Text style={styles.songTitle} numberOfLines={1}>{themeSong?.title ?? 'Add a song to your profile'}</Text>
@@ -431,15 +448,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: DARK,
   },
-  spotifyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1ED760',
-  },
-  songArt: { width: 40, height: 40, borderRadius: 10 },
+  songArt: { width: 52, height: 52, borderRadius: 10, backgroundColor: '#282828' },
   songCopy: { flex: 1 },
   songEyebrow: {
     color: '#A8A0B0',

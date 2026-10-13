@@ -132,7 +132,7 @@ export function SafetyPrivacyScreen({ navigation }: NativeStackScreenProps<RootS
   if (loading || !settings) {
     return (
       <SafeAreaView style={styles.center} edges={["bottom"]}>
-        <ActivityIndicator color={theme.colors.primary} />
+        <ActivityIndicator color="#303034" />
       </SafeAreaView>
     );
   }
@@ -144,12 +144,12 @@ export function SafetyPrivacyScreen({ navigation }: NativeStackScreenProps<RootS
         <Text style={styles.rowSubtitle}>{subtitle}</Text>
       </View>
       {savingKey === settingKey ? (
-        <ActivityIndicator size="small" color={theme.colors.primary} />
+        <ActivityIndicator size="small" color="#303034" />
       ) : (
         <Switch
           value={Boolean(settings[settingKey])}
           onValueChange={() => void toggle(settingKey)}
-          trackColor={{ true: theme.colors.primary }}
+          trackColor={{ false: "#D7D4DC", true: "#303034" }}
         />
       )}
     </View>
@@ -159,13 +159,13 @@ export function SafetyPrivacyScreen({ navigation }: NativeStackScreenProps<RootS
     <SafeAreaView style={styles.root} edges={["bottom"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.breakCard}>
-        <View style={styles.breakIcon}><Ionicons name="moon-outline" size={22} color="#8D46D8" /></View>
+        <View style={styles.breakIcon}><Ionicons name="moon-outline" size={22} color="#303034" /></View>
         <View style={styles.breakCopy}>
           <Text style={styles.breakTitle}>Take a break</Text>
           <Text style={styles.breakSubtitle}>Hide your account from For You while keeping your profile, matches and messages.</Text>
         </View>
-        {savingKey === "showInDiscover" ? <ActivityIndicator size="small" color="#8D46D8" /> : (
-          <Switch value={!settings.showInDiscover} onValueChange={() => void toggle("showInDiscover")} trackColor={{ false: "#D7D4DC", true: "#FF6372" }} />
+        {savingKey === "showInDiscover" ? <ActivityIndicator size="small" color="#303034" /> : (
+          <Switch value={!settings.showInDiscover} onValueChange={() => void toggle("showInDiscover")} trackColor={{ false: "#D7D4DC", true: "#303034" }} />
         )}
       </View>
       <Text style={styles.heading}>Visibility</Text>
@@ -244,17 +244,17 @@ export function SafetyPrivacyScreen({ navigation }: NativeStackScreenProps<RootS
       <View style={styles.group}>
         <Pressable style={styles.linkRow} onPress={() => navigation.navigate("BlockedUsers")}>
           <View style={styles.linkIcon}>
-            <Ionicons name="remove-circle-outline" size={19} color={theme.colors.primary} />
+            <Ionicons name="remove-circle-outline" size={19} color="#303034" />
           </View>
           <Text style={styles.linkLabel}>Blocked users</Text>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         </Pressable>
         <Pressable style={styles.linkRow} onPress={() => void downloadData()} disabled={exporting}>
           <View style={styles.linkIcon}>
-            <Ionicons name="download-outline" size={19} color={theme.colors.primary} />
+            <Ionicons name="download-outline" size={19} color="#303034" />
           </View>
           <Text style={styles.linkLabel}>Download my data</Text>
-          {exporting ? <ActivityIndicator size="small" color={theme.colors.primary} /> : <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />}
+          {exporting ? <ActivityIndicator size="small" color="#303034" /> : <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />}
         </Pressable>
       </View>
 
@@ -273,7 +273,7 @@ export function SafetyPrivacyScreen({ navigation }: NativeStackScreenProps<RootS
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8F8FC" },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
   content: { padding: 16, paddingBottom: 36 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.background },
   heading: { fontFamily: theme.typography.semibold, fontSize: 12, color: theme.colors.textMuted, marginBottom: 8, marginTop: 4 },
@@ -291,12 +291,12 @@ const styles = StyleSheet.create({
   rowLabel: { fontFamily: theme.typography.medium, fontSize: 13.5, color: theme.colors.text },
   rowSubtitle: { fontFamily: theme.typography.regular, fontSize: 11, color: theme.colors.textMuted, marginTop: 2 },
   linkRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 58, paddingHorizontal: 14 },
-  linkIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  linkIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#F4F4F5", alignItems: "center", justifyContent: "center" },
   dangerIcon: { backgroundColor: theme.colors.coralSoft },
   linkLabel: { flex: 1, fontFamily: theme.typography.medium, fontSize: 13.5, color: theme.colors.text },
   dangerText: { color: theme.colors.danger },
-  breakCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 15, borderRadius: 20, marginBottom: 20, backgroundColor: "#FFF2F5", borderWidth: 1, borderColor: "#FFB1C2" },
-  breakIcon: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "#F3EAFE" },
+  breakCard: { flexDirection: "row", alignItems: "center", gap: 11, padding: 15, borderRadius: 10, marginBottom: 20, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC" },
+  breakIcon: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: "#F4F4F5" },
   breakCopy: { flex: 1 },
   breakTitle: { fontFamily: theme.typography.bold, fontSize: 15, color: "#221F26" },
   breakSubtitle: { marginTop: 2, fontFamily: theme.typography.regular, fontSize: 10.5, lineHeight: 15, color: "#77737C" },
@@ -304,8 +304,8 @@ const styles = StyleSheet.create({
   phoneLabel: { fontFamily: theme.typography.semibold, fontSize: 12.5, color: theme.colors.text },
   phoneHint: { fontFamily: theme.typography.regular, fontSize: 10.5, color: theme.colors.textMuted, lineHeight: 15, marginTop: 2 },
   phoneRow: { flexDirection: "row", gap: 8, marginTop: 10 },
-  phoneInput: { flex: 1, height: 44, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: "#DDD9E1", backgroundColor: "#FAF9FB", color: theme.colors.text, fontFamily: theme.typography.regular },
-  phoneButton: { minWidth: 66, height: 44, paddingHorizontal: 15, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#FF6372" },
+  phoneInput: { flex: 1, height: 48, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: "#D7D7DC", backgroundColor: "#FFFFFF", color: "#08080D", fontFamily: theme.typography.regular, fontSize: 14 },
+  phoneButton: { minWidth: 66, height: 48, paddingHorizontal: 15, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#303034" },
   phoneButtonText: { color: "white", fontFamily: theme.typography.bold },
   linked: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 14, paddingBottom: 13 },
   linkedText: { color: "#2A827A", fontFamily: theme.typography.medium, fontSize: 11 },

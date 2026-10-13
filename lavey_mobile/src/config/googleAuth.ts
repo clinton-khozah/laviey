@@ -1,13 +1,13 @@
-import Constants from 'expo-constants';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-/** Web OAuth client ID (same project as lavey-backend + website). Public — not a secret. */
+/**
+ * Web client in the same Google project as this Android app's signing certificates.
+ * Public — not a secret.
+ */
 export const GOOGLE_WEB_CLIENT_ID =
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim()
-  || (Constants.expoConfig?.extra?.googleWebClientId as string | undefined)?.trim()
-  || '17132674984-klaq75k8d7k6kc0ke76d0dhp85bor8hd.apps.googleusercontent.com';
+  '932812160359-t7hnq6svmg97k4ro94re3h05l0c24qum.apps.googleusercontent.com';
 
-let configured = false;
+let configuredFor: string | null = null;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,13 +30,13 @@ async function ensurePlayServices(showUpdateDialog: boolean): Promise<void> {
 }
 
 export function configureGoogleSignIn(): void {
-  if (configured || !GOOGLE_WEB_CLIENT_ID) return;
+  if (configuredFor === GOOGLE_WEB_CLIENT_ID || !GOOGLE_WEB_CLIENT_ID) return;
   GoogleSignin.configure({
     webClientId: GOOGLE_WEB_CLIENT_ID,
     offlineAccess: false,
     forceCodeForRefreshToken: false,
   });
-  configured = true;
+  configuredFor = GOOGLE_WEB_CLIENT_ID;
 }
 
 export async function getGoogleIdTokenSilently(): Promise<string | null> {
@@ -56,28 +56,12 @@ export async function getGoogleIdTokenSilently(): Promise<string | null> {
     // No cached Google session on this device.
   }
 
-  try {
-    const tokens = await GoogleSignin.getTokens();
-    if (tokens.idToken) return tokens.idToken;
-  } catch {
-    return null;
-  }
-
   return null;
 }
 
 export async function getGoogleIdToken(): Promise<string | null> {
   configureGoogleSignIn();
   await ensurePlayServices(true);
-
-  try {
-    const cached = await GoogleSignin.signInSilently();
-    if (cached.type === 'success' && cached.data.idToken) {
-      return cached.data.idToken;
-    }
-  } catch {
-    // No cached Google session — open the account picker.
-  }
 
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {

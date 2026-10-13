@@ -11,26 +11,50 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
+import { NameInitialCircle } from "../../components/common/NameInitialCircle";
+import { hasCustomProfileAvatar } from "../../utils/discoverProfileReady";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { NavigationProp, ParamListBase } from "@react-navigation/native";
 import { useChat } from "../../context/ChatContext";
 import { useSocket } from "../../hooks/useSocket";
-import { chatApi, discoverApi, subscriptionApi } from "../../api/services";
+import { chatApi, contentApi, discoverApi, subscriptionApi } from "../../api/services";
 import { formatConversationDate } from "../../utils/dateFormatter";
 import { theme } from "../../constants/theme";
 import type { MainTabParamList } from "../../components/navigation/BottomTabNavigator";
 import { useProfilesWhoLikedYou } from "../../hooks/useProfilesWhoLikedYou";
 import { MatchAvatarStrip } from "./components/MatchAvatarStrip";
+import { ChatEmptyStart } from "./components/ChatEmptyStart";
+import { ChatRowMarks } from "./components/ChatRowMarks";
+import { MessageLikesPanel } from "./components/MessageLikesPanel";
+import { NotificationInbox } from "./components/NotificationInbox";
 import { ProfileFeedModal } from "../home/components/ProfileFeedModal";
 import { PlatinumModal } from "../../components/subscription/PlatinumModal";
 import type { Conversation, NotificationEvent, Profile } from "../../types";
 import { useAccessMode } from "../../context/AccessModeContext";
 import { BackToForYouButton } from "../../components/navigation/BackToForYouButton";
+import { useLogoReady } from "../../utils/deferLogo";
+import { loadNotifications, peekNotifications } from "../../utils/notificationInboxCache";
+import { navigateToForYou } from "../../utils/navigateToForYou";
 // Group chats disabled — re-enable when the feature ships.
 // import { CreateGroupSheet } from "../groups/CreateGroupSheet";
-type Filter = "all" | "unread" | "online";
+type Filter = "all" | "unread" | "online" | "likes";
+
+function openChatScreen(
+  navigation: NavigationProp<ParamListBase>,
+  params: { conversationId: string; conversation?: Conversation; profileId?: string },
+) {
+  let current: NavigationProp<ParamListBase> | undefined = navigation;
+  while (current) {
+    if (current.getState()?.routeNames?.includes("ChatDetail")) {
+      current.navigate("ChatDetail", params);
+      return;
+    }
+    current = current.getParent();
+  }
+}
 function formatCountdown(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
   const totalMinutes = Math.max(0, Math.floor(ms / 60_000));
@@ -43,7 +67,8 @@ export function ChatListScreen({
   navigation,
   route,
 }: BottomTabScreenProps<MainTabParamList, "Chat">) {
-  const { conversations, loading, refresh } = useChat();
+  const { conversations, refresh } = useChat();
+  const logoReady = useLogoReady();
   const { allFree } = useAccessMode();
   const { profiles: likedProfiles, likedBackIds, refetch: refetchLikedProfiles } = useProfilesWhoLikedYou();
   const [stripPreviewProfile, setStripPreviewProfile] = useState<Profile | null>(null);
@@ -51,7 +76,7 @@ export function ChatListScreen({
   const [special, setSpecial] = useState<"notifications" | "admin" | null>(
     null,
   );
-  const [notifications, setNotifications] = useState<NotificationEvent[]>([]);
+  const [notifications, setNotifications] = useState<NotificationEvent[]>(peekNotifications);
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const [platinumOpen, setPlatinumOpen] = useState(false);
   // const [creatingGroup, setCreatingGroup] = useState(false);
@@ -60,11 +85,8 @@ export function ChatListScreen({
   const update = useCallback(() => void refresh(true), [refresh]);
   useSocket(update);
   useEffect(() => {
+    void loadNotifications().then(setNotifications).catch(() => undefined);
     void Promise.all([
-      chatApi
-        .notifications()
-        .then(setNotifications)
-        .catch(() => setNotifications([])),
       chatApi
         .officialInbox()
         .then(setOfficial)
@@ -83,20 +105,22 @@ export function ChatListScreen({
           conversationId: route.params.conversationId,
         });
   }, [route.params?.conversationId, navigation]);
-  const shown = useMemo(
-    () =>
-      conversations.filter(
-        (x) =>
-          filter === "all" ||
-          (filter === "unread" && x.unreadCount > 0) ||
-          (filter === "online" && x.isOnline),
-      ),
-    [conversations, filter],
-  );
+  const shown = useMemo(() => {
+    const filtered = conversations.filter(
+      (x) =>
+        filter === "all" ||
+        (filter === "unread" && x.unreadCount > 0) ||
+        (filter === "online" && x.isOnline),
+    );
+    return [...filtered].sort((a, b) => {
+      if (Boolean(a.isPinned) === Boolean(b.isPinned)) return 0;
+      return a.isPinned ? -1 : 1;
+    });
+  }, [conversations, filter]);
   const unread = conversations.reduce((n, x) => n + x.unreadCount, 0);
   const openChatFromStrip = useCallback(
     (conversation: Conversation) =>
-      navigation.getParent()?.navigate("ChatDetail", {
+      openChatScreen(navigation, {
         conversationId: conversation.id,
         conversation,
       }),
@@ -124,28 +148,35 @@ export function ChatListScreen({
     },
     [refetchLikedProfiles, refresh],
   );
+  const likePostFromNotification = useCallback((postId: string) => {
+    void contentApi.likePost(postId).catch((e: unknown) => {
+      Alert.alert("Couldn't like that post", e instanceof Error ? e.message : "Please try again.");
+    });
+  }, []);
   const openChatFromNotification = useCallback(
-    async (actorUserId: string) => {
-      try {
-        const { conversationId } = await chatApi.conversationByProfile(actorUserId);
-        if (!conversationId) throw new Error("Your match chat is still being prepared. Please try again.");
-        setSpecial(null);
-        navigation.getParent()?.navigate("ChatDetail", { conversationId });
-      } catch (e) {
-        Alert.alert("Couldn't open chat", e instanceof Error ? e.message : "Please try again.");
-      }
+    (actorUserId: string) => {
+      const known = conversations.find((item) => item.participantProfileId === actorUserId);
+      setNotifications((prev) => prev.map((item) => (item.actorUserId === actorUserId ? { ...item, read: true } : item)));
+      void chatApi.markNotificationsRead().catch(() => {});
+      setSpecial(null);
+      openChatScreen(navigation, known
+        ? { conversationId: known.id, conversation: known }
+        : { conversationId: "resolve", profileId: actorUserId });
+      void refresh(true);
     },
-    [navigation],
+    [conversations, navigation, refresh],
   );
   return (
     <SafeAreaView style={styles.root}>
-      <View pointerEvents="none" style={styles.watermarkWrap}>
-        <Image
-          source={require("../../../assets/heart-tight.png")}
-          style={styles.watermarkImage}
-          contentFit="contain"
-        />
-      </View>
+      {logoReady ? (
+        <View pointerEvents="none" style={styles.watermarkWrap}>
+          <Image
+            source={require("../../../assets/heart-tight.png")}
+            style={styles.watermarkImage}
+            contentFit="contain"
+          />
+        </View>
+      ) : null}
       <View style={styles.header}>
         <BackToForYouButton variant="light" />
         <Text style={styles.title}>Messages</Text>
@@ -166,12 +197,14 @@ export function ChatListScreen({
         </Pressable>
         */}
       </View>
-      <MatchAvatarStrip
-        likedProfiles={likedProfiles}
-        conversations={conversations}
-        onOpenLikedProfile={setStripPreviewProfile}
-        onOpenChat={openChatFromStrip}
-      />
+      <View style={styles.onlineStrip}>
+        <MatchAvatarStrip
+          likedProfiles={likedProfiles}
+          conversations={conversations}
+          onOpenLikedProfile={setStripPreviewProfile}
+          onOpenChat={openChatFromStrip}
+        />
+      </View>
       <View style={styles.tabs}>
         {(
           [
@@ -181,6 +214,7 @@ export function ChatListScreen({
               "online",
               `Online ${conversations.filter((x) => x.isOnline).length}`,
             ],
+            ["likes", `Likes ${likedProfiles.length}`],
           ] as const
         ).map(([id, label]) => (
           <Pressable key={id} onPress={() => setFilter(id)}>
@@ -190,11 +224,24 @@ export function ChatListScreen({
           </Pressable>
         ))}
       </View>
+      {filter === "likes" ? (
+        <MessageLikesPanel
+          profiles={likedProfiles}
+          likedBackIds={likedBackIds}
+          onLikeBack={async (profile) => {
+            await likeBackFromNotification(profile.id);
+          }}
+          onText={async (profile) => {
+            await openChatFromNotification(profile.id);
+          }}
+          onStart={() => navigateToForYou(navigation)}
+        />
+      ) : (
       <FlatList
         data={shown}
         keyExtractor={(x) => x.id}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={refresh} />
+          <RefreshControl refreshing={false} onRefresh={() => void refresh(true)} />
         }
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -205,7 +252,10 @@ export function ChatListScreen({
                 title="Notifications"
                 copy={notifications[0]?.text ?? "Likes, crushes & updates appear here"}
                 badge={unreadNotifications}
-                onPress={() => setSpecial("notifications")}
+                onPress={() => {
+                  setSpecial("notifications");
+                  void loadNotifications().then(setNotifications).catch(() => undefined);
+                }}
                 gold
               />
               {!allFree ? <Special
@@ -224,19 +274,18 @@ export function ChatListScreen({
           <Pressable
             style={styles.item}
             onPress={() =>
-              navigation
-                .getParent()
-                ?.navigate("ChatDetail", {
-                  conversationId: item.id,
-                  conversation: item,
-                })
+              openChatScreen(navigation, {
+                conversationId: item.id,
+                conversation: item,
+              })
             }
           >
             <View>
-              <Image
-                source={{ uri: item.participantAvatar }}
-                style={styles.avatar}
-              />
+              {hasCustomProfileAvatar(item.participantAvatar) ? (
+                <Image source={{ uri: item.participantAvatar }} style={styles.avatar} />
+              ) : (
+                <NameInitialCircle name={item.participantName} size={58} />
+              )}
               {item.isOnline ? <View style={styles.dot} /> : null}
             </View>
             <View style={styles.body}>
@@ -246,6 +295,7 @@ export function ChatListScreen({
                 {formatConversationDate(item.lastMessageAt)}
               </Text>
             </View>
+            <ChatRowMarks pinned={Boolean(item.isPinned)} muted={Boolean(item.isMuted)} />
             {item.unreadCount ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{item.unreadCount}</Text>
@@ -254,15 +304,23 @@ export function ChatListScreen({
           </Pressable>
         )}
         ListEmptyComponent={
-          <Text style={styles.empty}>No conversations in this filter.</Text>
+          <ChatEmptyStart
+            icon="chatbubble-ellipses-outline"
+            title="No conversations yet"
+            copy="Find someone on For You, match, and say hello. Your chats will show up here."
+            action="Start a chat"
+            onStart={() => navigateToForYou(navigation)}
+          />
         }
       />
+      )}
       <SpecialSheet
         kind={special}
         close={() => setSpecial(null)}
         notifications={notifications}
         likedBackIds={likedBackIds}
         onLikeBack={likeBackFromNotification}
+        onLikePost={likePostFromNotification}
         onOpenChat={openChatFromNotification}
         onOpenPlatinum={() => setPlatinumOpen(true)}
         welcomeDiscount={welcomeDiscount}
@@ -350,145 +408,13 @@ function Special({
     </Pressable>
   );
 }
-const NOTIFICATION_KIND_LABELS: Record<string, string> = {
-  crush: "Crush",
-  post_like: "Post appreciation",
-  like: "Profile like",
-  verified: "Verification",
-  match: "New match",
-  system: "Lavey",
-  profile_view: "Profile view",
-  meetup_like: "Date interest",
-  meetup_join: "Date join",
-};
-function formatActorMeta(item: NotificationEvent): string | null {
-  const parts: string[] = [];
-  if (item.actorAge != null) parts.push(String(item.actorAge));
-  if (item.actorLocation) parts.push(item.actorLocation);
-  return parts.length ? parts.join(" · ") : null;
-}
-
-function NotificationCard({
-  item,
-  showChat,
-  onAction,
-}: {
-  item: NotificationEvent;
-  showChat: boolean;
-  onAction(): void;
-}) {
-  const isMatch = item.kind === "match";
-  const headline =
-    item.kind === "match"
-      ? (item.title ?? "It's a match!")
-      : item.kind === "verified"
-        ? "You're verified!"
-        : (item.title ?? item.text);
-  const subtext =
-    item.body && item.body !== headline
-      ? item.body
-      : item.kind === "match"
-        ? `${item.actorName.split(" ")[0] ?? item.actorName} matched with you`
-        : null;
-  const actorMeta = formatActorMeta(item);
-  const vibeLabel =
-    item.actorVibeScore != null ? `${Math.round(item.actorVibeScore)}% vibe` : null;
-
-  return (
-    <View
-      style={[
-        styles.notice,
-        isMatch && styles.noticeMatch,
-        !item.read && styles.noticeUnread,
-        !item.read && isMatch && styles.noticeMatchUnread,
-      ]}
-    >
-      <View style={styles.noticeHeaderRow}>
-        <Text style={styles.noticeKind}>
-          {(NOTIFICATION_KIND_LABELS[item.kind] ?? "Update").toUpperCase()}
-        </Text>
-        <Text style={styles.noticeMetaInline}>{item.sentAt}</Text>
-      </View>
-      {isMatch ? <View style={styles.noticeMatchAccent} /> : null}
-      <View style={styles.noticeMain}>
-        <View style={styles.noticeTopRow}>
-          <NotificationIcon item={item} match={isMatch} />
-          <View style={styles.noticeContent}>
-            <View style={styles.noticeNameRow}>
-              <Text style={styles.noticeName} numberOfLines={1}>
-                {item.actorName}
-                {item.actorAge != null ? `, ${item.actorAge}` : ""}
-              </Text>
-              {vibeLabel ? (
-                <View style={styles.noticeVibePill}>
-                  <Text style={styles.noticeVibeText}>{vibeLabel}</Text>
-                </View>
-              ) : null}
-            </View>
-            {actorMeta ? (
-              <View style={styles.noticeLocationRow}>
-                <Ionicons name="location-outline" size={12} color="#8B93A1" />
-                <Text style={styles.noticeLocation} numberOfLines={1}>
-                  {item.actorLocation ?? actorMeta}
-                </Text>
-              </View>
-            ) : null}
-            <Text style={[styles.noticeTitle, isMatch && styles.noticeTitleMatch]}>
-              {headline}
-            </Text>
-            {subtext ? <Text style={styles.noticeText}>{subtext}</Text> : null}
-          </View>
-        </View>
-        {item.actionable && item.actorUserId ? (
-          <Pressable
-            style={[styles.noticeAction, showChat && styles.noticeActionChat]}
-            onPress={onAction}
-          >
-            <Text style={styles.noticeActionText}>
-              {showChat ? "Open conversation" : "Like back"}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function NotificationIcon({ item, match = false }: { item: NotificationEvent; match?: boolean }) {
-  if (item.kind === "verified") {
-    return (
-      <View style={[styles.noticeIcon, styles.noticeIconVerified]}>
-        <Ionicons name="checkmark-circle" size={26} color="#1877F2" />
-      </View>
-    );
-  }
-  if (item.kind === "system") {
-    return (
-      <View style={[styles.noticeIcon, styles.noticeIconSystem]}>
-        <Ionicons name="notifications" size={20} color="#8D3EE7" />
-      </View>
-    );
-  }
-  if (item.actorAvatar) {
-    return (
-      <Image
-        source={{ uri: item.actorAvatar }}
-        style={[styles.noticeAvatar, match && styles.noticeAvatarMatch]}
-      />
-    );
-  }
-  return (
-    <View style={[styles.noticeIcon, styles.noticeIconSystem]}>
-      <Ionicons name="heart" size={20} color="#FF5571" />
-    </View>
-  );
-}
 function SpecialSheet({
   kind,
   close,
   notifications,
   likedBackIds,
   onLikeBack,
+  onLikePost,
   onOpenChat,
   onOpenPlatinum,
   welcomeDiscount,
@@ -498,6 +424,7 @@ function SpecialSheet({
   notifications: NotificationEvent[];
   likedBackIds: Set<string>;
   onLikeBack(actorUserId: string): void;
+  onLikePost(postId: string): void;
   onOpenChat(actorUserId: string): void;
   onOpenPlatinum(): void;
   welcomeDiscount: { percent: number; expiresAt: string } | null;
@@ -525,37 +452,19 @@ function SpecialSheet({
               <Ionicons name="close" size={24} />
             </Pressable>
           </View>
+          {kind === "notifications" ? (
+            <NotificationInbox
+              notifications={notifications}
+              likedBackIds={likedBackIds}
+              onLikeBack={onLikeBack}
+              onLikePost={onLikePost}
+              onOpenChat={onOpenChat}
+            />
+          ) : (
           <ScrollView
             contentContainerStyle={styles.sheetBody}
             showsVerticalScrollIndicator={false}
           >
-            {kind === "notifications" ? (
-              notifications.length ? (
-                notifications.map((item) => {
-                  const showChat =
-                    item.kind === "match" ||
-                    (item.actorUserId ? likedBackIds.has(item.actorUserId) : false);
-                  return (
-                    <NotificationCard
-                      key={item.id}
-                      item={item}
-                      showChat={showChat}
-                      onAction={() =>
-                        item.actorUserId
-                          ? showChat
-                            ? onOpenChat(item.actorUserId)
-                            : onLikeBack(item.actorUserId)
-                          : undefined
-                      }
-                    />
-                  );
-                })
-              ) : (
-                <Text style={styles.empty}>
-                  Likes, crushes and account updates will appear here.
-                </Text>
-              )
-            ) : (
               <View style={styles.promo}>
                 <View style={styles.promoCardHead}>
                   <Image
@@ -606,8 +515,8 @@ function SpecialSheet({
                     : "Manage your plan anytime from Settings."}
                 </Text>
               </View>
-            )}
           </ScrollView>
+          )}
         </SafeAreaView>
       </View>
     </Modal>
@@ -638,6 +547,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerSpacer: { flex: 1 },
+  onlineStrip: { height: 104, zIndex: 3, marginBottom: 6, overflow: "visible" },
   title: { fontFamily: theme.typography.bold, fontSize: 27 },
   plus: {
     position: "absolute",
@@ -676,7 +586,7 @@ const styles = StyleSheet.create({
     marginBottom: 13,
   },
   tab: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 11,
     paddingVertical: 7,
     fontFamily: theme.typography.medium,
     fontSize: 10,
@@ -744,7 +654,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    height: "82%",
+    height: "68%",
     backgroundColor: "#F8F8FC",
     borderTopLeftRadius: 27,
     borderTopRightRadius: 27,
@@ -761,138 +671,6 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontFamily: theme.typography.bold, fontSize: 21 },
   sheetBody: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 36 },
-  notice: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E6E8ED",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 14,
-    marginBottom: 12,
-    overflow: "hidden",
-    shadowColor: "#1C1C28",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  },
-  noticeMatch: {
-    borderColor: "#E8D4E0",
-    backgroundColor: "#FFFCFE",
-  },
-  noticeMatchUnread: {
-    borderColor: "#DCC6D3",
-    backgroundColor: "#FFF9FB",
-  },
-  noticeMatchAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-    backgroundColor: "#C94B73",
-  },
-  noticeHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-    paddingLeft: 4,
-  },
-  noticeKind: {
-    fontFamily: theme.typography.semibold,
-    fontSize: 10,
-    letterSpacing: 1.1,
-    color: "#7A8190",
-  },
-  noticeMetaInline: {
-    fontFamily: theme.typography.regular,
-    fontSize: 10.5,
-    color: "#9AA3AF",
-  },
-  noticeMain: {
-    gap: 12,
-    paddingLeft: 4,
-  },
-  noticeTopRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  noticeContent: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  noticeNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  noticeName: {
-    fontFamily: theme.typography.bold,
-    fontSize: 15,
-    color: "#1F2430",
-    flexShrink: 1,
-  },
-  noticeVibePill: {
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: "#F3F4F7",
-    borderWidth: 1,
-    borderColor: "#E2E5EB",
-  },
-  noticeVibeText: {
-    fontFamily: theme.typography.semibold,
-    fontSize: 10.5,
-    color: "#5C6470",
-  },
-  noticeLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 1,
-  },
-  noticeLocation: {
-    fontFamily: theme.typography.regular,
-    fontSize: 11.5,
-    color: "#7A8190",
-    flex: 1,
-  },
-  noticeUnread: { borderColor: "#D8DCE4", backgroundColor: "#FAFBFD" },
-  noticeIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  noticeIconVerified: { backgroundColor: "#EAF3FF" },
-  noticeIconSystem: { backgroundColor: "#F9F0FE" },
-  noticeAvatar: { width: 48, height: 48, borderRadius: 24 },
-  noticeAvatarMatch: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: "#DCC6D3",
-  },
-  noticeTitle: { fontFamily: theme.typography.semibold, fontSize: 13.5, color: "#2B3140", marginTop: 4 },
-  noticeTitleMatch: { fontFamily: theme.typography.bold, fontSize: 14, color: "#8E3A5B" },
-  noticeText: { fontFamily: theme.typography.regular, fontSize: 12.5, color: "#5F6673", marginTop: 3, lineHeight: 18 },
-  noticeMeta: { fontFamily: theme.typography.regular, fontSize: 10.5, color: "#9A94A0", marginTop: 6 },
-  noticeAction: {
-    alignSelf: "flex-start",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: "#1F2430",
-  },
-  noticeActionChat: { backgroundColor: "#8E3A5B" },
-  noticeActionText: { fontFamily: theme.typography.semibold, fontSize: 11.5, color: "white", letterSpacing: 0.2 },
   promo: { padding: 4 },
   promoCardHead: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 },
   promoCardAvatar: { width: 44, height: 44 },

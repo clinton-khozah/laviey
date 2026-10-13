@@ -1,9 +1,11 @@
-import { useEffect, useState, type PropsWithChildren, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { theme } from '../../constants/theme';
+import { useSignInLoader } from '../../components/auth/SignInHeartOverlay';
+import { useLogoReady } from '../../utils/deferLogo';
 
 type LegalDocument = 'terms' | 'privacy';
 
@@ -12,8 +14,12 @@ type Props = PropsWithChildren<{
   subtitle: string;
   footer?: ReactNode;
   legal?: boolean;
+  legalCopy?: { lead: string; terms: string; join: string; privacy: string };
   loading?: boolean;
   onBack?: () => void;
+  headerRight?: ReactNode;
+  showPoweredBy?: boolean;
+  poweredByLabel?: string;
 }>;
 
 const TERMS = [
@@ -32,10 +38,14 @@ const PRIVACY = [
   ['Your choices', 'You can update profile information in the app and request access to or deletion of your data through Settings or support@lavey.co.za.'],
 ] as const;
 
-export function AuthLayout({ title, subtitle, children, footer, legal = false, loading = false, onBack }: Props) {
+export function AuthLayout({ title, subtitle, children, footer, legal = false, legalCopy, loading = false, onBack, headerRight, showPoweredBy = false, poweredByLabel = 'Powered by Brainstak' }: Props) {
   const [legalDocument, setLegalDocument] = useState<LegalDocument | null>(null);
+  const { setAnchor } = useSignInLoader();
+  const logoReady = useLogoReady();
+  const logoRef = useRef<View>(null);
   const sections = legalDocument === 'privacy' ? PRIVACY : TERMS;
   const loadingProgress = useSharedValue(0);
+  const pulse = useSharedValue(0);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -45,10 +55,25 @@ export function AuthLayout({ title, subtitle, children, footer, legal = false, l
     });
   }, [loading, loadingProgress]);
 
+  useEffect(() => {
+    if (!loading) {
+      pulse.value = 0;
+      return;
+    }
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 650, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 650, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+  }, [loading, pulse]);
+
   const logoStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: loadingProgress.value * 150 },
-      { scale: 1 + loadingProgress.value * 0.28 },
+      { scale: (1 + loadingProgress.value * 0.28) * (0.94 + pulse.value * 0.12) },
     ],
   }));
   const taglineStyle = useAnimatedStyle(() => ({
@@ -72,10 +97,24 @@ export function AuthLayout({ title, subtitle, children, footer, legal = false, l
           <Ionicons name="arrow-back" size={24} color="#18181B" />
         </Pressable>
       ) : null}
+      {headerRight ? <View style={[styles.headerRight, { top: insets.top + 8 }]}>{headerRight}</View> : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           <View style={styles.header} accessibilityLabel="Lavey">
-            <Animated.Image source={require('../../../assets/heart-tight.png')} resizeMode="contain" style={[styles.brandImage, logoStyle]} />
+            <View
+              ref={logoRef}
+              onLayout={() => {
+                logoRef.current?.measureInWindow((_x, y) => {
+                  if (y > 0) setAnchor(y);
+                });
+              }}
+            >
+              {logoReady ? (
+                <Animated.Image source={require('../../../assets/heart-tight.png')} resizeMode="contain" style={[styles.brandImage, logoStyle]} />
+              ) : (
+                <View style={styles.brandImage} />
+              )}
+            </View>
             <Animated.Text style={[styles.tagline, taglineStyle]}>{subtitle}</Animated.Text>
           </View>
           <Animated.View style={[styles.card, formStyle]} pointerEvents={loading ? 'none' : 'auto'}>
@@ -86,15 +125,19 @@ export function AuthLayout({ title, subtitle, children, footer, legal = false, l
           {legal ? (
             <Animated.View style={formStyle} pointerEvents={loading ? 'none' : 'auto'}>
               <Text style={styles.legal}>
-                By continuing, you agree to our{' '}
-                <Text style={styles.legalLink} onPress={() => setLegalDocument('terms')}>Terms & Conditions</Text>
-                {' '}and acknowledge our{' '}
-                <Text style={styles.legalLink} onPress={() => setLegalDocument('privacy')}>Privacy Policy</Text>.
+                {legalCopy?.lead ?? 'By continuing, you agree to our'}{' '}
+                <Text style={styles.legalLink} onPress={() => setLegalDocument('terms')}>{legalCopy?.terms ?? 'Terms & Conditions'}</Text>
+                {' '}{legalCopy?.join ?? 'and acknowledge our'}{' '}
+                <Text style={styles.legalLink} onPress={() => setLegalDocument('privacy')}>{legalCopy?.privacy ?? 'Privacy Policy'}</Text>.
               </Text>
             </Animated.View>
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showPoweredBy ? (
+        <Text style={[styles.poweredBy, { bottom: Math.max(insets.bottom, 12) + 18 }]}>{poweredByLabel}</Text>
+      ) : null}
 
       <Modal visible={legalDocument !== null} animationType="slide" transparent onRequestClose={() => setLegalDocument(null)}>
         <View style={styles.modalBackdrop}>
@@ -125,15 +168,17 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFFFFF' },
   flex: { flex: 1 },
   backButton: { position: 'absolute', left: 16, zIndex: 10, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerRight: { position: 'absolute', right: 16, zIndex: 10 },
   content: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingTop: 48, paddingBottom: 28 },
   header: { width: '100%', alignItems: 'center', marginBottom: 28 },
-  brandImage: { width: 68, height: 68, marginBottom: 14 },
+  brandImage: { width: 96, height: 96, marginBottom: 14 },
   tagline: { fontFamily: theme.typography.regular, fontSize: 14, lineHeight: 20, color: '#5F5F68', textAlign: 'center' },
   card: { width: '100%', maxWidth: 380 },
   title: { fontFamily: theme.typography.bold, fontSize: 23, lineHeight: 30, color: '#18181B', textAlign: 'left', marginBottom: 20 },
   form: { gap: 14 },
   legal: { marginTop: 14, maxWidth: 310, textAlign: 'center', fontFamily: theme.typography.regular, fontSize: 10, lineHeight: 16, color: '#85858E' },
   legalLink: { fontFamily: theme.typography.semibold, color: '#303034', textDecorationLine: 'underline' },
+  poweredBy: { position: 'absolute', alignSelf: 'center', color: '#8A8A93', fontSize: 11, fontWeight: '500', letterSpacing: 0.15 },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.34)' },
   modalSheet: { height: '78%', borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: '#FFFFFF', overflow: 'hidden' },
   modalHeader: { minHeight: 62, paddingLeft: 22, paddingRight: 14, flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DFDFE3' },

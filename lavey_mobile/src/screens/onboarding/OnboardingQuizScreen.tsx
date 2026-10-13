@@ -21,7 +21,8 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { onboardingApi, profileApi, settingsApi, type UserSettings } from "../../api/services";
+import { onboardingApi, profileApi } from "../../api/services";
+import { useLanguage } from "../../context/LanguageContext";
 import { useTranslatedStrings } from "../../hooks/useTranslatedStrings";
 import { ONBOARDING_QUIZ_STRINGS } from "./onboardingQuizScreen.strings";
 import { ONBOARDING_LOCATION_STEP_STRINGS } from "./components/onboardingLocationStep.strings";
@@ -29,6 +30,7 @@ import { saveOnboardingDiscoverPrefs } from "../../utils/discoverOnboardingPrefs
 import { discoverFiltersFromOnboarding } from "../../utils/discoverFiltersFromOnboarding";
 import { saveDiscoverFilters } from "../../utils/discoverFilterStorage";
 import { saveOnboardingQuizSnapshot } from "../../utils/onboardingQuizStorage";
+import { prefetchForYouFeed } from "../../utils/discoverFeedLoader";
 import { theme } from "../../constants/theme";
 import { useAuth } from "../../hooks/useAuth";
 import type {
@@ -54,7 +56,7 @@ const CATALOG_FIELD_MAP: Record<string, string> = {
 };
 
 const SKIPPABLE_STEPS = new Set(["orientation", "religion", "languages"]);
-const QUIZ_LOAD_TIMEOUT_MS = 12_000;
+const QUIZ_LOAD_TIMEOUT_MS = 70_000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -182,6 +184,7 @@ export function OnboardingQuizScreen({ onComplete, onIdentityStepComplete }: { o
   const isGoogleUser = session?.user.provider === "google";
 
   const [loading, setLoading] = useState(true);
+  const [patientWait, setPatientWait] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [questions, setQuestions] = useState<OnboardingQuestion[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
@@ -194,14 +197,14 @@ export function OnboardingQuizScreen({ onComplete, onIdentityStepComplete }: { o
   const [bio, setBio] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<UserSettings["language"]>("en");
+  const { language } = useLanguage();
 
   const loadQuiz = useCallback(async () => {
     try {
       const list = await withTimeout(
         onboardingApi.questions(),
         QUIZ_LOAD_TIMEOUT_MS,
-        "The server is taking too long to respond. Tap Retry — it may still be waking up.",
+        "The server is taking too long to respond. Tap Retry.",
       );
       setQuestions(list);
       setLoadError(null);
@@ -213,12 +216,16 @@ export function OnboardingQuizScreen({ onComplete, onIdentityStepComplete }: { o
   }, []);
 
   useEffect(() => {
-    void settingsApi
-      .get()
-      .then((settings) => {
-        if (settings.language) setLanguage(settings.language);
-      })
-      .catch(() => undefined);
+    if (!loading) {
+      setPatientWait(false);
+      return;
+    }
+    const timer = setTimeout(() => setPatientWait(true), 8_000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
+
+  useEffect(() => {
     void loadQuiz().catch(() => undefined);
   }, [loadQuiz]);
 
@@ -302,6 +309,7 @@ export function OnboardingQuizScreen({ onComplete, onIdentityStepComplete }: { o
         gender: answers.gender,
         orientation: answers.orientation,
       };
+      prefetchForYouFeed(discoverFiltersFromOnboarding(quizSnapshot), false);
       if (session?.user.id) {
         await saveOnboardingQuizSnapshot(session.user.id, quizSnapshot);
         await saveDiscoverFilters(
@@ -375,7 +383,9 @@ export function OnboardingQuizScreen({ onComplete, onIdentityStepComplete }: { o
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.title}>One moment…</Text>
+        <Text style={styles.title}>
+          {patientWait ? "Waking the server up. This can take a minute." : "One moment…"}
+        </Text>
       </SafeAreaView>
     );
   }

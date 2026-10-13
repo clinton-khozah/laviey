@@ -14,7 +14,7 @@ export function SettingsModal({
 }) {
   return (
     <SlidePanelModal visible={visible} onClose={onClose}>
-      <SettingsPanel onClose={onClose} navigation={navigation} />
+      {visible ? <SettingsPanel onClose={onClose} navigation={navigation} /> : null}
     </SlidePanelModal>
   );
 }

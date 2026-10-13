@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { subscriptionApi } from "../../api/services";
-import { LoadingIndicator } from "../common/LoadingIndicator";
+import { finishPlayPurchase, PlayBillingUnavailable, PlayPurchaseCancelled, preparePlayBilling, purchasePlayPlatinum } from "../../billing/playPlatinum";
 import { theme } from "../../constants/theme";
+import { useAuth } from "../../hooks/useAuth";
 import type { PayfastCheckoutResponse, PlatinumCatalog } from "../../types";
 import { PayfastCheckoutModal } from "../../screens/discover/components/PayfastCheckoutModal";
 import { useAccessMode } from "../../context/AccessModeContext";
@@ -22,6 +23,7 @@ function formatCountdown(ms: number): string {
 
 export function PlatinumModal({ visible, close }: { visible: boolean; close(): void }) {
   const { allFree } = useAccessMode();
+  const { session } = useAuth();
   const [catalog, setCatalog] = useState<PlatinumCatalog | null>(null);
   const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +33,22 @@ export function PlatinumModal({ visible, close }: { visible: boolean; close(): v
   const [confirmText, setConfirmText] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [playReady, setPlayReady] = useState(false);
   const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    if (!visible || Platform.OS !== "android") {
+      setPlayReady(false);
+      return;
+    }
+    let cancelled = false;
+    void preparePlayBilling().then((ready) => {
+      if (!cancelled) setPlayReady(ready);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible || !catalog?.welcomeDiscount) return;
@@ -66,9 +83,33 @@ export function PlatinumModal({ visible, close }: { visible: boolean; close(): v
     setBusy(true);
     setError("");
     try {
+      if (playReady && session?.user.id) {
+        const purchase = await purchasePlayPlatinum(selected, session.user.id);
+        const status = await subscriptionApi.confirmPlay(purchase.productId, purchase.purchaseToken);
+        await finishPlayPurchase(purchase);
+        setBusy(false);
+        if (status.isPremium) setSubscribed(true);
+        else setError("Payment submitted. Platinum will activate once Google Play confirms it.");
+        return;
+      }
       const result = await subscriptionApi.checkout(selected);
       setCheckout(result);
     } catch (e) {
+      if (e instanceof PlayPurchaseCancelled) {
+        setBusy(false);
+        return;
+      }
+      if (e instanceof PlayBillingUnavailable) {
+        try {
+          const result = await subscriptionApi.checkout(selected);
+          setCheckout(result);
+          return;
+        } catch (fallback) {
+          setError(fallback instanceof Error ? fallback.message : "Could not start checkout.");
+          setBusy(false);
+          return;
+        }
+      }
       setError(e instanceof Error ? e.message : "Could not start checkout.");
       setBusy(false);
     }
@@ -112,10 +153,12 @@ export function PlatinumModal({ visible, close }: { visible: boolean; close(): v
           </View>
 
           {!catalog && !error ? (
-            <LoadingIndicator />
+            <View style={styles.loading}>
+              <ActivityIndicator color={theme.colors.coral} />
+            </View>
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-              {error ? (
+              {error && !catalog ? (
                 <Text style={styles.error}>{error}</Text>
               ) : subscribed ? (
                 <View style={styles.successWrap}>
@@ -137,6 +180,7 @@ export function PlatinumModal({ visible, close }: { visible: boolean; close(): v
                 </View>
               ) : (
                 <>
+                  {error ? <Text style={styles.error}>{error}</Text> : null}
                   {catalog?.welcomeDiscount ? (
                     <View style={styles.discountBanner}>
                       <Ionicons name="pricetag" size={14} color="#B8860B" />
@@ -213,9 +257,10 @@ export function PlatinumModal({ visible, close }: { visible: boolean; close(): v
                   <Text style={styles.fine}>
                     {selected === "day" ? catalog?.oneTimeFinePrint : catalog?.recurringFinePrint}
                   </Text>
-                  {catalog?.pricingNote ? <Text style={styles.fine}>{catalog.pricingNote}</Text> : null}
+                  {!playReady && catalog?.pricingNote ? <Text style={styles.fine}>{catalog.pricingNote}</Text> : null}
                   <Text style={styles.secure}>
-                    <Ionicons name="lock-closed" size={10} color="#999" /> Secure checkout via PayFast
+                    <Ionicons name="lock-closed" size={10} color="#999" />{" "}
+                    {playReady ? "Billed by Google Play in your local currency" : "Secure checkout via PayFast"}
                   </Text>
                 </>
               )}
@@ -244,6 +289,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: theme.typography.bold, fontSize: 20 },
   close: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F4F4F5", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#DDD" },
   content: { padding: 18, paddingBottom: 32 },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   hero: { borderRadius: 18, padding: 20, alignItems: "center", overflow: "hidden" },
   heroWatermark: {
     position: "absolute",

@@ -17,12 +17,16 @@ import Animated, {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { discoverApi, profileApi } from "../../api/services";
 import { theme } from "../../constants/theme";
+import { NameInitialCircle } from "../../components/common/NameInitialCircle";
+import { useLogoReady } from "../../utils/deferLogo";
+import { hasCustomProfileAvatar } from "../../utils/discoverProfileReady";
 import type { Profile } from "../../types";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { ProfileFeedModal } from "../home/components/ProfileFeedModal";
 
 const NEARBY_RADIUS_KM = 15;
 const SEARCH_RESULT_LIMIT = 10;
+const WORLDWIDE_RESULT_LIMIT = 50;
 const MIN_SEARCH_MS = 2200;
 const MAX_RADAR_SLOTS = 10;
 const RING_COLORS = ["#FF536E", "#FF7A8A", "#A855F7"] as const;
@@ -63,7 +67,7 @@ function Ring({ delay, size }: { delay: number; size: number }) {
   );
 }
 
-function CenterPulse({ avatarUrl }: { avatarUrl?: string }) {
+function CenterPulse({ avatarUrl, name, showLogo }: { avatarUrl?: string; name?: string; showLogo?: boolean }) {
   const glow = useSharedValue(0.85);
 
   useEffect(() => {
@@ -76,12 +80,12 @@ function CenterPulse({ avatarUrl }: { avatarUrl?: string }) {
     <View style={styles.centerWrap}>
       <Animated.View style={[styles.centerGlow, glowStyle]} />
       <View style={styles.centerAvatarRing}>
-        {avatarUrl ? (
+        {hasCustomProfileAvatar(avatarUrl) ? (
           <Image source={{ uri: avatarUrl }} style={styles.centerAvatar} contentFit="cover" />
+        ) : showLogo ? (
+          <Image source={require("../../../assets/heart-tight.png")} style={styles.centerLogo} contentFit="contain" />
         ) : (
-          <View style={[styles.centerAvatar, styles.centerAvatarFallback]}>
-            <Ionicons name="person" size={26} color={theme.colors.textMuted} />
-          </View>
+          <NameInitialCircle name={name || "You"} size={68} />
         )}
       </View>
     </View>
@@ -191,7 +195,11 @@ function FoundAvatar({
     <Animated.View style={[styles.foundWrap, style]}>
       <Pressable onPress={onPress} hitSlop={6}>
         <LinearGradient colors={["#FF536E", "#A855F7"]} style={styles.foundRing}>
-          <Image source={{ uri: profile.avatar }} style={styles.foundAvatar} contentFit="cover" />
+          {hasCustomProfileAvatar(profile.avatar) ? (
+            <Image source={{ uri: profile.avatar }} style={styles.foundAvatar} contentFit="cover" />
+          ) : (
+            <NameInitialCircle name={profile.name} size={45} />
+          )}
         </LinearGradient>
         {profile.verified ? (
           <View style={styles.verifiedBadge}>
@@ -267,7 +275,11 @@ function NearbyListSheet({
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <Pressable style={styles.listRow} onPress={() => openProfile(item)}>
-                <Image source={{ uri: item.avatar }} style={styles.listAvatar} contentFit="cover" />
+                {hasCustomProfileAvatar(item.avatar) ? (
+                  <Image source={{ uri: item.avatar }} style={styles.listAvatar} contentFit="cover" />
+                ) : (
+                  <NameInitialCircle name={item.name} size={48} />
+                )}
                 <View style={styles.listRowText}>
                   <Text style={styles.listName}>
                     {item.name}, {item.age}
@@ -291,10 +303,11 @@ export function NearbyRadarScreen({
   navigation,
 }: NativeStackScreenProps<RootStackParamList, "Nearby">) {
   const { width, height } = useWindowDimensions();
+  const logoReady = useLogoReady();
   const [myAvatarUrl, setMyAvatarUrl] = useState<string | undefined>(undefined);
+  const [myName, setMyName] = useState("You");
   const [phase, setPhase] = useState<"searching" | "results">("searching");
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [searchExpanded, setSearchExpanded] = useState(false);
   const [selected, setSelected] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchToken, setSearchToken] = useState(0);
@@ -309,37 +322,42 @@ export function NearbyRadarScreen({
   const radarLayout = useMemo(() => layoutRadarPoints(radarSlotCount, maxRadius), [radarSlotCount, maxRadius]);
 
   useEffect(() => {
-    void profileApi.me().then((me) => setMyAvatarUrl(me.avatarUrl)).catch(() => {});
+    void profileApi.me()
+      .then((me) => {
+        setMyName(me.displayName?.trim() || "You");
+        setMyAvatarUrl(hasCustomProfileAvatar(me.avatarUrl) ? me.avatarUrl : undefined);
+      })
+      .catch(() => {});
   }, []);
 
   const runSearch = useCallback(async () => {
     setPhase("searching");
     setError(null);
-    setSearchExpanded(false);
     const startedAt = Date.now();
     try {
-      const nearbyResult = await discoverApi.list({
+      let result = await discoverApi.list({
         filter: "nearby",
         distanceTierKm: NEARBY_RADIUS_KM,
         maxDistanceKm: NEARBY_RADIUS_KM,
         limit: SEARCH_RESULT_LIMIT,
       });
-      const shouldExpand = nearbyResult.profiles.length === 0;
-      const result = shouldExpand
-        ? await discoverApi.list({
-            filter: "nearby",
-            expandDistance: true,
-            limit: SEARCH_RESULT_LIMIT,
-          })
-        : nearbyResult;
-      const sorted = [...result.profiles]
-        .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
-        .slice(0, SEARCH_RESULT_LIMIT);
+      let worldwide = false;
+      if (result.profiles.length === 0) {
+        worldwide = true;
+        result = await discoverApi.list({
+          filter: "nearby",
+          expandDistance: true,
+          limit: WORLDWIDE_RESULT_LIMIT,
+        });
+      }
+      const sorted = [...result.profiles].sort(
+        (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity),
+      );
+      const visible = worldwide ? sorted : sorted.slice(0, SEARCH_RESULT_LIMIT);
       const elapsed = Date.now() - startedAt;
       const wait = Math.max(0, MIN_SEARCH_MS - elapsed);
       setTimeout(() => {
-        setSearchExpanded(shouldExpand);
-        setProfiles(sorted);
+        setProfiles(visible);
         setPhase("results");
       }, wait);
     } catch (e) {
@@ -361,13 +379,15 @@ export function NearbyRadarScreen({
   return (
     <View style={styles.root}>
       <LinearGradient colors={["#FFFFFF", "#FFF3F5", "#F7F7FB"]} style={StyleSheet.absoluteFill} />
-      <Image
-        source={LOGO_WATERMARK}
-        style={[styles.watermark, { width: watermarkSize, height: watermarkSize, marginLeft: -watermarkSize / 2, marginTop: -watermarkSize / 2 }]}
-        contentFit="contain"
-        blurRadius={14}
-        pointerEvents="none"
-      />
+      {logoReady ? (
+        <Image
+          source={LOGO_WATERMARK}
+          style={[styles.watermark, { width: watermarkSize, height: watermarkSize, marginLeft: -watermarkSize / 2, marginTop: -watermarkSize / 2 }]}
+          contentFit="contain"
+          blurRadius={14}
+          pointerEvents="none"
+        />
+      ) : null}
 
       <View style={styles.top}>
         <Pressable style={styles.circleBtn} onPress={navigation.goBack} hitSlop={8}>
@@ -375,9 +395,6 @@ export function NearbyRadarScreen({
         </Pressable>
         <View style={styles.topTextWrap}>
           <Text style={styles.title}>Nearby</Text>
-          <Text style={styles.subtitle}>
-            {searchExpanded ? "Search expanded beyond 15 km" : `Within ${NEARBY_RADIUS_KM} km of you`}
-          </Text>
         </View>
         <Pressable
           style={styles.circleBtn}
@@ -431,7 +448,7 @@ export function NearbyRadarScreen({
               onPress={() => setListOpen(true)}
             />
           ) : null}
-          <CenterPulse avatarUrl={myAvatarUrl} />
+          <CenterPulse avatarUrl={myAvatarUrl} name={myName} showLogo={searching} />
         </View>
       </View>
 
@@ -449,18 +466,15 @@ export function NearbyRadarScreen({
           </>
         ) : profiles.length === 0 ? (
           <>
-            <Text style={styles.statusText}>No one within {NEARBY_RADIUS_KM} km right now</Text>
-            <Pressable
-              style={styles.retryBtn}
-              onPress={() => navigation.replace("DiscoveryProfiles", { openFilters: true })}
-            >
-              <Text style={styles.retryText}>Widen search</Text>
+            <Text style={styles.statusText}>No one nearby right now</Text>
+            <Pressable style={styles.retryBtn} onPress={() => setSearchToken((v) => v + 1)}>
+              <Text style={styles.retryText}>Try again</Text>
             </Pressable>
           </>
         ) : (
           <Animated.View entering={FadeIn.duration(300)} style={styles.statusRow}>
             <Text style={styles.statusText}>
-              {profiles.length} {profiles.length === 1 ? "person" : "people"} found{searchExpanded ? " in a wider search" : " nearby"}
+              {profiles.length} {profiles.length === 1 ? "person" : "people"} found nearby
             </Text>
             <Pressable onPress={() => setListOpen(true)} hitSlop={8}>
               <Text style={styles.viewAllText}>View all</Text>
@@ -521,12 +535,6 @@ const styles = StyleSheet.create({
   },
   topTextWrap: { flex: 1, alignItems: "center" },
   title: { fontFamily: theme.typography.bold, fontSize: 18, color: theme.colors.text },
-  subtitle: {
-    fontFamily: theme.typography.medium,
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
   radarArea: {
     flex: 1,
     alignItems: "center",
@@ -563,6 +571,7 @@ const styles = StyleSheet.create({
     ...theme.shadow,
   },
   centerAvatar: { width: 68, height: 68, borderRadius: 34 },
+  centerLogo: { width: 42, height: 42 },
   centerAvatarFallback: { alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.surfaceMuted },
   foundWrap: {
     position: "absolute",

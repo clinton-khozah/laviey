@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../../../constants/theme";
 import type { Profile } from "../../../types";
 import { profileDetailRows } from "../../../utils/profileIdentityLabels";
+import { MatchProgressHeart } from "./MatchProgressHeart";
 import {
   formatProfileActivityStatus,
   isProfileActivityOnline,
@@ -12,23 +13,23 @@ import {
 type DetailIcon = keyof typeof Ionicons.glyphMap;
 
 const ROW_ICONS: Record<string, DetailIcon> = {
-  activity: "pulse-outline",
-  about: "reader-outline",
-  gender: "person-outline",
-  orientation: "git-network-outline",
+  activity: "time-outline",
+  about: "document-text-outline",
+  gender: "male-female-outline",
+  orientation: "people-circle-outline",
   interested: "people-outline",
-  purpose: "compass-outline",
+  purpose: "search-outline",
   religion: "book-outline",
   location: "location-outline",
-  distance: "navigate-outline",
+  distance: "map-outline",
   languages: "language-outline",
-  interests: "pricetags-outline",
+  interests: "list-outline",
   occupation: "briefcase-outline",
   education: "school-outline",
   hometown: "home-outline",
   themeSong: "musical-notes-outline",
   match: "heart-outline",
-  verified: "shield-checkmark-outline",
+  verified: "checkmark-circle-outline",
 };
 
 function DetailRow({
@@ -37,17 +38,23 @@ function DetailRow({
   value,
   valueColor,
   leadingDot,
+  heartPercent,
 }: {
   icon: DetailIcon;
   label: string;
   value: string;
   valueColor?: string;
   leadingDot?: boolean;
+  heartPercent?: number;
 }) {
   return (
     <View style={styles.row}>
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={18} color="#6B5E7A" />
+        {heartPercent != null ? (
+          <MatchProgressHeart percent={heartPercent} />
+        ) : (
+          <Ionicons name={icon} size={18} color="#6B5E7A" />
+        )}
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.label}>{label}</Text>
@@ -120,6 +127,7 @@ export function ProfileMoreDetailsSheet({
             {rows.map((row) => (
               <DetailRow
                 key={row.key}
+                heartPercent={row.key === "match" ? profile.vibeScore : undefined}
                 icon={ROW_ICONS[row.key] ?? "information-circle-outline"}
                 label={row.label}
                 value={row.value}

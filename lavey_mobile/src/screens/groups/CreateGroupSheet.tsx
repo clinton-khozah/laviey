@@ -58,7 +58,7 @@ export function CreateGroupSheet({
   const pickCover = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return Alert.alert("Photo access needed", "Allow photo access to choose a group profile image.");
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], legacy: true, allowsEditing: true, aspect: [1, 1], quality: 0.85 });
     if (!result.canceled) setCoverUri(result.assets[0]?.uri ?? null);
   };
 

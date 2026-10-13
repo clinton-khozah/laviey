@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { matchApi, roomApi } from "../../api/services";
 import { LoadingIndicator } from "../../components/common/LoadingIndicator";
+import { useLogoReady } from "../../utils/deferLogo";
 import type { MainTabParamList } from "../../components/navigation/BottomTabNavigator";
 import { theme } from "../../constants/theme";
 import { useAppData } from "../../context/AppDataContext";
@@ -51,6 +52,20 @@ function coverThemeFor(id: string): readonly [string, string] {
   return COVER_THEMES[hash % COVER_THEMES.length];
 }
 
+function upcomingEvening(): Date {
+  const next = new Date();
+  next.setDate(next.getDate() + 1);
+  next.setHours(19, 0, 0, 0);
+  return next;
+}
+
+function shiftWhen(current: Date, days: number, minutes: number): Date {
+  const next = new Date(current);
+  next.setDate(next.getDate() + days);
+  next.setMinutes(next.getMinutes() + minutes);
+  return next;
+}
+
 function whenLabel(item: OnlineDate, actuallyLive: boolean): string {
   if (actuallyLive) return "Live now";
   if (item.scheduledLabel) return item.scheduledLabel;
@@ -60,12 +75,6 @@ function whenLabel(item: OnlineDate, actuallyLive: boolean): string {
   return "Scheduled";
 }
 
-const START_PRESETS = [
-  { minutes: 15, label: "In 15 min" },
-  { minutes: 60, label: "In 1 hour" },
-  { minutes: 240, label: "Later today" },
-  { minutes: 60 * 24, label: "Tomorrow" },
-] as const;
 type MeetupFilter = "all" | "live" | "upcoming" | "ended";
 
 const FILTER_OPTIONS: { id: MeetupFilter; label: string }[] = [
@@ -78,6 +87,7 @@ const FILTER_OPTIONS: { id: MeetupFilter; label: string }[] = [
 export function DiscoverScreen({ navigation }: BottomTabScreenProps<MainTabParamList, "Discover">) {
   const { width, height } = useWindowDimensions();
   const watermarkSide = Math.min(width, height) * 0.82;
+  const logoReady = useLogoReady();
   const { dates, datesLoading, refreshDates, setDates } = useAppData();
   const [refreshing, setRefreshing] = useState(false);
   const [sheet, setSheet] = useState(false);
@@ -128,9 +138,11 @@ export function DiscoverScreen({ navigation }: BottomTabScreenProps<MainTabParam
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.root}>
-        <View pointerEvents="none" style={styles.watermarkWrap}>
-          <Image source={DATE_WATERMARK} style={[styles.watermarkHero, { width: watermarkSide, height: watermarkSide }]} contentFit="contain" />
-        </View>
+        {logoReady ? (
+          <View pointerEvents="none" style={styles.watermarkWrap}>
+            <Image source={DATE_WATERMARK} style={[styles.watermarkHero, { width: watermarkSide, height: watermarkSide }]} contentFit="contain" />
+          </View>
+        ) : null}
         <LoadingIndicator fullScreen />
       </SafeAreaView>
     );
@@ -138,9 +150,11 @@ export function DiscoverScreen({ navigation }: BottomTabScreenProps<MainTabParam
 
   return (
     <SafeAreaView style={styles.root}>
-      <View pointerEvents="none" style={styles.watermarkWrap}>
-        <Image source={DATE_WATERMARK} style={[styles.watermarkHero, { width: watermarkSide, height: watermarkSide }]} contentFit="contain" />
-      </View>
+      {logoReady ? (
+        <View pointerEvents="none" style={styles.watermarkWrap}>
+          <Image source={DATE_WATERMARK} style={[styles.watermarkHero, { width: watermarkSide, height: watermarkSide }]} contentFit="contain" />
+        </View>
+      ) : null}
       <View style={styles.pageContent}>
       <View style={styles.header}>
         <BackToForYouButton variant="light" />
@@ -364,17 +378,18 @@ function ScheduleSheet({
 }) {
   const [caption, setCaption] = useState("");
   const [isPublic, setPublic] = useState(true);
-  const [minutes, setMinutes] = useState<number>(START_PRESETS[0].minutes);
+  const [when, setWhen] = useState(upcomingEvening);
   const [matches, setMatches] = useState<MatchListItem[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [inviteeId, setInviteeId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"live" | "schedule" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const { height } = useWindowDimensions();
 
   useEffect(() => {
     if (!visible) {
       setCaption("");
       setPublic(true);
-      setMinutes(START_PRESETS[0].minutes);
+      setWhen(upcomingEvening());
       setInviteeId(null);
       return;
     }
@@ -387,27 +402,22 @@ function ScheduleSheet({
   }, [visible]);
 
   const invitee = matches.find((m) => m.userId === inviteeId) ?? null;
-  const scheduledAt = useMemo(
-    () =>
-      new Date(Date.now() + minutes * 60000).toLocaleString([], {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    [minutes],
-  );
+  const dateLabel = when.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  const timeLabel = when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-  const submit = async (kind: "live" | "schedule") => {
+  const submit = async () => {
     const text = caption.trim();
     if (!text) return Alert.alert("Say something", "Add a short title for your date.");
     if (!isPublic && !invitee) {
       return Alert.alert("Choose a match", "Private dates need someone invited — pick a match below.");
     }
-    setBusy(kind);
+    if (when.getTime() <= Date.now()) {
+      return Alert.alert("Pick a later time", "Choose a date and time that has not already passed.");
+    }
+    const earliest = Date.now() + 2 * 60_000;
+    const startsAt = new Date(Math.max(when.getTime(), earliest)).toISOString();
+    setBusy(true);
     try {
-      const startsAt = new Date(Date.now() + (kind === "live" ? 1 : minutes) * 60000).toISOString();
       const created = await roomApi.create({
         title: text.slice(0, 48),
         topic: text.slice(0, 240),
@@ -420,7 +430,7 @@ function ScheduleSheet({
     } catch (e) {
       Alert.alert("Could not create date", e instanceof Error ? e.message : "Please try again.");
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
@@ -429,7 +439,7 @@ function ScheduleSheet({
       <KeyboardAvoidingView style={styles.keyboardFill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <Pressable style={styles.scrim} onPress={onClose}>
           <Pressable style={styles.sheetTouchable} onPress={() => undefined}>
-            <SafeAreaView style={styles.sheet} edges={["bottom"]}>
+            <SafeAreaView style={[styles.sheet, { height: Math.round(height * 0.78) }]} edges={["bottom"]}>
               <View style={styles.sheetContent}>
               <View style={styles.sheetHandle} />
               <View pointerEvents="none" style={styles.sheetArtWrap}>
@@ -439,7 +449,7 @@ function ScheduleSheet({
                 <View style={styles.sheetHeaderMain}>
                   <View style={styles.sheetHeaderCopy}>
                     <Text style={styles.sheetHeaderTitle}>Create a date</Text>
-                    <Text style={styles.sheetHeaderSub}>Go live now or pick a time.</Text>
+                    <Text style={styles.sheetHeaderSub}>Choose the day and time.</Text>
                   </View>
                 </View>
                 <Pressable style={styles.sheetHeaderClose} onPress={onClose} hitSlop={8}>
@@ -464,32 +474,6 @@ function ScheduleSheet({
                   maxLength={240}
                 />
                 <Text style={styles.inputCount}>{caption.length}/240</Text>
-
-                <Text style={styles.sheetLabel}>Quick start</Text>
-                <Pressable
-                  onPress={() => void submit("live")}
-                  disabled={busy !== null}
-                  style={({ pressed }) => [styles.goLiveBtn, pressed && styles.pressed, busy !== null && styles.disabled]}
-                >
-                  <View style={styles.goLiveIconWrap}>
-                    {busy === "live" ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <View style={styles.goLiveDot} />
-                    )}
-                  </View>
-                  <View style={styles.goLiveCopy}>
-                    <Text style={styles.goLiveTitle}>{busy === "live" ? "Starting…" : "Start now"}</Text>
-                    <Text style={styles.goLiveHint}>Live in under a minute — no scheduling needed</Text>
-                  </View>
-                  <Ionicons name="arrow-forward-circle" size={26} color={theme.colors.coral} />
-                </Pressable>
-
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or plan ahead</Text>
-                  <View style={styles.dividerLine} />
-                </View>
 
                 <Text style={styles.sheetLabel}>Who can join</Text>
                 <View style={styles.visChoices}>
@@ -558,45 +542,50 @@ function ScheduleSheet({
                 ) : null}
 
                 <Animated.View layout={LinearTransition.duration(200)}>
-                  <Text style={styles.sheetLabel}>When</Text>
-                  <View style={styles.pills}>
-                    {START_PRESETS.map((p) => {
-                      const active = minutes === p.minutes;
-                      return (
-                        <Pressable key={p.minutes} onPress={() => setMinutes(p.minutes)}>
-                          <View style={[styles.pill, active && styles.pillActive]}>
-                            <Text style={[styles.pillText, active && styles.pillTextActive]}>{p.label}</Text>
-                          </View>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  <View style={styles.dateBox}>
-                    <View style={styles.dateBoxIcon}>
-                      <Ionicons name="calendar" size={16} color={DARK} />
+                  <Text style={styles.sheetLabel}>Date</Text>
+                  <View style={styles.whenRow}>
+                    <Pressable style={styles.whenStep} onPress={() => setWhen((current) => shiftWhen(current, -1, 0))} accessibilityLabel="Previous day">
+                      <Ionicons name="chevron-back" size={18} color={DARK} />
+                    </Pressable>
+                    <View style={styles.whenValue}>
+                      <Ionicons name="calendar-outline" size={16} color={DARK} />
+                      <Text style={styles.whenText}>{dateLabel}</Text>
                     </View>
-                    <View style={styles.dateBoxCopy}>
-                      <Text style={styles.dateBoxLabel}>Scheduled for</Text>
-                      <Text style={styles.dateBoxText}>{scheduledAt}</Text>
-                    </View>
+                    <Pressable style={styles.whenStep} onPress={() => setWhen((current) => shiftWhen(current, 1, 0))} accessibilityLabel="Next day">
+                      <Ionicons name="chevron-forward" size={18} color={DARK} />
+                    </Pressable>
                   </View>
-
-                  <Pressable
-                    onPress={() => void submit("schedule")}
-                    disabled={busy !== null}
-                    style={({ pressed }) => [styles.submit, pressed && styles.pressed, busy !== null && styles.disabled]}
-                  >
-                    {busy === "schedule" ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <Ionicons name={isPublic ? "calendar-outline" : "paper-plane-outline"} size={18} color="#FFFFFF" />
-                        <Text style={styles.submitText}>{isPublic ? "Schedule date" : "Send invite"}</Text>
-                      </>
-                    )}
-                  </Pressable>
+                  <Text style={styles.sheetLabel}>Time</Text>
+                  <View style={styles.whenRow}>
+                    <Pressable style={styles.whenStep} onPress={() => setWhen((current) => shiftWhen(current, 0, -30))} accessibilityLabel="Earlier time">
+                      <Ionicons name="chevron-back" size={18} color={DARK} />
+                    </Pressable>
+                    <View style={styles.whenValue}>
+                      <Ionicons name="time-outline" size={16} color={DARK} />
+                      <Text style={styles.whenText}>{timeLabel}</Text>
+                    </View>
+                    <Pressable style={styles.whenStep} onPress={() => setWhen((current) => shiftWhen(current, 0, 30))} accessibilityLabel="Later time">
+                      <Ionicons name="chevron-forward" size={18} color={DARK} />
+                    </Pressable>
+                  </View>
                 </Animated.View>
               </ScrollView>
+              <View style={styles.sheetFooter}>
+                <Pressable
+                  onPress={() => void submit()}
+                  disabled={busy}
+                  style={({ pressed }) => [styles.submit, pressed && styles.pressed, busy && styles.disabled]}
+                >
+                  {busy ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons name={isPublic ? "calendar-outline" : "paper-plane-outline"} size={18} color="#FFFFFF" />
+                      <Text style={styles.submitText}>Create date</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
               </View>
             </SafeAreaView>
           </Pressable>
@@ -797,6 +786,7 @@ const styles = StyleSheet.create({
   },
   sheetContent: {
     zIndex: 1,
+    flex: 1,
   },
   sheetArtWrap: {
     alignItems: "center",
@@ -805,7 +795,7 @@ const styles = StyleSheet.create({
   },
   sheetArt: {
     width: "100%",
-    height: 148,
+    height: 72,
   },
   sheetHandle: {
     alignSelf: "center",
@@ -851,7 +841,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#F3F2F4",
   },
-  sheetScroll: { flexGrow: 0, backgroundColor: "transparent" },
+  sheetScroll: { flex: 1, backgroundColor: "transparent" },
+  sheetFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#ECEAEE",
+    backgroundColor: "#FFFFFF",
+  },
+  whenRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  whenStep: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F2F4",
+  },
+  whenValue: {
+    flex: 1,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#E4E0E6",
+    backgroundColor: "#FAFAFC",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  whenText: {
+    fontFamily: theme.typography.semibold,
+    fontSize: 15,
+    color: DARK,
+  },
   sheetBody: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, gap: 4, backgroundColor: "transparent" },
   sheetLabel: {
     marginTop: 10,
@@ -882,33 +910,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#B0ACB8",
   },
-  goLiveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: "#FFF5F6",
-    borderWidth: 1,
-    borderColor: "#FFD6DC",
-  },
-  goLiveIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.coral,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goLiveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#FFFFFF" },
-  goLiveCopy: { flex: 1 },
-  goLiveTitle: { fontFamily: theme.typography.bold, fontSize: 15, color: DARK },
-  goLiveHint: { fontFamily: theme.typography.regular, fontSize: 12, color: "#8C8798", marginTop: 2 },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.6 },
-  divider: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 14 },
-  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: "#E8E4EA" },
-  dividerText: { fontFamily: theme.typography.medium, fontSize: 11, color: "#A09AA5", letterSpacing: 0.2 },
   visChoices: {
     flexDirection: "row",
     gap: 10,
@@ -985,56 +988,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: DARK,
   },
-  pills: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  pill: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E0E6",
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#FAFAFC",
-  },
-  pillActive: { backgroundColor: DARK, borderColor: DARK },
-  pillText: { fontFamily: theme.typography.semibold, fontSize: 12, color: "#5B5660" },
-  pillTextActive: { color: "#FFFFFF" },
-  dateBox: {
-    marginTop: 12,
-    padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E0E6",
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#FAFAFC",
-  },
-  dateBoxIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E0E6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  dateBoxCopy: { flex: 1 },
-  dateBoxLabel: {
-    fontFamily: theme.typography.medium,
-    fontSize: 10,
-    color: "#8C8798",
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  dateBoxText: {
-    marginTop: 2,
-    fontFamily: theme.typography.semibold,
-    fontSize: 14,
-    color: DARK,
-  },
   submit: {
     height: 52,
-    marginTop: 16,
+    marginTop: 0,
     borderRadius: 16,
     backgroundColor: DARK,
     flexDirection: "row",

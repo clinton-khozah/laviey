@@ -1,5 +1,4 @@
 import type { Filters, GenderFilter } from "../screens/discover/components/FilterModal";
-import { ensureNonBinaryIncluded } from "./forYouFeedFilters";
 
 const AGE_BOUNDS: Record<string, { min: number; max: number }> = {
   "18-24": { min: 18, max: 24 },
@@ -67,9 +66,9 @@ export function gendersFromInterestedIn(
   if (keys.includes("men")) genders.push("man");
   if (keys.includes("nonbinary")) genders.push("nonbinary");
 
-  if (genders.length > 0) return ensureNonBinaryIncluded(genders);
+  if (genders.length > 0) return genders;
 
-  if (gender && orientation) return ensureNonBinaryIncluded(inferGendersFromIdentity(gender, orientation));
+  if (gender && orientation) return inferGendersFromIdentity(gender, orientation);
   return DEFAULT_DISCOVER_FILTERS.genders;
 }
 

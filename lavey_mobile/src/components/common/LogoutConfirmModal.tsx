@@ -1,6 +1,10 @@
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../constants/theme";
+import { useT } from "../../hooks/useTranslatedStrings";
+
+const INK = "#171720";
+const BODY =
+  "Your profile, matches, and messages remain saved. You will need to sign in again to use Lavey on this device.";
 
 export function LogoutConfirmModal({
   visible,
@@ -13,35 +17,36 @@ export function LogoutConfirmModal({
   onConfirm(): void;
   onCancel(): void;
 }) {
+  const t = useT();
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="log-out-outline" size={26} color="#101018" />
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onCancel}>
+      <Pressable style={styles.backdrop} onPress={loading ? undefined : onCancel}>
+        <Pressable style={styles.card} onPress={() => undefined}>
+          <View style={styles.rule} />
+          <Text style={styles.eyebrow}>{t("ACCOUNT")}</Text>
+          <Text style={styles.title}>{t("Sign out")}</Text>
+          <Text style={styles.copy}>{t(BODY)}</Text>
+          <View style={styles.actions}>
+            <Pressable
+              style={({ pressed }) => [styles.cancelBtn, pressed && styles.pressed]}
+              disabled={loading}
+              onPress={onCancel}
+              accessibilityRole="button"
+            >
+              <Text style={styles.cancelText}>{t("Cancel")}</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.confirmBtn, pressed && styles.pressed, loading && styles.disabled]}
+              disabled={loading}
+              onPress={onConfirm}
+              accessibilityRole="button"
+            >
+              {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.confirmText}>{t("Sign out")}</Text>}
+            </Pressable>
           </View>
-          <Text style={styles.title}>Log out of Lavey?</Text>
-          <Text style={styles.copy}>
-            You'll need to sign in again to access your account. Everything stays saved until you return.
-          </Text>
-
-          <Pressable
-            style={[styles.logoutBtn, loading && styles.btnDisabled]}
-            disabled={loading}
-            onPress={onConfirm}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.logoutText}>Log out</Text>
-            )}
-          </Pressable>
-
-          <Pressable style={styles.stayBtn} disabled={loading} onPress={onCancel}>
-            <Text style={styles.stayText}>Stay signed in</Text>
-          </Pressable>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -51,57 +56,78 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 28,
-    backgroundColor: "rgba(16,16,24,.55)",
+    backgroundColor: "rgba(12, 12, 16, 0.62)",
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    paddingHorizontal: 24,
-    paddingTop: 28,
-    paddingBottom: 22,
-    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    paddingTop: 22,
+    paddingHorizontal: 22,
+    paddingBottom: 18,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E0E6",
+    borderColor: theme.colors.border,
+    ...theme.shadow,
   },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F3F2F5",
+  rule: {
+    width: 36,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: INK,
     marginBottom: 16,
   },
+  eyebrow: {
+    fontFamily: theme.typography.medium,
+    fontSize: 11,
+    letterSpacing: 1.6,
+    color: theme.colors.textMuted,
+  },
   title: {
+    marginTop: 8,
     fontFamily: theme.typography.bold,
-    fontSize: 20,
-    color: "#101018",
-    textAlign: "center",
+    fontSize: 22,
+    lineHeight: 28,
+    color: INK,
   },
   copy: {
     marginTop: 10,
     fontFamily: theme.typography.regular,
     fontSize: 14,
-    lineHeight: 21,
-    color: "#8C8798",
-    textAlign: "center",
-    maxWidth: 280,
+    lineHeight: 22,
+    color: theme.colors.textSecondary,
   },
-  logoutBtn: {
+  actions: {
     marginTop: 22,
-    width: "100%",
-    height: 50,
-    borderRadius: 14,
+    flexDirection: "row",
+    gap: 10,
+  },
+  cancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E5484D",
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: "#D8D8E0",
   },
-  btnDisabled: { opacity: 0.7 },
-  logoutText: { fontFamily: theme.typography.bold, fontSize: 15, color: "#FFFFFF" },
-  stayBtn: {
-    marginTop: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+  confirmBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: INK,
   },
-  stayText: { fontFamily: theme.typography.semibold, fontSize: 14, color: "#101018" },
+  pressed: { opacity: 0.82 },
+  disabled: { opacity: 0.7 },
+  cancelText: {
+    fontFamily: theme.typography.semibold,
+    fontSize: 15,
+    color: INK,
+  },
+  confirmText: {
+    fontFamily: theme.typography.semibold,
+    fontSize: 15,
+    color: "#FFFFFF",
+  },
 });

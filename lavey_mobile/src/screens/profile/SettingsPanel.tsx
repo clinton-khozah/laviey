@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import type { NavigationProp } from "@react-navigation/native";
-import { profileApi, settingsApi, translationApi, type AppLanguageOption, type UserSettings } from "../../api/services";
+import { profileApi, settingsApi, type UserSettings } from "../../api/services";
 import { syncUserLocation } from "../../utils/syncUserLocation";
 import { registerPushToken } from "../../hooks/usePushRegistration";
 import { useAuth } from "../../hooks/useAuth";
@@ -24,14 +24,14 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { PlatinumModal } from "../../components/subscription/PlatinumModal";
 import type { UserProfile } from "../../types";
 import { useAccessMode } from "../../context/AccessModeContext";
+import { useLanguage } from "../../context/LanguageContext";
+import { SPOKEN_LANGUAGES, spokenLanguageLabel } from "../../i18n/spokenLanguages";
 import { useTranslatedStrings } from "../../hooks/useTranslatedStrings";
 import { LogoutConfirmModal } from "../../components/common/LogoutConfirmModal";
 import { SETTINGS_SCREEN_STRINGS } from "./settingsScreen.strings";
 
-const DARK = "#101018";
+const DARK = "#303034";
 const MUTED = "#8C8798";
-
-const FALLBACK_LANGUAGES: AppLanguageOption[] = [{ code: "en", label: "English" }];
 
 export function SettingsPanel({
   onClose,
@@ -41,6 +41,7 @@ export function SettingsPanel({
   navigation: NavigationProp<RootStackParamList>;
 }) {
   const { logout } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const { allFree } = useAccessMode();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -52,14 +53,29 @@ export function SettingsPanel({
   const [newPassword, setNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [languages, setLanguages] = useState<AppLanguageOption[]>(FALLBACK_LANGUAGES);
-  const { t } = useTranslatedStrings(SETTINGS_SCREEN_STRINGS, settings?.language ?? "en");
+  const { t } = useTranslatedStrings(SETTINGS_SCREEN_STRINGS, language);
 
   useEffect(() => {
-    void profileApi.me().then(setProfile).catch(() => undefined);
-    void settingsApi.get().then(setSettings).catch((error) => Alert.alert("Couldn't load settings", error instanceof Error ? error.message : "Please try again."));
-    void translationApi.languages().then(setLanguages).catch(() => undefined);
+    let cancelled = false;
+    const load = (attempt: number) => {
+      void settingsApi.get().then((next) => {
+        if (!cancelled) setSettings(next);
+      }).catch((error: unknown) => {
+        if (cancelled) return;
+        if (attempt < 2) {
+          setTimeout(() => load(attempt + 1), 700);
+          return;
+        }
+        Alert.alert("Couldn't load settings", error instanceof Error ? error.message : "Please try again.");
+      });
+    };
+    void profileApi.me().then((next) => {
+      if (!cancelled) setProfile(next);
+    }).catch(() => undefined);
+    load(0);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const patchSetting = async (patch: Partial<UserSettings>) => {
@@ -186,11 +202,10 @@ export function SettingsPanel({
     </View>
   );
 
-  const languageLabel = languages.find((item) => item.code === settings?.language)?.label ?? "English";
-  const selectedBetaLanguage = languages.find((item) => item.code === settings?.language && item.qualityTier === "beta");
+  const languageLabel = spokenLanguageLabel(language);
 
   return (
-    <>
+    <View style={styles.screen}>
       <View style={styles.header}>
         <Pressable style={styles.backBtn} onPress={onClose} hitSlop={8}>
           <Ionicons name="chevron-back" size={24} color={DARK} />
@@ -201,14 +216,14 @@ export function SettingsPanel({
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Section title={t("PROFILE")}>
-          <Row icon="create-outline" label="Edit profile" description="Name, bio, education, work & interests" onPress={() => profile && navigation.navigate("EditProfile", { profile })} disabled={!profile} />
+          <Row icon="create-outline" label="Edit profile" description="Name, bio, education and work" onPress={() => profile && navigation.navigate("EditProfile", { profile })} disabled={!profile} />
           <Row icon="shield-checkmark-outline" label={profile?.verified ? "Identity verified" : "Verify my identity"} description="Build trust with a verified badge" onPress={() => profile && navigation.navigate("VerifyIdentity", { profile })} disabled={!profile} />
           <Row icon="location-outline" label="Update my location" description="Improve nearby recommendations" onPress={() => void syncLocation().catch((error) => Alert.alert("Could not update location", error.message))} />
           <Row icon="musical-notes-outline" label="Theme song" description="Choose a song for your profile" onPress={() => navigation.navigate("SpotifyThemeSong")} />
         </Section>
 
         <Section title={t("PREFERENCES")}>
-          <Row icon="language-outline" label="App language" description={selectedBetaLanguage ? "AI-translated (beta) — may be imperfect" : "Language used across Lavey"} value={languageLabel} onPress={() => setLanguageOpen(true)} />
+          <Row icon="language-outline" label="App language" description="Language used across Lavey" value={languageLabel} onPress={() => setLanguageOpen(true)} />
           <Toggle label="Push notifications" description="Instant alerts for messages, matches and activity" value={settings?.pushNotificationsEnabled ?? true} onChange={() => void togglePushNotifications()} />
           <Toggle label="Like feedback sound" description="Play a soft chime when you like someone" value={settings?.likeFeedbackSoundEnabled ?? true} onChange={() => void patchSetting({ likeFeedbackSoundEnabled: !settings?.likeFeedbackSoundEnabled })} />
         </Section>
@@ -248,13 +263,17 @@ export function SettingsPanel({
             <Text style={styles.modalTitle}>{t("Choose your language")}</Text>
             <Text style={styles.modalCopy}>{t("Select the language you want to use in Lavey.")}</Text>
             <View style={styles.languageGrid}>
-              {languages.map((item) => (
-                <Pressable key={item.code} style={[styles.language, settings?.language === item.code && styles.languageActive]} onPress={() => { void patchSetting({ language: item.code }); setLanguageOpen(false); }}>
-                  <Text style={[styles.languageText, settings?.language === item.code && styles.languageTextActive]}>
-                    {item.label}
-                    {item.qualityTier === "beta" ? " (beta)" : ""}
+              {SPOKEN_LANGUAGES.map((item) => (
+                <Pressable key={item.code} style={[styles.language, language === item.code && styles.languageActive]} onPress={() => {
+                  setLanguageOpen(false);
+                  void setLanguage(item.code).catch((error) => {
+                    Alert.alert("Couldn't save language", error instanceof Error ? error.message : "Please try again.");
+                  });
+                }}>
+                  <Text style={[styles.languageText, language === item.code && styles.languageTextActive]}>
+                    {item.nativeLabel}
                   </Text>
-                  {settings?.language === item.code ? <Ionicons name="checkmark" size={16} color={DARK} /> : null}
+                  {language === item.code ? <Ionicons name="checkmark" size={16} color="#FFFFFF" /> : null}
                 </Pressable>
               ))}
             </View>
@@ -281,21 +300,14 @@ export function SettingsPanel({
 
       <LogoutConfirmModal
         visible={logoutOpen}
-        loading={loggingOut}
         onCancel={() => setLogoutOpen(false)}
         onConfirm={() => {
-          setLoggingOut(true);
-          void logout().then(() => {
-            setLogoutOpen(false);
-            setLoggingOut(false);
-            onClose();
-            navigation.popToTop();
-          });
+          void logout();
         }}
       />
 
       {!allFree ? <PlatinumModal visible={platinumOpen} close={() => setPlatinumOpen(false)} /> : null}
-    </>
+    </View>
   );
 }
 
@@ -309,6 +321,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -377,12 +390,12 @@ const styles = StyleSheet.create({
   modalTitle: { textAlign: "center", fontFamily: theme.typography.bold, fontSize: 18, color: DARK },
   modalCopy: { textAlign: "center", marginTop: 6, marginBottom: 16, fontFamily: theme.typography.regular, fontSize: 13, lineHeight: 18, color: MUTED },
   languageGrid: { gap: 8 },
-  language: { minHeight: 46, paddingHorizontal: 14, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FAFAFA", borderWidth: StyleSheet.hairlineWidth, borderColor: "#ECEAEE" },
-  languageActive: { backgroundColor: "#F3F2F4", borderColor: DARK },
-  languageText: { fontFamily: theme.typography.medium, fontSize: 14, color: "#5B5660" },
-  languageTextActive: { fontFamily: theme.typography.semibold, color: DARK },
-  input: { height: 48, borderRadius: 12, marginBottom: 10, paddingHorizontal: 14, backgroundColor: "#FAFAFA", borderWidth: StyleSheet.hairlineWidth, borderColor: "#E4E0E6", fontFamily: theme.typography.regular, fontSize: 14, color: DARK },
-  primaryButton: { height: 48, marginTop: 4, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: DARK },
+  language: { minHeight: 48, paddingHorizontal: 14, borderRadius: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC" },
+  languageActive: { backgroundColor: "#303034", borderColor: "#303034" },
+  languageText: { fontFamily: theme.typography.medium, fontSize: 14, color: "#3D3D4B" },
+  languageTextActive: { fontFamily: theme.typography.semibold, color: "#FFFFFF" },
+  input: { height: 48, borderRadius: 10, marginBottom: 10, paddingHorizontal: 14, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC", fontFamily: theme.typography.regular, fontSize: 14, color: "#08080D" },
+  primaryButton: { height: 48, marginTop: 4, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#303034" },
   dangerButton: { height: 48, marginTop: 4, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.danger },
   primaryButtonText: { fontFamily: theme.typography.semibold, fontSize: 14, color: "#FFFFFF" },
   cancelButton: { alignItems: "center", paddingTop: 14 },

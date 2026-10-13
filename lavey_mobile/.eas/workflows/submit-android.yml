@@ -1,0 +1,21 @@
+name: Submit Android (internal testing)
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build_android:
+    name: Build Android app bundle
+    type: build
+    params:
+      platform: android
+      profile: production-aab
+
+  submit_android:
+    name: Submit to Play Store internal testing
+    needs: [build_android]
+    type: submit
+    params:
+      profile: internal
+      build_id: ${{ needs.build_android.outputs.build_id }}

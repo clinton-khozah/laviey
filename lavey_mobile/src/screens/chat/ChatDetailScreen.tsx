@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -18,7 +18,6 @@ import * as ImagePicker from "expo-image-picker";
 import {
   AudioModule,
   RecordingPresets,
-  useAudioPlayer,
   useAudioRecorder,
   useAudioRecorderState,
 } from "expo-audio";
@@ -26,12 +25,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { chatApi, discoverApi, matchApi } from "../../api/services";
+import { useChat } from "../../context/ChatContext";
 import { LoadingIndicator } from "../../components/common/LoadingIndicator";
+import { NameInitialCircle } from "../../components/common/NameInitialCircle";
+import { hasCustomProfileAvatar } from "../../utils/discoverProfileReady";
 import { theme } from "../../constants/theme";
 import type { ChatAssistResult, ChatMessage, Conversation, Profile } from "../../types";
 import { ProfileFeedModal } from "../home/components/ProfileFeedModal";
+import { CrushRequestModal } from "./components/CrushRequestModal";
+import { ComposerEmojiSheet } from "./components/ComposerEmojiSheet";
+import { VoicePlaybackBar } from "./components/VoicePlaybackBar";
+import { VoiceRecordingBar } from "./components/VoiceRecordingBar";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { navigateToForYou } from "../../utils/navigateToForYou";
+import { useLogoReady } from "../../utils/deferLogo";
 
 function conversationPreviewProfile(conversation: Conversation): Profile {
   return {
@@ -56,9 +63,10 @@ export function ChatDetailScreen({
   navigation,
 }: NativeStackScreenProps<RootStackParamList, "ChatDetail">) {
   const { conversationId, conversation } = route.params;
+  const { acceptRequest, acceptedConversationId } = useChat();
+  const logoReady = useLogoReady();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [assist, setAssist] = useState(false);
   const [ai, setAi] = useState<ChatAssistResult | null>(null);
@@ -66,79 +74,151 @@ export function ChatDetailScreen({
   const [reply, setReply] = useState<ChatMessage | null>(null);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
   const [requestBusy, setRequestBusy] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [previewProfile, setPreviewProfile] = useState<Profile | null>(null);
+  const participantProfile = useRef<Profile | null>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const loadingMessages = useRef(false);
+  const pendingOutgoing = useRef<string | null>(null);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const insets = useSafeAreaInsets();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardLift, setKeyboardLift] = useState(0);
   const composerBottomPad = keyboardVisible
-    ? 8
-    : Math.max(insets.bottom, Platform.OS === "android" ? 10 : 8);
-  const incomingRequest = conversation?.conversationKind === "i_crush_incoming" || conversation?.conversationKind === "chat_request_incoming";
-  const outgoingRequest = conversation?.conversationKind === "i_crush_outgoing" || conversation?.conversationKind === "chat_request_outgoing";
+    ? 12
+    : Math.max(insets.bottom, 0) + 22;
+  const alreadyAcceptedId = conversation?.iCrushInviteId ? acceptedConversationId(conversation.iCrushInviteId) : undefined;
+  const incomingRequest = !alreadyAcceptedId && (conversation?.conversationKind === "i_crush_incoming" || conversation?.conversationKind === "chat_request_incoming");
+  const outgoingRequest = !alreadyAcceptedId && (conversation?.conversationKind === "i_crush_outgoing" || conversation?.conversationKind === "chat_request_outgoing");
   // Defensive fallback: conversationId itself encodes a pending request ("icrush-<inviteId>")
   // even if a caller forgot to pass the matching conversation.conversationKind — without this,
   // load()/send() below would try to query this synthetic id as a real conversation uuid.
-  const pendingRequest = incomingRequest || outgoingRequest || conversationId.startsWith("icrush-");
+  const pendingRequest =
+    !alreadyAcceptedId &&
+    !chatOpen &&
+    conversation?.conversationKind !== "match" &&
+    (incomingRequest || outgoingRequest || conversationId.startsWith("icrush-"));
   const crushRequest = conversation?.conversationKind === "i_crush_incoming" || conversation?.conversationKind === "i_crush_outgoing";
   const respondToRequest = async (accept: boolean) => {
     if (!conversation?.iCrushInviteId || requestBusy) return;
+    if (accept) {
+      setChatOpen(true);
+      try {
+        const result = await matchApi.acceptCrush(conversation.iCrushInviteId);
+        const opened = { ...conversation, id: result.conversationId, conversationKind: "match" as const, iCrushInviteId: undefined };
+        acceptRequest(conversation.iCrushInviteId, opened);
+        navigation.setParams({
+          conversationId: result.conversationId,
+          conversation: opened,
+        });
+      } catch (e) {
+        setChatOpen(false);
+        Alert.alert("Could not respond", e instanceof Error ? e.message : "Please try again.");
+      }
+      return;
+    }
     setRequestBusy(true);
     try {
-      if (accept) {
-        const result = await matchApi.acceptCrush(conversation.iCrushInviteId);
-        navigation.replace("ChatDetail", { conversationId: result.conversationId, conversation: { ...conversation, id: result.conversationId, conversationKind: "match" } });
-      } else {
-        await matchApi.rejectCrush(conversation.iCrushInviteId);
-        navigation.goBack();
-      }
+      await matchApi.rejectCrush(conversation.iCrushInviteId);
+      navigation.goBack();
     } catch (e) {
       Alert.alert("Could not respond", e instanceof Error ? e.message : "Please try again.");
     } finally {
       setRequestBusy(false);
     }
   };
+  useEffect(() => {
+    if (!alreadyAcceptedId || !conversation || alreadyAcceptedId === conversationId) return;
+    navigation.setParams({
+      conversationId: alreadyAcceptedId,
+      conversation: { ...conversation, id: alreadyAcceptedId, conversationKind: "match", iCrushInviteId: undefined },
+    });
+  }, [alreadyAcceptedId, conversation, conversationId, navigation]);
   const load = useCallback(
-    async (silent = false) => {
-      if (!silent) setLoading(true);
+    async () => {
+      if (conversationId === "resolve" || loadingMessages.current) return;
+      loadingMessages.current = true;
       try {
-        setMessages(await chatApi.messages(conversationId));
-        await chatApi.read(conversationId);
-      } catch (e) {
-        if (!silent)
-          Alert.alert(
-            "Could not load chat",
-            e instanceof Error ? e.message : "Please try again.",
-          );
+        const next = await chatApi.messages(conversationId);
+        setMessages((current) => {
+          const same =
+            current.length === next.length &&
+            current[current.length - 1]?.id === next[next.length - 1]?.id &&
+            current[current.length - 1]?.text === next[next.length - 1]?.text;
+          return same ? current : next;
+        });
+        void chatApi.read(conversationId).catch(() => undefined);
+      } catch {
+        // Keep the thread on screen. The next refresh can fill it in.
       } finally {
-        if (!silent) setLoading(false);
+        loadingMessages.current = false;
       }
     },
     [conversationId],
   );
   useEffect(() => {
+    if (conversationId !== "resolve" || !route.params.profileId) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const lookup = chatApi.conversationByProfile(route.params.profileId);
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("This chat is taking too long to open.")), 8000);
+    });
+    void Promise.race([lookup, timeout])
+      .then(({ conversationId: id }) => {
+        if (cancelled) return;
+        if (!id) {
+          Alert.alert("Couldn't open chat", "Your match chat is still being prepared. Please try again.");
+          navigation.goBack();
+          return;
+        }
+        navigation.setParams({ conversationId: id });
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        Alert.alert("Couldn't open chat", e instanceof Error ? e.message : "Please try again.");
+        navigation.goBack();
+      });
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [conversationId, navigation, route.params.profileId]);
+  useEffect(() => {
     // A pending crush/chat request has no real conversation yet — conversationId is a
     // synthetic "icrush-<inviteId>" placeholder, not a row the messages API can look up.
-    if (pendingRequest) {
-      setLoading(false);
-      return;
-    }
+    if (pendingRequest || conversationId === "resolve") return;
     void load();
-    const poll = setInterval(() => void load(true), 4000);
+    const poll = setInterval(() => void load(), 12000);
     return () => clearInterval(poll);
   }, [load, pendingRequest]);
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const showSub = Keyboard.addListener(showEvent, () => {
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      const windowHeight = Dimensions.get("window").height;
+      const screenHeight = Dimensions.get("screen").height;
+      const { height, screenY } = event.endCoordinates;
+      const windowAlreadyShrunk = screenHeight - windowHeight > height * 0.45;
+      const covered = Math.round(windowHeight - screenY);
+      const lift = windowAlreadyShrunk
+        ? 0
+        : covered > 0 && covered <= height + 48
+          ? covered
+          : Math.round(height);
+      setKeyboardLift(lift);
       setKeyboardVisible(true);
       requestAnimationFrame(() => {
         scrollRef.current?.scrollToEnd({ animated: true });
       });
     });
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardLift(0);
+      setKeyboardVisible(false);
+    });
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -146,6 +226,7 @@ export function ChatDetailScreen({
   }, []);
   const changeText = (v: string) => {
     setText(v);
+    if (conversationId.startsWith("icrush-") || conversationId === "resolve") return;
     void chatApi
       .typing(conversationId, Boolean(v.trim()))
       .catch(() => undefined);
@@ -155,17 +236,18 @@ export function ChatDetailScreen({
       2200,
     );
   };
-  const send = async () => {
-    const body = text.trim();
+  const deliver = async (body: string) => {
     if (!body || sending) return;
+    const draft = text;
     setText("");
     setSending(true);
     try {
       const result = await chatApi.send(conversationId, body);
       setMessages((old) => [...old, result]);
       setReply(null);
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
     } catch (e) {
-      setText(body);
+      setText(draft);
       Alert.alert(
         "Message not sent",
         e instanceof Error ? e.message : "Please try again.",
@@ -174,9 +256,33 @@ export function ChatDetailScreen({
       setSending(false);
     }
   };
+  const send = () => {
+    const body = text.trim();
+    if (!body || sending) return;
+    if (conversationId.startsWith("icrush-") || conversationId === "resolve") {
+      pendingOutgoing.current = body;
+      setText("");
+      return;
+    }
+    void deliver(body);
+  };
+  useEffect(() => {
+    const body = pendingOutgoing.current;
+    if (!body || conversationId.startsWith("icrush-") || conversationId === "resolve") return;
+    pendingOutgoing.current = null;
+    void deliver(body);
+  }, [conversationId]);
+  const insertEmoji = (emoji: string) => {
+    setText((current) => {
+      if (!current) return emoji;
+      return /\s$/.test(current) ? `${current}${emoji}` : `${current} ${emoji}`;
+    });
+    setEmojiOpen(false);
+  };
   const sendPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      legacy: true,
       quality: 0.82,
     });
     if (result.canceled) return;
@@ -200,6 +306,7 @@ export function ChatDetailScreen({
     try {
       if (recorderState.isRecording) {
         await recorder.stop();
+        await AudioModule.setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
         if (recorder.uri) {
           const sent = await chatApi.sendAudio(conversationId, recorder.uri);
           setMessages((old) => [...old, sent]);
@@ -229,11 +336,17 @@ export function ChatDetailScreen({
     setAssist(true);
     setAiLoading(true);
     try {
+      let transcript = messages;
+      const hasText = transcript.some((message) => message.kind !== "image" && message.kind !== "audio" && message.text?.trim());
+      if (!hasText && conversationId !== "resolve" && !conversationId.startsWith("icrush-")) {
+        transcript = await chatApi.messages(conversationId);
+        setMessages(transcript);
+      }
       setAi(
         await chatApi.assist(
           conversationId,
           conversation?.participantName || "your match",
-          messages,
+          transcript,
         ),
       );
     } catch (e) {
@@ -245,9 +358,25 @@ export function ChatDetailScreen({
       setAiLoading(false);
     }
   };
+  useEffect(() => {
+    const profileId = conversation?.participantProfileId;
+    if (!profileId) return;
+    let cancelled = false;
+    void discoverApi.profile(profileId).then((profile) => {
+      if (cancelled) return;
+      participantProfile.current = profile;
+      setPreviewProfile((current) => (current?.id === profile.id ? profile : current));
+      const photos = [profile.avatar, ...profile.posts.map((post) => post.src || post.poster || "")].filter(Boolean).slice(0, 6);
+      if (photos.length) void Image.prefetch(photos);
+    }).catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [conversation?.participantProfileId]);
   const openParticipantProfile = useCallback(() => {
-    if (!conversation?.participantProfileId) return;
-    setPreviewProfile(conversationPreviewProfile(conversation));
+    if (!conversation) return;
+    setPreviewProfile(participantProfile.current ?? conversationPreviewProfile(conversation));
+    if (!conversation.participantProfileId) return;
     void discoverApi
       .profile(conversation.participantProfileId)
       .then(setPreviewProfile)
@@ -264,13 +393,15 @@ export function ChatDetailScreen({
         <Pressable
           style={styles.headerCenter}
           onPress={openParticipantProfile}
-          disabled={!conversation?.participantProfileId}
+          disabled={!conversation}
+          accessibilityLabel={`View ${conversation?.participantName || "profile"}`}
         >
           {conversation ? (
-            <Image
-              source={{ uri: conversation.participantAvatar }}
-              style={styles.avatar}
-            />
+            hasCustomProfileAvatar(conversation.participantAvatar) ? (
+              <Image source={{ uri: conversation.participantAvatar }} style={styles.avatar} />
+            ) : (
+              <NameInitialCircle name={conversation.participantName} size={40} />
+            )
           ) : null}
           <View style={styles.headerBody}>
             <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1}>
@@ -288,6 +419,8 @@ export function ChatDetailScreen({
         <View style={styles.headerSideRight}>
           {!pendingRequest && !conversation?.isAiCompanion ? (
             <Pressable
+              style={styles.headerIcon}
+              hitSlop={8}
               onPress={() =>
                 navigation.navigate("VideoCall", { conversationId, conversation })
               }
@@ -296,6 +429,8 @@ export function ChatDetailScreen({
             </Pressable>
           ) : null}
           <Pressable
+            style={styles.headerIcon}
+            hitSlop={8}
             onPress={() =>
               navigation.navigate("ChatOptions", { conversationId, conversation })
             }
@@ -304,29 +439,28 @@ export function ChatDetailScreen({
           </Pressable>
         </View>
       </View>
-      <View style={styles.body}>
-        <View pointerEvents="none" style={styles.watermarkWrap}>
-          <Image
-            source={require("../../../assets/heart-tight.png")}
-            style={styles.watermarkImage}
-            contentFit="contain"
-            blurRadius={Platform.OS === "android" ? 4 : 2}
-          />
-        </View>
-        <View pointerEvents="none" style={styles.watermarkWrap}>
-          <Image
-            source={require("../../../assets/heart-tight.png")}
-            style={styles.watermarkImage}
-            contentFit="contain"
-            blurRadius={Platform.OS === "android" ? 4 : 2}
-          />
-        </View>
-        <View style={styles.messagesArea}>
-          {loading ? (
-            <View style={styles.loadingWrap}>
-              <LoadingIndicator label="Loading conversation…" />
+      <View style={[styles.body, { paddingBottom: keyboardLift }]}>
+        {logoReady ? (
+          <>
+            <View pointerEvents="none" style={styles.watermarkWrap}>
+              <Image
+                source={require("../../../assets/heart-tight.png")}
+                style={styles.watermarkImage}
+                contentFit="contain"
+                blurRadius={Platform.OS === "android" ? 4 : 2}
+              />
             </View>
-          ) : (
+            <View pointerEvents="none" style={styles.watermarkWrap}>
+              <Image
+                source={require("../../../assets/heart-tight.png")}
+                style={styles.watermarkImage}
+                contentFit="contain"
+                blurRadius={Platform.OS === "android" ? 4 : 2}
+              />
+            </View>
+          </>
+        ) : null}
+        <View style={styles.messagesArea}>
             <ScrollView
               ref={scrollRef}
               style={styles.flex}
@@ -345,6 +479,7 @@ export function ChatDetailScreen({
                 <Bubble
                   key={item.id}
                   message={item}
+                  otherOnline={Boolean(conversation?.isOnline)}
                   onLongPress={() => setSelectedMessage(item)}
                 />
               ))}
@@ -354,7 +489,6 @@ export function ChatDetailScreen({
                 </View>
               ) : null}
             </ScrollView>
-          )}
         </View>
         {reply ? (
           <View style={styles.replyBar}>
@@ -374,87 +508,98 @@ export function ChatDetailScreen({
             </Pressable>
           </View>
         ) : null}
-        {pendingRequest ? (
-          <View style={[styles.requestCard, { marginBottom: composerBottomPad }]}>
-            <Image source={{ uri: conversation?.participantAvatar }} style={styles.requestAvatar} />
-            <Text style={styles.requestTitle}>{incomingRequest ? (crushRequest ? `${conversation?.participantName} sent you a crush 💋` : `${conversation?.participantName} wants to chat`) : (crushRequest ? "Crush sent" : "Request sent")}</Text>
-            <Text style={styles.requestCopy}>{incomingRequest ? "View their profile above, then accept to open the conversation or decline." : `Waiting for ${conversation?.participantName} to accept. You can chat once they approve.`}</Text>
-            {incomingRequest ? <View style={styles.requestActions}>
-              <Pressable disabled={requestBusy} style={styles.requestDecline} onPress={() => void respondToRequest(false)}><Text style={styles.requestDeclineText}>Decline</Text></Pressable>
-              <Pressable disabled={requestBusy} style={styles.requestAccept} onPress={() => void respondToRequest(true)}><Text style={styles.requestAcceptText}>{requestBusy ? "Please wait…" : (crushRequest ? "Accept crush" : "Accept request")}</Text></Pressable>
-            </View> : null}
-          </View>
-        ) : (
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "padding"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 66 : 0}
-          >
-            <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
+        {pendingRequest || conversationId === "resolve" ? null : (
+          <View style={[styles.composerDock, { paddingBottom: composerBottomPad }]}>
               <View style={styles.composer}>
-                <Pressable
-                  style={[
-                    styles.roundButton,
-                    recorderState.isRecording && styles.recording,
-                  ]}
-                  onPress={() => void toggleRecording()}
-                >
-                  <Ionicons
-                    name={recorderState.isRecording ? "stop" : "mic"}
-                    size={19}
-                    color={recorderState.isRecording ? "#D7264A" : "#726C79"}
-                  />
-                </Pressable>
-                <Pressable
-                  style={styles.roundButton}
-                  onPress={() => void sendPhoto()}
-                >
-                  <Ionicons name="camera-outline" size={19} color="#726C79" />
-                </Pressable>
                 <View style={styles.inputWrap}>
-                  <TextInput
-                    value={text}
-                    onChangeText={changeText}
-                    multiline
-                    numberOfLines={4}
-                    maxFontSizeMultiplier={1}
-                    placeholder={
-                      recorderState.isRecording
-                        ? `Recording ${Math.ceil(recorderState.durationMillis / 1000)}s…`
-                        : "Say something sweet…"
-                    }
-                    placeholderTextColor="#A79FB0"
-                    style={styles.input}
-                    textAlignVertical="center"
-                    onFocus={() => {
-                      requestAnimationFrame(() => {
-                        scrollRef.current?.scrollToEnd({ animated: true });
-                      });
-                    }}
-                  />
-                  <Pressable
-                    style={styles.emojiButton}
-                    onPress={() => void openAi()}
-                    accessibilityLabel="Lavey reply ideas and mood"
-                  >
-                    <Image
-                      source={require("../../../assets/heart-tight.png")}
-                      style={styles.composerAiLogo}
+                  {recorderState.isRecording ? (
+                    <VoiceRecordingBar durationMillis={recorderState.durationMillis} />
+                  ) : (
+                    <TextInput
+                      value={text}
+                      onChangeText={changeText}
+                      multiline
+                      scrollEnabled
+                      maxFontSizeMultiplier={1.1}
+                      placeholder="Message"
+                      placeholderTextColor="#8A8D91"
+                      style={styles.input}
+                      textAlignVertical="top"
+                      onContentSizeChange={() => {
+                        requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
+                      }}
+                      onFocus={() => {
+                        requestAnimationFrame(() => {
+                          scrollRef.current?.scrollToEnd({ animated: true });
+                        });
+                      }}
                     />
-                    <View style={styles.composerAiDot}>
-                      <Ionicons name="sparkles" size={7} color="white" />
+                  )}
+                  {text.trim() ? (
+                    <Pressable
+                      style={styles.pillIcon}
+                      onPress={() => void openAi()}
+                      accessibilityLabel="Lavey reply ideas"
+                    >
+                      <Image
+                        source={require("../../../assets/heart-tight.png")}
+                        style={styles.composerAiLogo}
+                      />
+                    </Pressable>
+                  ) : (
+                    <View style={styles.pillTools}>
+                      <Pressable
+                        style={styles.pillIcon}
+                        onPress={() => void openAi()}
+                        accessibilityLabel="Lavey reply ideas"
+                      >
+                        <Image
+                          source={require("../../../assets/heart-tight.png")}
+                          style={styles.composerAiLogo}
+                        />
+                      </Pressable>
+                      <Pressable
+                        style={styles.pillIcon}
+                        onPress={() => void sendPhoto()}
+                        accessibilityLabel="Send a photo"
+                      >
+                        <Ionicons name="image-outline" size={20} color="#65676B" />
+                      </Pressable>
+                      <Pressable
+                        style={styles.pillIcon}
+                        onPress={() => void toggleRecording()}
+                        accessibilityLabel={recorderState.isRecording ? "Stop recording" : "Voice message"}
+                      >
+                        <Ionicons
+                          name={recorderState.isRecording ? "stop" : "mic-outline"}
+                          size={20}
+                          color={recorderState.isRecording ? "#D7264A" : "#65676B"}
+                        />
+                      </Pressable>
                     </View>
-                  </Pressable>
+                  )}
                 </View>
                 <Pressable
-                  onPress={() => void send()}
-                  style={[styles.send, !text.trim() && styles.sendIdle]}
-                  disabled={!text.trim() && !recorderState.isRecording}
+                  onPress={() => setEmojiOpen(true)}
+                  style={styles.send}
+                  accessibilityLabel="Add emoji"
                 >
-                  <Ionicons name="send" size={19} color="white" />
+                  <Ionicons name="heart" size={20} color="white" />
                 </Pressable>
+                {text.trim() ? (
+                  <Pressable
+                    onPress={() => {
+                      if (recorderState.isRecording || sending) return;
+                      void send();
+                    }}
+                    style={styles.send}
+                    accessibilityLabel="Send"
+                  >
+                    <Ionicons name="send" size={20} color="white" />
+                  </Pressable>
+                ) : null}
               </View>
             </View>
-          </KeyboardAvoidingView>
         )}
       </View>
 
@@ -485,6 +630,20 @@ export function ChatDetailScreen({
           setSelectedMessage(null);
         }}
       />
+      {pendingRequest ? (
+        <CrushRequestModal
+          visible
+          name={conversation?.participantName || "them"}
+          avatar={conversation?.participantAvatar}
+          incoming={incomingRequest}
+          crush={crushRequest}
+          busy={requestBusy}
+          onAccept={() => void respondToRequest(true)}
+          onDecline={() => void respondToRequest(false)}
+          onClose={incomingRequest ? undefined : () => navigation.goBack()}
+        />
+      ) : null}
+      <ComposerEmojiSheet visible={emojiOpen} onClose={() => setEmojiOpen(false)} onPick={insertEmoji} />
       {previewProfile ? (
         <ProfileFeedModal
           profile={previewProfile}
@@ -512,11 +671,24 @@ function ReactionPicker({ message, close, react, reply }: { message: ChatMessage
     </Modal>
   );
 }
+function MessageTicks({ read, online }: { read: boolean; online: boolean }) {
+  const seen = read;
+  const delivered = seen || online;
+  return (
+    <Ionicons
+      name={delivered ? "checkmark-done" : "checkmark"}
+      size={15}
+      color={seen ? "#34B7F1" : "#9AA0A6"}
+    />
+  );
+}
 function Bubble({
   message,
+  otherOnline,
   onLongPress,
 }: {
   message: ChatMessage;
+  otherOnline: boolean;
   onLongPress(): void;
 }) {
   const mine = message.senderId === "me";
@@ -538,7 +710,7 @@ function Bubble({
       {message.kind === "image" && message.imageUrl ? (
         <Image source={{ uri: message.imageUrl }} style={styles.photo} />
       ) : message.kind === "audio" && message.audioUrl ? (
-        <AudioBubble url={message.audioUrl} mine={mine} />
+        <VoicePlaybackBar url={message.audioUrl} mine={mine} />
       ) : (
         <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>
           {message.text}
@@ -548,9 +720,7 @@ function Bubble({
         <Text style={[styles.time, mine && styles.timeMine]}>
           {message.sentAt}
         </Text>
-        {mine ? (
-          <Text style={styles.ticks}>{message.read ? "✓✓✓" : "✓"}</Text>
-        ) : null}
+        {mine ? <MessageTicks read={message.read} online={otherOnline} /> : null}
       </View>
       {message.reaction ? (
         <View style={styles.reactionBubble}>
@@ -562,8 +732,9 @@ function Bubble({
   if (mine) {
     return (
       <Pressable
+        delayLongPress={350}
         onLongPress={onLongPress}
-        style={[styles.bubbleWrap, styles.alignEnd]}
+        style={[styles.bubbleWrap, styles.alignEnd, message.reaction ? styles.bubbleWithReaction : null]}
       >
         <LinearGradient
           colors={["#FDE7F0", "#F2E8FA"]}
@@ -578,25 +749,11 @@ function Bubble({
   }
   return (
     <Pressable
+      delayLongPress={350}
       onLongPress={onLongPress}
-      style={[styles.bubbleWrap, styles.alignStart, styles.bubble, styles.theirs]}
+      style={[styles.bubbleWrap, styles.alignStart, styles.bubble, styles.theirs, message.reaction ? styles.bubbleWithReaction : null]}
     >
       {body}
-    </Pressable>
-  );
-}
-function AudioBubble({ url, mine }: { url: string; mine: boolean }) {
-  const player = useAudioPlayer(url);
-  const tint = mine ? "#7E244E" : "#3D3940";
-  return (
-    <Pressable style={styles.audio} onPress={() => player.play()}>
-      <View style={[styles.playCircle, mine && styles.playCircleMine]}>
-        <Ionicons name="play" size={15} color={mine ? "#9D3264" : "#726C79"} />
-      </View>
-      <View style={[styles.wave, mine && styles.waveMine]} />
-      <Text style={{ color: tint, fontFamily: theme.typography.medium, fontSize: 12 }}>
-        Voice
-      </Text>
     </Pressable>
   );
 }
@@ -622,12 +779,7 @@ function Assist({
     <Modal visible={visible} transparent animationType="slide">
       <Pressable style={styles.assistBackdrop} onPress={close}>
         <Pressable style={styles.assistSheet} onPress={(event) => event.stopPropagation()}>
-          <LinearGradient
-            colors={["#7C3AED", "#C026D3", "#FF5271"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.assistHero}
-          >
+          <View style={styles.assistHero}>
             <View style={styles.assistHeroTop}>
               <View style={styles.assistBrand}>
                 <Image
@@ -651,7 +803,7 @@ function Assist({
             <Text style={styles.assistHeroSub}>
               Lavey reads the chat with {firstName} and suggests what to say next.
             </Text>
-          </LinearGradient>
+          </View>
 
           <ScrollView
             style={styles.assistBody}
@@ -667,18 +819,13 @@ function Assist({
               <>
                 <View style={styles.moodCard}>
                   <View style={styles.moodCardHead}>
-                    <Ionicons name="pulse-outline" size={16} color="#7C3AED" />
+                    <Ionicons name="pulse-outline" size={16} color="#111111" />
                     <Text style={styles.moodLabel}>Conversation mood</Text>
                   </View>
                   <View style={styles.moodBadgeWrap}>
-                    <LinearGradient
-                      colors={["#EDE9FE", "#FCE7F3"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.moodBadge}
-                    >
+                    <View style={styles.moodBadge}>
                       <Text style={styles.moodBadgeText}>{result.moodLabel}</Text>
-                    </LinearGradient>
+                    </View>
                   </View>
                   <Text style={styles.moodText}>{result.moodExplanation}</Text>
                 </View>
@@ -701,7 +848,7 @@ function Assist({
                         <Text style={styles.suggestionIndexText}>{index + 1}</Text>
                       </View>
                       <Text style={styles.suggestionText}>{suggestion}</Text>
-                      <Ionicons name="arrow-forward-circle" size={22} color="#C026D3" />
+                      <Ionicons name="arrow-forward-circle" size={22} color="#111111" />
                     </Pressable>
                   ))}
                 </View>
@@ -720,9 +867,9 @@ function Assist({
 }
 
 const SUGGESTION_ACCENTS = [
-  { backgroundColor: "#7C3AED" },
-  { backgroundColor: "#0891B2" },
-  { backgroundColor: "#DB2777" },
+  { backgroundColor: "#111111" },
+  { backgroundColor: "#111111" },
+  { backgroundColor: "#111111" },
 ] as const;
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#F8F8FC" },
@@ -741,11 +888,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerSideRight: {
-    minWidth: 44,
+    minWidth: 96,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 4,
+    gap: 14,
+    paddingRight: 6,
+  },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerCenter: {
     flex: 1,
@@ -797,6 +951,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   bubbleWrap: { maxWidth: "78%", marginVertical: 4, marginBottom: 6 },
+  bubbleWithReaction: { marginBottom: 22 },
   alignEnd: { alignSelf: "flex-end" },
   alignStart: { alignSelf: "flex-start" },
   bubble: {
@@ -884,7 +1039,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,.04)",
     padding: 7,
     borderRadius: 8,
-    marginBottom: 7,
+    marginBottom: 12,
   },
   quoteMine: {
     borderColor: "#C85B88",
@@ -948,6 +1103,8 @@ const styles = StyleSheet.create({
   },
   replyBar: {
     minHeight: 48,
+    marginBottom: 18,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: "#F4EEF8",
     borderTopWidth: 1,
@@ -964,101 +1121,63 @@ const styles = StyleSheet.create({
   },
   replyText: { maxWidth: 280, fontSize: 10, color: "#78727C" },
   composerDock: {
-    backgroundColor: "#FDFDFF",
+    backgroundColor: "#FFFFFF",
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#E8E4EC",
-    shadowColor: "#171720",
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
+    borderTopColor: "#E4E6EB",
   },
   composer: {
-    minHeight: 56,
-    paddingVertical: 7,
+    paddingTop: 10,
+    paddingBottom: 10,
     paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 6,
-    backgroundColor: "#FDFDFF",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
   },
-  requestCard: { margin: 16, padding: 20, borderRadius: 22, alignItems: "center", backgroundColor: "white", borderWidth: 1, borderColor: "#E9DDF3" },
-  requestAvatar: { width: 74, height: 74, borderRadius: 37, marginBottom: 12 },
-  requestTitle: { fontFamily: theme.typography.bold, fontSize: 17, color: theme.colors.text, textAlign: "center" },
-  requestCopy: { fontFamily: theme.typography.regular, fontSize: 12.5, lineHeight: 19, color: "#7E7783", textAlign: "center", marginTop: 7 },
-  requestActions: { flexDirection: "row", gap: 10, width: "100%", marginTop: 18 },
-  requestDecline: { flex: 1, height: 45, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "#F1EEF3" },
-  requestDeclineText: { fontFamily: theme.typography.bold, fontSize: 12, color: "#625A67" },
-  requestAccept: { flex: 1.4, height: 45, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: "#7C3AED" },
-  requestAcceptText: { fontFamily: theme.typography.bold, fontSize: 12, color: "white" },
-  roundButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F0EDF2",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  recording: { backgroundColor: "#FFCCD7" },
   inputWrap: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "flex-end",
-    borderWidth: 1,
-    borderColor: "#E5E1E9",
-    borderRadius: 21,
-    backgroundColor: "white",
-    paddingLeft: 15,
+    borderRadius: 24,
+    backgroundColor: "#F0F2F5",
+    paddingLeft: 14,
     paddingRight: 4,
-    paddingVertical: 4,
   },
   input: {
     flex: 1,
-    minHeight: 36,
-    maxHeight: 108,
-    paddingTop: Platform.OS === "android" ? 8 : 10,
-    paddingBottom: Platform.OS === "android" ? 8 : 10,
+    minHeight: 26,
+    maxHeight: 96,
+    marginVertical: 11,
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
     fontFamily: theme.typography.regular,
-    fontSize: 14.5,
-    color: "#241F29",
+    fontSize: 17,
+    lineHeight: 22,
+    color: "#050505",
   },
-  emojiButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  pillTools: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+  },
+  pillIcon: {
+    width: 36,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
   },
-  composerAiLogo: { width: 24, height: 24 },
-  composerAiDot: {
-    position: "absolute",
-    right: 1,
-    bottom: 1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#7C3AED",
-    borderWidth: 1,
-    borderColor: "white",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  composerAiLogo: { width: 20, height: 20 },
   send: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: "#EC4899",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#EC4899",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 3,
   },
-  sendIdle: { backgroundColor: "#E7A9C4", shadowOpacity: 0 },
+  sendLike: { backgroundColor: "#EC4899" },
   assistBackdrop: {
     flex: 1,
     backgroundColor: "rgba(14, 12, 20, 0.52)",
@@ -1075,6 +1194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 20,
+    backgroundColor: "#111111",
   },
   assistHeroTop: {
     flexDirection: "row",
@@ -1142,9 +1262,9 @@ const styles = StyleSheet.create({
   moodCard: {
     borderRadius: 18,
     padding: 16,
-    backgroundColor: "#FAF8FF",
+    backgroundColor: "#F7F7F8",
     borderWidth: 1,
-    borderColor: "#E9E0FF",
+    borderColor: "#ECECEE",
   },
   moodCardHead: {
     flexDirection: "row",
@@ -1165,12 +1285,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#E9D5FF",
+    borderColor: "#E6E6E8",
+    backgroundColor: "#FFFFFF",
   },
   moodBadgeText: {
     fontFamily: theme.typography.bold,
     fontSize: 13,
-    color: "#7C3AED",
+    color: "#111111",
   },
   moodText: {
     marginTop: 12,
@@ -1194,7 +1315,7 @@ const styles = StyleSheet.create({
   suggestionsHint: {
     fontFamily: theme.typography.medium,
     fontSize: 11,
-    color: "#C026D3",
+    color: "#8A8494",
   },
   suggestionCard: {
     flexDirection: "row",
@@ -1205,8 +1326,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#ECE7F3",
-    shadowColor: "#7C3AED",
+    borderColor: "#ECECEE",
+    shadowColor: "#000000",
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },

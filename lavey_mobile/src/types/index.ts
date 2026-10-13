@@ -40,6 +40,7 @@ export interface Conversation {
   id: string; participantProfileId: string; participantName: string; participantAvatar: string;
   lastMessage: string; lastMessageAt: string; unreadCount: number; isOnline: boolean;
   isTyping?: boolean; lastSeenLabel?: string | null; matchedAt: string; vibeScore: number;
+  isPinned?: boolean; isMuted?: boolean;
   conversationKind?: 'match' | 'i_crush_incoming' | 'i_crush_outgoing' | 'chat_request_incoming' | 'chat_request_outgoing';
   iCrushInviteId?: string;
   isAiCompanion?: boolean; aiDisclosureLabel?: string;
@@ -49,7 +50,7 @@ export interface ChatMessage {
   read: boolean; kind?: 'text' | 'image' | 'audio'; imageUrl?: string; audioUrl?: string; expiresAt?: string; expired?: boolean; sending?: boolean; reaction?: string; replyTo?: { id: string; senderId: 'me' | 'them'; text: string; kind: 'text' | 'image' | 'audio' };
 }
 export interface ChatAssistResult { moodLabel: string; moodExplanation: string; suggestions: string[] }
-export type NotificationKind = 'like' | 'crush' | 'post_like' | 'verified' | 'match' | 'system' | 'profile_view' | 'meetup_like' | 'meetup_join';
+export type NotificationKind = 'like' | 'crush' | 'post_like' | 'verified' | 'match' | 'system' | 'profile_view' | 'meetup_like' | 'meetup_join' | 'date_invite';
 export interface NotificationEvent {
   id: string; actorUserId: string | null; actorName: string; actorAvatar: string;
   kind: NotificationKind; title: string | null; body: string | null; text: string;

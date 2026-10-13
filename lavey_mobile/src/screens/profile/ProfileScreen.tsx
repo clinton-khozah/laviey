@@ -3,11 +3,10 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
-import type { NavigationProp } from "@react-navigation/native";
-import { chatApi, contentApi, discoverApi } from "../../api/services";
+import { useFocusEffect, type NavigationProp } from "@react-navigation/native";
+import { chatApi, contentApi, discoverApi, prefetchAudience } from "../../api/services";
 import { CircularProgressRing } from "../../components/common/CircularProgressRing";
 import { LoadingIndicator } from "../../components/common/LoadingIndicator";
 import { theme } from "../../constants/theme";
@@ -17,10 +16,13 @@ import type { Profile, ProfilePost, UserProfile } from "../../types";
 import type { MainTabParamList } from "../../components/navigation/BottomTabNavigator";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { PostViewerModal } from "./components/PostViewerModal";
+import { YouAudienceSheet } from "./components/YouAudienceSheet";
 import { PlatinumModal } from "../../components/subscription/PlatinumModal";
 import { ProfileFeedModal } from "../home/components/ProfileFeedModal";
 import { SettingsModal } from "./SettingsModal";
 import { PresenceDot } from "../../components/common/PresenceDot";
+import { NameInitialCircle } from "../../components/common/NameInitialCircle";
+import { hasCustomProfileAvatar } from "../../utils/discoverProfileReady";
 import { useAccessMode } from "../../context/AccessModeContext";
 import { BackToForYouButton } from "../../components/navigation/BackToForYouButton";
 import * as ImagePicker from "expo-image-picker";
@@ -59,6 +61,15 @@ export function ProfileScreen({
   const [extraProfiles, setExtraProfiles] = useState<Record<string, Profile>>({});
   const [likesPreviewProfile, setLikesPreviewProfile] = useState<Profile | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [audienceOpen, setAudienceOpen] = useState(false);
+  useEffect(() => {
+    if (web && profile) void prefetchAudience();
+  }, [web, profile?.id]);
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProfile(true);
+    }, [refreshProfile]),
+  );
   const [postUploading, setPostUploading] = useState(false);
   const addPostFromGallery = useCallback(async () => {
     if (postUploading || !profile || profile.posts.length >= 5) return;
@@ -69,21 +80,24 @@ export function ProfileScreen({
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      legacy: true,
       quality: 0.9,
-      allowsEditing: true,
-      aspect: [3, 4],
     });
     if (result.canceled || !result.assets[0]?.uri) return;
+    const localUri = result.assets[0].uri;
+    const tempId = `local-${Date.now()}`;
+    setProfile({ ...profile, posts: [...profile.posts, { id: tempId, type: "image", src: localUri }] });
     setPostUploading(true);
     try {
-      const post = await contentApi.createPost(result.assets[0].uri);
-      setProfile(profile ? { ...profile, posts: [...profile.posts, post] } : profile);
+      const post = await contentApi.createPost(localUri);
+      setProfile({ ...profile, posts: [...profile.posts, post] });
     } catch (error) {
+      setProfile(profile);
       Alert.alert("Could not upload post", error instanceof Error ? error.message : "Please try again.");
     } finally {
       setPostUploading(false);
     }
-  }, [postUploading, profile]);
+  }, [postUploading, profile, setProfile]);
   useEffect(() => {
     if (tab !== "likes") return;
     setPostLikersLoading(true);
@@ -131,16 +145,15 @@ export function ProfileScreen({
   const likersLoading = profileLikersLoading || postLikersLoading;
   const completion = useMemo(() => {
     if (!profile) return null;
-    const hasAvatar = Boolean(profile.avatarUrl);
+    const hasAvatar = hasCustomProfileAvatar(profile.avatarUrl);
     const hasDisplayName = Boolean(profile.displayName?.trim());
-    const hasBio = (profile.bio?.trim().length ?? 0) >= 20;
-    const hasInterests = profile.interests.length > 0;
+    const hasBio = Boolean(profile.bio?.trim());
     const hasPhotos = profile.posts.length > 0;
     const items: Array<{ id: string; label: string; cta: string; done: boolean }> = [
       { id: "photo", label: "Add a profile photo", cta: "Add photo", done: hasAvatar },
+      { id: "details", label: "Add your name and bio", cta: "Edit profile", done: hasDisplayName && hasBio },
+      { id: "gallery", label: "Add a photo", cta: "Add photo", done: hasPhotos },
       { id: "verification", label: "Verify your identity", cta: "Verify", done: profile.verified },
-      { id: "details", label: "Add your name, bio & interests", cta: "Edit profile", done: hasDisplayName && hasBio && hasInterests },
-      { id: "gallery", label: "Add a few gallery photos", cta: "Add photos", done: hasPhotos },
     ];
     const completedCount = items.filter((i) => i.done).length;
     return { items, percent: Math.round((completedCount / items.length) * 100) };
@@ -206,10 +219,23 @@ export function ProfileScreen({
         </View>
         <ScrollView contentContainerStyle={styles.webContent}>
           <View style={styles.avatarRing}>
-            <Image
-              source={{ uri: profile.avatarUrl }}
-              style={styles.webAvatar}
-            />
+            <View style={styles.avatarClip}>
+              {hasCustomProfileAvatar(profile.avatarUrl) ? (
+                <Image
+                  source={{ uri: profile.avatarUrl }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={0}
+                />
+              ) : (
+                <View style={styles.webAvatarLetter}>
+                  <Text style={styles.webAvatarLetterText}>
+                    {(profile.displayName?.trim().charAt(0) || "?").toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
             {profile.verified ? (
               <View style={styles.verified}>
                 <Ionicons name="checkmark" size={20} color="white" />
@@ -232,16 +258,32 @@ export function ProfileScreen({
             </Pressable>
           )}
           <View style={styles.stats}>
-            {[
-              [profile.stats.crushesReceived, "CRUSHES"],
-              [profile.stats.matches, "MATCHES"],
-              [totalViews, "VIEWS"],
-            ].map(([n, l]) => (
-              <View style={styles.stat} key={String(l)}>
-                <Text style={styles.statN}>{n}</Text>
-                <Text style={styles.statL}>{l}</Text>
-              </View>
-            ))}
+            {(
+              [
+                [profile.stats.crushesReceived, "CRUSHES", false],
+                [profile.stats.matches, "MATCHES", false],
+                [totalViews, "VIEWS", true],
+              ] as const
+            ).map(([n, l, opensAudience]) => {
+              const body = (
+                <>
+                  <Text style={styles.statN}>{n}</Text>
+                  <Text style={styles.statL}>{l}</Text>
+                </>
+              );
+              if (!opensAudience) {
+                return (
+                  <View style={styles.stat} key={l}>
+                    {body}
+                  </View>
+                );
+              }
+              return (
+                <Pressable style={styles.stat} key={l} onPress={() => setAudienceOpen(true)} accessibilityRole="button">
+                  {body}
+                </Pressable>
+              );
+            })}
           </View>
           {completion && completion.percent < 100 ? (
             <View style={styles.completionCard}>
@@ -292,7 +334,7 @@ export function ProfileScreen({
               <Text style={[styles.switchTabText, tab === "likes" && styles.switchTabTextActive]}>Likes</Text>
             </Pressable>
           </View>
-          <Animated.View key={tab} entering={FadeIn.duration(220)} exiting={FadeOut.duration(140)} layout={LinearTransition.duration(200)}>
+          <View key={tab}>
             {tab === "posts" ? (
               <>
                 <View style={[styles.posts, styles.gridTop]}>
@@ -300,7 +342,10 @@ export function ProfileScreen({
                     <Pressable key={p.id} onPress={() => setViewerIndex(index)} style={[styles.postTile, { width: tileWidth, height: tileHeight }]}>
                       <Image
                         source={{ uri: p.poster || p.src }}
-                        style={styles.post}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={0}
                       />
                       <PostMetricsOverlay post={p} />
                     </Pressable>
@@ -328,7 +373,7 @@ export function ProfileScreen({
                     style={[styles.likeCard, { width: tileWidth, height: tileHeight }]}
                     onPress={() => setLikesPreviewProfile(liker.profile)}
                   >
-                    <Image source={{ uri: liker.photo }} style={styles.likeCardPhoto} />
+                    <Image source={{ uri: liker.photo }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" transition={0} />
                     <View style={styles.likeCardHeartBadge}>
                       <Ionicons name="heart" size={12} color="#FF3860" />
                     </View>
@@ -357,7 +402,7 @@ export function ProfileScreen({
                 ))}
               </View>
             )}
-          </Animated.View>
+          </View>
         </ScrollView>
         <PostViewerModal
           visible={viewerIndex !== null}
@@ -382,6 +427,14 @@ export function ProfileScreen({
         {rootNavigation ? (
           <SettingsModal visible={settingsOpen} onClose={() => setSettingsOpen(false)} navigation={rootNavigation} />
         ) : null}
+        <YouAudienceSheet
+          visible={audienceOpen}
+          onClose={() => setAudienceOpen(false)}
+          onOpenProfile={(person) => {
+            setLikesPreviewProfile(person);
+            setAudienceOpen(false);
+          }}
+        />
       </SafeAreaView>
     );
   return (
@@ -396,7 +449,11 @@ export function ProfileScreen({
             <Ionicons name="settings-outline" size={23} />
           </Pressable>
         </View>
-        <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+        {hasCustomProfileAvatar(profile.avatarUrl) ? (
+          <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+        ) : (
+          <NameInitialCircle name={profile.displayName} size={100} />
+        )}
         <View style={styles.classicNameRow}>
           <Text style={styles.name}>{profile.displayName}</Text>
           {profile.verified ? (
@@ -421,7 +478,10 @@ export function ProfileScreen({
             <Pressable key={p.id} onPress={() => setViewerIndex(index)} style={[styles.postTile, { width: tileWidth, height: tileHeight }]}>
               <Image
                 source={{ uri: p.poster || p.src }}
-                style={styles.post}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={0}
               />
               <PostMetricsOverlay post={p} />
             </Pressable>
@@ -520,20 +580,31 @@ const styles = StyleSheet.create({
   upgradeText: { fontFamily: theme.typography.semibold, fontSize: 11, color: DARK },
   webContent: { paddingTop: 52, alignItems: "center", paddingBottom: 95 },
   avatarRing: {
-    width: 118,
-    height: 118,
-    borderRadius: 59,
+    width: 156,
+    height: 156,
+    borderRadius: 78,
     padding: 3,
     borderWidth: 2,
     borderColor: DARK,
     backgroundColor: "#FFFFFF",
   },
-  webAvatar: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "white",
+  avatarClip: {
+    flex: 1,
+    borderRadius: 74,
+    overflow: "hidden",
+    backgroundColor: "#E2D3F7",
+  },
+  webAvatarLetter: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E2D3F7",
+  },
+  webAvatarLetterText: {
+    fontFamily: theme.typography.bold,
+    fontSize: 56,
+    lineHeight: 64,
+    color: "#8D3EE7",
   },
   verified: {
     position: "absolute",
@@ -706,7 +777,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
   },
-  postTile: { borderRadius: 12, overflow: "hidden", backgroundColor: "#E9E6EC" },
+  postTile: { borderRadius: 12, overflow: "hidden", backgroundColor: "#E9E6EC", position: "relative" },
   likesLoading: { marginTop: 30 },
   gridTop: { marginTop: 17 },
   likesEmpty: { alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 10 },

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
+import { useLogoReady } from "../../utils/deferLogo";
 export function LoadingIndicator({
   fullScreen = false,
   transparent = false,
@@ -12,6 +13,7 @@ export function LoadingIndicator({
   compact?: boolean;
 }) {
   const pulse = useRef(new Animated.Value(0)).current;
+  const logoReady = useLogoReady();
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -48,11 +50,15 @@ export function LoadingIndicator({
         ],
       }}
     >
-      <Image
-        source={require("../../../assets/heart-tight.png")}
-        contentFit="contain"
-        style={styles.heart}
-      />
+      {logoReady ? (
+        <Image
+          source={require("../../../assets/heart-tight.png")}
+          contentFit="contain"
+          style={fullScreen ? styles.heartLarge : styles.heart}
+        />
+      ) : (
+        <View style={fullScreen ? styles.heartLarge : styles.heart} />
+      )}
     </Animated.View>
   );
 
@@ -72,11 +78,19 @@ const styles = StyleSheet.create({
     minHeight: 110,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FDE7F0",
     zIndex: 100,
     elevation: 100,
   },
-  full: { backgroundColor: "#FFFFFF" },
+  full: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "#FDE7F0",
+  },
   transparent: { backgroundColor: "transparent" },
   heart: { width: 45, height: 45 },
+  heartLarge: { width: 168, height: 168 },
 });

@@ -11,9 +11,12 @@ import {
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { NameInitialCircle } from "../../../components/common/NameInitialCircle";
 import { SlidePanelModal } from "../../../components/common/SlidePanelModal";
+import { hasCustomProfileAvatar } from "../../../utils/discoverProfileReady";
 import { theme } from "../../../constants/theme";
 import type { Profile } from "../../../types";
+import { LikeChatStarters } from "./LikeChatStarters";
 
 export function ReceivedLikesSheet({
   visible,
@@ -22,7 +25,7 @@ export function ReceivedLikesSheet({
   loading,
   onClose,
   onLikeBack,
-  onOpenChat,
+  onSendStarter,
   onViewProfile,
 }: {
   visible: boolean;
@@ -31,7 +34,7 @@ export function ReceivedLikesSheet({
   loading: boolean;
   onClose(): void;
   onLikeBack(profile: Profile): Promise<void>;
-  onOpenChat(profile: Profile): void;
+  onSendStarter(profile: Profile, greeting: string): Promise<void>;
   onViewProfile(profile: Profile): void;
 }) {
   const { width } = useWindowDimensions();
@@ -39,15 +42,11 @@ export function ReceivedLikesSheet({
   const horizontalPad = 16;
   const cardWidth = (width - horizontalPad * 2 - gap) / 2;
   const cardHeight = cardWidth * 1.28;
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const letterSize = Math.round(Math.min(72, cardWidth * 0.4));
+  const [starterProfile, setStarterProfile] = useState<Profile | null>(null);
 
-  const likeBack = async (profile: Profile) => {
-    setBusyId(profile.id);
-    try {
-      await onLikeBack(profile);
-    } finally {
-      setBusyId(null);
-    }
+  const likeBack = (profile: Profile) => {
+    void onLikeBack(profile);
   };
 
   return (
@@ -77,8 +76,14 @@ export function ReceivedLikesSheet({
             const reciprocated = likedBackIds.has(item.id);
             return (
               <Pressable style={[styles.card, { width: cardWidth, height: cardHeight }]} onPress={() => onViewProfile(item)}>
-                <Image source={{ uri: item.avatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                <LinearGradient colors={["transparent", "rgba(0,0,0,.72)"]} style={styles.cardGradient} />
+                {hasCustomProfileAvatar(item.avatar) ? (
+                  <Image source={{ uri: item.avatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                ) : (
+                  <View style={styles.letterStage} pointerEvents="none">
+                    <NameInitialCircle name={item.name} size={letterSize} />
+                  </View>
+                )}
+                <LinearGradient colors={["transparent", "rgba(0,0,0,.55)"]} style={styles.cardGradient} />
                 <View style={styles.cardHeart}>
                   <Ionicons name="heart" size={12} color="#FFFFFF" />
                 </View>
@@ -92,18 +97,15 @@ export function ReceivedLikesSheet({
                 </View>
                 <Pressable
                   style={[styles.actionBtn, reciprocated && styles.actionBtnChat]}
-                  disabled={busyId === item.id}
                   onPress={(event) => {
                     event.stopPropagation();
-                    if (reciprocated) onOpenChat(item);
-                    else void likeBack(item);
+                    if (reciprocated) setStarterProfile(item);
+                    else likeBack(item);
                   }}
                 >
-                  {busyId === item.id ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.actionText}>{reciprocated ? "Chat" : "Like back"}</Text>
-                  )}
+                  <Text style={[styles.actionText, reciprocated && styles.actionTextChat]}>
+                    {reciprocated ? "Chat now" : "Like back"}
+                  </Text>
                 </Pressable>
               </Pressable>
             );
@@ -119,6 +121,14 @@ export function ReceivedLikesSheet({
           }
         />
       )}
+      <LikeChatStarters
+        profile={starterProfile}
+        onClose={() => setStarterProfile(null)}
+        onSend={async (profile, greeting) => {
+          await onSendStarter(profile, greeting);
+          setStarterProfile(null);
+        }}
+      />
     </SlidePanelModal>
   );
 }
@@ -143,9 +153,15 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 18,
     overflow: "hidden",
-    backgroundColor: "#ECEAEE",
+    backgroundColor: "#F3EEF8",
   },
-  cardGradient: { ...StyleSheet.absoluteFillObject },
+  letterStage: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 42,
+  },
+  cardGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: "46%" },
   cardHeart: {
     position: "absolute",
     top: 10,
@@ -165,16 +181,19 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     bottom: 10,
-    height: 32,
+    height: 34,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,.22)",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,.35)",
+    backgroundColor: "#FF4B6E",
   },
-  actionBtnChat: { backgroundColor: "#101018", borderColor: "#101018" },
+  actionBtnChat: {
+    backgroundColor: "#000000",
+    borderWidth: 2,
+    borderColor: "#FF4B6E",
+  },
   actionText: { fontFamily: theme.typography.bold, fontSize: 11, color: "#FFFFFF" },
+  actionTextChat: { color: "#FFFFFF" },
   emptyWrap: { alignItems: "center", paddingHorizontal: 32, paddingVertical: 48, gap: 8 },
   emptyIcon: {
     width: 64,

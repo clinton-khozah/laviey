@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GoogleLogoIcon } from '../../components/auth/GoogleLogoIcon';
+import { LanguagePickerButton } from '../../components/language/LanguagePickerButton';
 import { AuthLayout } from './AuthLayout';
+import { useSignInLoader } from '../../components/auth/SignInHeartOverlay';
+import { useLanguage } from '../../context/LanguageContext';
+import { loginCopyFor } from '../../i18n/loginCopy';
+import { ApiError } from '../../api/apiError';
 import { useAuth } from '../../hooks/useAuth';
 import { isEmail } from '../../utils/validators';
 import { theme } from '../../constants/theme';
@@ -15,12 +20,16 @@ import { googleSignInErrorMessage } from '../../utils/api/networkError';
 const GOOGLE_SIGN_IN_TIMEOUT_MS = 45_000;
 
 export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackParamList, 'Login'>) {
-  const { session, login, loginWithGoogle, signInPrompt, clearSignInPrompt } = useAuth();
+  const { login, loginWithGoogle, signInPrompt, clearSignInPrompt } = useAuth();
+  const { start: startSignInLoader, finish: finishSignInLoader } = useSignInLoader();
+  const { language, setLanguage } = useLanguage();
+  const copy = loginCopyFor(language);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [credentialError, setCredentialError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleButtonProgress = useSharedValue(1);
 
@@ -42,15 +51,17 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
     clearSignInPrompt();
   }, [clearSignInPrompt, signInPrompt]);
 
-  useEffect(() => {
-    if (session) setGoogleLoading(false);
-  }, [session]);
-
   const signInWithGoogle = async () => {
     setGoogleLoading(true);
+    startSignInLoader();
+    await new Promise((resolve) => setTimeout(resolve, 220));
     try {
       const idToken = await getGoogleIdToken();
-      if (!idToken) return;
+      if (!idToken) {
+        finishSignInLoader();
+        setGoogleLoading(false);
+        return;
+      }
       await Promise.race([
         loginWithGoogle(idToken),
         new Promise<never>((_, reject) =>
@@ -61,29 +72,50 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
         ),
       ]);
     } catch (error) {
-      Alert.alert('Could not sign in with Google', googleSignInErrorMessage(error));
-    } finally {
+      finishSignInLoader();
       setGoogleLoading(false);
+      console.warn('[google-sign-in]', error);
+      Alert.alert('Could not sign in with Google', googleSignInErrorMessage(error));
     }
   };
 
   const submit = async () => {
+    setCredentialError(null);
     if (!isEmail(email) || password.length < 6) {
-      return Alert.alert('Check your details', 'Enter a valid email and a password of at least 6 characters.');
+      return Alert.alert(copy.checkTitle, copy.checkBody);
     }
+    startSignInLoader();
     setLoading(true);
     try {
       await login(email.trim(), password);
+    } catch (error) {
+      finishSignInLoader();
+      const message = error instanceof Error ? error.message : "";
+      const status = error instanceof ApiError ? error.status : undefined;
+      const code = error instanceof ApiError ? error.code : undefined;
+      if (status === 401 && code !== "EMAIL_CONFIRMATION_REQUIRED") {
+        setCredentialError(copy.credentialError);
+      } else {
+        Alert.alert(copy.failedTitle, message || "Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
-    catch (error) { Alert.alert('Could not sign in', error instanceof Error ? error.message : 'Please try again.'); }
-    finally { setLoading(false); }
   };
 
   return (
-    <AuthLayout subtitle={sessionEnded ? 'Welcome back — sign in to pick up where you left off' : 'Sign in to continue to Lavey'} legal loading={googleLoading} footer={
+    <AuthLayout
+      showPoweredBy
+      poweredByLabel={copy.poweredBy}
+      subtitle={sessionEnded ? copy.welcomeBack : copy.continue}
+      legal
+      legalCopy={{ lead: copy.legalLead, terms: copy.terms, join: copy.legalJoin, privacy: copy.privacy }}
+      loading={loading || googleLoading}
+      headerRight={<LanguagePickerButton language={language} title={copy.chooseLanguage} onSelect={(code) => void setLanguage(code)} />}
+      footer={
       <Pressable onPress={() => navigation.navigate('Register')} hitSlop={8}>
         <Text style={styles.toggle}>
-          New to Lavey? <Text style={styles.link}>Create an account</Text>
+          {copy.newTo} <Text style={styles.link}>{copy.createAccount}</Text>
         </Text>
       </Pressable>
     }>
@@ -101,10 +133,13 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
       <View style={styles.divider}><View style={styles.line} /><Text style={styles.or}>OR</Text><View style={styles.line} /></View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>EMAIL</Text>
+        <Text style={styles.label}>{copy.email}</Text>
         <TextInput
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(value) => {
+            setEmail(value);
+            if (credentialError) setCredentialError(null);
+          }}
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
@@ -114,11 +149,14 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>PASSWORD</Text>
+        <Text style={styles.label}>{copy.password}</Text>
         <View style={styles.passwordWrap}>
           <TextInput
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(value) => {
+              setPassword(value);
+              if (credentialError) setCredentialError(null);
+            }}
             secureTextEntry={!showPassword}
             autoComplete="current-password"
             selectionColor={theme.colors.primary}
@@ -128,15 +166,16 @@ export function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackPara
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={21} color="#858A98" />
           </Pressable>
         </View>
+        {credentialError ? <Text style={styles.credentialError}>{credentialError}</Text> : null}
       </View>
 
       <Pressable onPress={() => navigation.navigate('ForgotPassword')} hitSlop={8}>
-        <Text style={styles.forgot}>Forgot password?</Text>
+        <Text style={styles.forgot}>{copy.forgot}</Text>
       </Pressable>
 
       <Pressable disabled={loading} onPress={submit} style={({ pressed }) => [styles.submitWrap, pressed && styles.pressed, loading && styles.disabled]}>
         <View style={styles.submit}>
-          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.submitText}>Sign in</Text>}
+          <Text style={styles.submitText}>{copy.signIn}</Text>
         </View>
       </Pressable>
     </AuthLayout>
@@ -155,6 +194,7 @@ const styles = StyleSheet.create({
   passwordWrap: { position: 'relative' },
   passwordInput: { paddingRight: 46, width: '100%' },
   eye: { position: 'absolute', right: 7, top: 4, width: 36, height: 40, alignItems: 'center', justifyContent: 'center' },
+  credentialError: { marginTop: 6, fontFamily: theme.typography.regular, fontSize: 12, lineHeight: 16, color: theme.colors.danger },
   forgot: { textAlign: 'right', fontFamily: theme.typography.medium, fontSize: 12, color: '#5C3564' },
   submitWrap: { marginTop: 2, borderRadius: 10 },
   submit: { height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#303034' },

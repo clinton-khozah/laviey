@@ -29,7 +29,7 @@ export function LegalScreen({ route }: NativeStackScreenProps<RootStackParamList
   if (!doc) {
     return (
       <SafeAreaView style={styles.center} edges={["bottom"]}>
-        <ActivityIndicator color={theme.colors.primary} />
+        <ActivityIndicator color="#303034" />
       </SafeAreaView>
     );
   }
@@ -59,8 +59,8 @@ export function LegalScreen({ route }: NativeStackScreenProps<RootStackParamList
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.background },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.background, padding: 24 },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF", padding: 24 },
   error: { fontFamily: theme.typography.medium, fontSize: 13.5, color: theme.colors.danger, textAlign: "center" },
   content: { padding: 20, paddingBottom: 40 },
   title: { fontFamily: theme.typography.bold, fontSize: 21, color: theme.colors.text },
@@ -68,10 +68,12 @@ const styles = StyleSheet.create({
   safetyNote: {
     marginTop: 14,
     padding: 12,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primarySoft,
+    borderRadius: 10,
+    backgroundColor: "#F4F4F5",
+    borderWidth: 1,
+    borderColor: "#D7D7DC",
   },
-  safetyNoteText: { fontFamily: theme.typography.medium, fontSize: 12.5, color: theme.colors.primaryDark, lineHeight: 18 },
+  safetyNoteText: { fontFamily: theme.typography.medium, fontSize: 12.5, color: "#303034", lineHeight: 18 },
   section: { marginTop: 22 },
   sectionTitle: { fontFamily: theme.typography.bold, fontSize: 15, color: theme.colors.text, marginBottom: 8 },
   paragraph: { fontFamily: theme.typography.regular, fontSize: 13, color: theme.colors.textSecondary, lineHeight: 19, marginBottom: 8 },

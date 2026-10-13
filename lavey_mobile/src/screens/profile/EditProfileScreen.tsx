@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,27 +14,26 @@ import {
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { onboardingApi, profileApi } from "../../api/services";
-import { PrimaryButton } from "../../components/common/PrimaryButton";
+import { profileApi } from "../../api/services";
+import { useAppData } from "../../context/AppDataContext";
 import { theme } from "../../constants/theme";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
-import type { OnboardingOption } from "../../types";
 
-type FieldKey = "name" | "headline" | "bio" | "pronouns" | "city" | "hometown" | "school" | "degree" | "occupation" | "company";
+type FieldKey = "name" | "headline" | "bio" | "city" | "hometown" | "school" | "degree" | "occupation" | "company";
 type Form = Record<FieldKey, string>;
 
 export function EditProfileScreen({ route, navigation }: NativeStackScreenProps<RootStackParamList, "EditProfile">) {
   const profile = route.params.profile;
+  const { setProfile } = useAppData();
   const [avatar, setAvatar] = useState(profile.avatarUrl);
   const [loading, setLoading] = useState(false);
-  const [interestOptions, setInterestOptions] = useState<OnboardingOption[]>([]);
-  const [selectedInterestKeys, setSelectedInterestKeys] = useState(() => profile.interests.map((item) => item.key));
+  const [locating, setLocating] = useState<"city" | "hometown" | null>(null);
   const [form, setForm] = useState<Form>({
     name: profile.displayName,
     headline: profile.headline ?? "",
     bio: profile.bio,
-    pronouns: profile.pronouns ?? "",
     city: profile.city ?? "",
     hometown: profile.hometown ?? "",
     school: profile.school ?? "",
@@ -44,57 +44,66 @@ export function EditProfileScreen({ route, navigation }: NativeStackScreenProps<
 
   const set = (key: FieldKey) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
-  useEffect(() => {
-    void onboardingApi.questions().then((questions) => {
-      const interestQuestion = questions.find((question) => question.stepKey === "interests");
-      setInterestOptions(interestQuestion?.options ?? []);
-    }).catch(() => undefined);
-  }, []);
-
-  const toggleInterest = (key: string) => {
-    setSelectedInterestKeys((current) => {
-      if (current.includes(key)) return current.filter((item) => item !== key);
-      if (current.length >= 12) {
-        Alert.alert("Maximum reached", "Choose up to 12 interests.");
-        return current;
+  const useCurrentPlace = async (key: "city" | "hometown") => {
+    setLocating(key);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Location is off", "Allow location to fill this in, or type the place yourself.");
+        return;
       }
-      return [...current, key];
-    });
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      const city = place?.city || place?.subregion || place?.district || place?.region || "";
+      const country = place?.country || "";
+      const label = [city, country].filter(Boolean).join(", ");
+      if (!label) {
+        Alert.alert("No place name", "We could not read a city from here. Type it instead.");
+        return;
+      }
+      set(key)(label);
+    } catch {
+      Alert.alert("Could not read your location", "Type the place instead.");
+    } finally {
+      setLocating(null);
+    }
   };
 
   const choosePhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
+      legacy: true,
       quality: 0.82,
     });
     if (result.canceled) return;
-    setAvatar(result.assets[0].uri);
-    try {
-      await profileApi.uploadAvatar(result.assets[0].uri);
-    } catch (error) {
+    const uri = result.assets[0].uri;
+    setAvatar(uri);
+    void profileApi.uploadAvatar(uri).then((result) => {
+      if (result.avatarUrl) setAvatar(result.avatarUrl);
+    }).catch((error) => {
       Alert.alert("Photo not uploaded", error instanceof Error ? error.message : "Please try again.");
-    }
+    });
   };
 
   const save = async () => {
     if (!form.name.trim()) return Alert.alert("Name required");
     setLoading(true);
     try {
-      await profileApi.update({
+      const updated = await profileApi.update({
         displayName: form.name.trim(),
         headline: form.headline.trim(),
         bio: form.bio.trim(),
-        pronouns: form.pronouns.trim(),
         city: form.city.trim(),
         hometown: form.hometown.trim(),
         school: form.school.trim(),
         degree: form.degree.trim(),
         occupation: form.occupation.trim(),
         company: form.company.trim(),
-        interestKeys: selectedInterestKeys,
       });
+      setProfile(updated);
       navigation.goBack();
     } catch (error) {
       Alert.alert("Could not save profile", error instanceof Error ? error.message : "Please try again.");
@@ -115,37 +124,27 @@ export function EditProfileScreen({ route, navigation }: NativeStackScreenProps<
           <Text style={styles.heroCopy}>These details help people find a genuine connection.</Text>
         </View>
 
-        <Section title="THE BASICS" icon="person-outline">
+        <Section title="The basics" icon="person-outline">
           <Field label="Display name" value={form.name} onChangeText={set("name")} maxLength={80} />
           <Field label="Profile headline" value={form.headline} onChangeText={set("headline")} placeholder="A quick line about your vibe" maxLength={80} />
-          <Field label="Pronouns" value={form.pronouns} onChangeText={set("pronouns")} placeholder="e.g. she/her" maxLength={40} />
           <Field label="About you" value={form.bio} onChangeText={set("bio")} placeholder="Share a little about yourself…" maxLength={500} multiline />
         </Section>
 
-        <Section title="EDUCATION & WORK" icon="school-outline">
+        <Section title="Education and work" icon="school-outline">
           <Field label="School, college or university" value={form.school} onChangeText={set("school")} placeholder="Where did you study?" />
           <Field label="Degree or field of study" value={form.degree} onChangeText={set("degree")} placeholder="e.g. BSc Computer Science" />
           <Field label="Occupation" value={form.occupation} onChangeText={set("occupation")} placeholder="What do you do?" />
           <Field label="Company" value={form.company} onChangeText={set("company")} placeholder="Where do you work?" />
         </Section>
 
-        <Section title="PLACES" icon="location-outline">
-          <Field label="Current city" value={form.city} onChangeText={set("city")} placeholder="Where do you live?" />
-          <Field label="Hometown" value={form.hometown} onChangeText={set("hometown")} placeholder="Where are you from?" />
+        <Section title="Places" icon="location-outline">
+          <Field label="Current city" value={form.city} onChangeText={set("city")} placeholder="Where do you live?" onLocate={() => void useCurrentPlace("city")} locating={locating === "city"} />
+          <Field label="Hometown" value={form.hometown} onChangeText={set("hometown")} placeholder="Where are you from?" onLocate={() => void useCurrentPlace("hometown")} locating={locating === "hometown"} />
         </Section>
 
-        <Section title="FROM YOUR QUIZ" icon="sparkles-outline">
-          <Text style={styles.quizCopy}>Choose the interests from your quiz that you want people to see on your For You profile.</Text>
-          <View style={styles.chips}>
-            {(interestOptions.length > 0 ? interestOptions : profile.interests).map((interest) => (
-              <Pressable key={interest.key} onPress={() => toggleInterest(interest.key)} style={[styles.chip, selectedInterestKeys.includes(interest.key) && styles.chipActive]}>
-                <Text style={[styles.chipText, selectedInterestKeys.includes(interest.key) && styles.chipTextActive]}>{interest.emoji} {interest.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Section>
-
-        <PrimaryButton label="Save profile" loading={loading} onPress={save} />
+        <Pressable disabled={loading} onPress={() => void save()} style={({ pressed }) => [styles.save, pressed && styles.savePressed, loading && styles.saveDisabled]}>
+          {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Save profile</Text>}
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -155,7 +154,7 @@ function Section({ title, icon, children }: { title: string; icon: keyof typeof 
   return (
     <View>
       <View style={styles.sectionTitle}>
-        <View style={styles.sectionIcon}><Ionicons name={icon} size={15} color="#8D46D8" /></View>
+        <View style={styles.sectionIcon}><Ionicons name={icon} size={15} color="#303034" /></View>
         <Text style={styles.sectionText}>{title}</Text>
       </View>
       <View style={styles.card}>{children}</View>
@@ -163,43 +162,70 @@ function Section({ title, icon, children }: { title: string; icon: keyof typeof 
   );
 }
 
-function Field({ label, multiline, ...props }: React.ComponentProps<typeof TextInput> & { label: string; multiline?: boolean }) {
+function Field({
+  label,
+  multiline,
+  onLocate,
+  locating,
+  ...props
+}: React.ComponentProps<typeof TextInput> & { label: string; multiline?: boolean; onLocate?: () => void; locating?: boolean }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        {...props}
-        multiline={multiline}
-        placeholderTextColor={theme.colors.textMuted}
-        style={[styles.input, multiline && styles.bio]}
-      />
+      <View>
+        <TextInput
+          {...props}
+          multiline={multiline}
+          placeholderTextColor="#A1A1AA"
+          selectionColor="#303034"
+          style={[styles.input, multiline && styles.bio, onLocate && styles.inputWithAction]}
+        />
+        {onLocate ? (
+          <Pressable
+            onPress={onLocate}
+            disabled={locating}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Use your current location for ${label}`}
+            style={styles.locate}
+          >
+            {locating ? <ActivityIndicator size="small" color="#303034" /> : <Ionicons name="location" size={18} color="#303034" />}
+          </Pressable>
+        ) : null}
+      </View>
       {props.maxLength ? <Text style={styles.count}>{String(props.value ?? "").length}/{props.maxLength}</Text> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8F8FC" },
-  content: { padding: 16, paddingBottom: 40, gap: 18 },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
+  content: { padding: 20, paddingBottom: 40, gap: 18 },
   hero: { alignItems: "center", paddingVertical: 8 },
   photoWrap: { position: "relative" },
-  avatar: { width: 112, height: 112, borderRadius: 56, backgroundColor: "#ECEAF0", borderWidth: 4, borderColor: "white" },
-  camera: { position: "absolute", right: 1, bottom: 2, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "#FF6372", borderWidth: 3, borderColor: "white" },
-  heroTitle: { marginTop: 12, fontFamily: theme.typography.bold, fontSize: 20, color: "#151521" },
-  heroCopy: { marginTop: 4, fontFamily: theme.typography.regular, fontSize: 12, color: "#8B8991", textAlign: "center" },
+  avatar: { width: 112, height: 112, borderRadius: 56, backgroundColor: "#F4F4F5", borderWidth: 4, borderColor: "white" },
+  camera: { position: "absolute", right: 1, bottom: 2, width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "#303034", borderWidth: 3, borderColor: "white" },
+  heroTitle: { marginTop: 12, fontFamily: theme.typography.bold, fontSize: 20, color: "#18181B" },
+  heroCopy: { marginTop: 4, fontFamily: theme.typography.regular, fontSize: 12, color: "#5F5F68", textAlign: "center" },
   sectionTitle: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 8 },
-  sectionIcon: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#F3EAFE" },
-  sectionText: { fontFamily: theme.typography.bold, fontSize: 12, letterSpacing: 0.5, color: "#929098" },
-  card: { backgroundColor: "white", borderRadius: 18, padding: 14, gap: 14, borderWidth: 1, borderColor: "#ECEAEC" },
-  field: { gap: 6 },
-  label: { fontFamily: theme.typography.semibold, fontSize: 12, color: "#5F5A65" },
-  input: { minHeight: 46, borderRadius: 13, borderWidth: 1, borderColor: "#E1DFE5", backgroundColor: "#FAF9FB", paddingHorizontal: 13, fontFamily: theme.typography.regular, color: "#221F26" },
+  sectionIcon: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "#F4F4F5" },
+  sectionText: { fontFamily: theme.typography.semibold, fontSize: 12, letterSpacing: 0.2, color: "#81818D" },
+  card: { backgroundColor: "#FFFFFF", borderRadius: 10, padding: 14, gap: 14, borderWidth: 1, borderColor: "#D7D7DC" },
+  field: { gap: 4 },
+  label: { fontFamily: theme.typography.semibold, fontSize: 10, lineHeight: 14, letterSpacing: 0.35, color: "#81818D" },
+  input: { minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: "#D7D7DC", backgroundColor: "#FFFFFF", paddingHorizontal: 14, fontFamily: theme.typography.regular, fontSize: 14, color: "#08080D" },
+  inputWithAction: { paddingRight: 44 },
+  locate: { position: "absolute", right: 8, top: 0, bottom: 0, width: 32, alignItems: "center", justifyContent: "center" },
   bio: { minHeight: 120, paddingTop: 12, textAlignVertical: "top" },
-  count: { position: "absolute", right: 9, bottom: 7, fontFamily: theme.typography.regular, color: "#AAA6AE", fontSize: 9 },
-  quizCopy: { fontFamily: theme.typography.regular, color: "#77737C", fontSize: 12, lineHeight: 18 },
+  count: { position: "absolute", right: 10, bottom: 8, fontFamily: theme.typography.regular, color: "#A1A1AA", fontSize: 9 },
+  quizCopy: { fontFamily: theme.typography.regular, color: "#5F5F68", fontSize: 12, lineHeight: 18 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18, backgroundColor: "#F0EFF3", borderWidth: 1, borderColor: "#DAD7DF" },
-  chipText: { fontFamily: theme.typography.semibold, fontSize: 11.5, color: "#5F5A65" },
-  chipActive: { backgroundColor: "#FFF2F5", borderColor: "#FF9AB1" },
-  chipTextActive: { color: "#FF5575" },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC" },
+  chipText: { fontFamily: theme.typography.semibold, fontSize: 11.5, color: "#3D3D4B" },
+  chipActive: { backgroundColor: "#303034", borderColor: "#303034" },
+  chipTextActive: { color: "#FFFFFF" },
+  save: { height: 48, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#303034" },
+  savePressed: { opacity: 0.88 },
+  saveDisabled: { opacity: 0.65 },
+  saveText: { fontFamily: theme.typography.bold, fontSize: 13, color: "#FFFFFF" },
 });

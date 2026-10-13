@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { profileApi, settingsApi, translationApi, type AppLanguageCode } from "../api/services";
+import { useLanguage } from "../context/LanguageContext";
 import { suggestedLanguageForCountry } from "../utils/countryToUiLanguage";
 
 const LANGUAGE_PRIMER_SHOWN_KEY = "@lavey/language-primer-shown";
@@ -16,6 +17,7 @@ export function useLanguageDetectionPrompt(enabled: boolean) {
   const [suggested, setSuggested] = useState<AppLanguageCode | null>(null);
   const [suggestedLabel, setSuggestedLabel] = useState("");
   const [applying, setApplying] = useState(false);
+  const { setLanguage } = useLanguage();
 
   useEffect(() => {
     if (!enabled) return;
@@ -55,7 +57,7 @@ export function useLanguageDetectionPrompt(enabled: boolean) {
     setApplying(true);
     try {
       await AsyncStorage.setItem(LANGUAGE_PRIMER_SHOWN_KEY, "1");
-      await settingsApi.update({ language: suggested });
+      await setLanguage(suggested);
     } catch {
       // Settings screen remains the fallback way to change language if this fails.
     } finally {

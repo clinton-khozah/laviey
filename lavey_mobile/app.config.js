@@ -1,9 +1,9 @@
 /** @type {import('@expo/config').ExpoConfig} */
 const appJson = require('./app.json');
 
-const googleWebClientId =
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim()
-  || '17132674984-klaq75k8d7k6kc0ke76d0dhp85bor8hd.apps.googleusercontent.com';
+/** Web client registered with this Android app's signing certificates. Public — not a secret. */
+const GOOGLE_WEB_CLIENT_ID = '932812160359-t7hnq6svmg97k4ro94re3h05l0c24qum.apps.googleusercontent.com';
+const googleWebClientId = GOOGLE_WEB_CLIENT_ID;
 
 module.exports = {
   expo: {

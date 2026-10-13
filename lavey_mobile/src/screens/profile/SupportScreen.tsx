@@ -98,7 +98,7 @@ export function SupportScreen({ navigation }: NativeStackScreenProps<RootStackPa
           </View>
         </View>
 
-        {loading && !conversation ? <View style={styles.center}><ActivityIndicator color="#8D46D8" /></View> : (
+        {loading && !conversation ? <View style={styles.center}><ActivityIndicator color="#303034" /></View> : (
           <FlatList
             ref={listRef}
             data={conversation?.messages ?? []}
@@ -114,7 +114,7 @@ export function SupportScreen({ navigation }: NativeStackScreenProps<RootStackPa
             renderItem={({ item }) => (
               <View style={[styles.bubbleWrap, item.sender === "me" && styles.bubbleWrapMe]}>
                 <View style={[styles.bubble, item.sender === "me" ? styles.bubbleMe : styles.bubbleSupport]}>
-                  {item.isAi ? <View style={styles.aiLabel}><Ionicons name="sparkles" size={11} color="#8D46D8" /><Text style={styles.aiText}>LAVIEY AI</Text></View> : null}
+                  {item.isAi ? <View style={styles.aiLabel}><Ionicons name="sparkles" size={11} color="#303034" /><Text style={styles.aiText}>LAVIEY AI</Text></View> : null}
                   <Text style={[styles.messageText, item.sender === "me" && styles.messageTextMe]}>{item.text}</Text>
                   <Text style={[styles.time, item.sender === "me" && styles.timeMe]}>{item.sentAt}</Text>
                 </View>
@@ -135,7 +135,7 @@ export function SupportScreen({ navigation }: NativeStackScreenProps<RootStackPa
           ) : null}
 
           <Pressable disabled={consultantMode || escalating} onPress={() => void requestConsultant()} style={[styles.consultant, consultantMode && styles.consultantActive]}>
-            <Ionicons name={consultantMode ? "checkmark-circle" : "headset-outline"} size={18} color={consultantMode ? "#2A827A" : "#8D46D8"} />
+            <Ionicons name={consultantMode ? "checkmark-circle" : "headset-outline"} size={18} color="#303034" />
             <Text style={[styles.consultantText, consultantMode && styles.consultantTextActive]}>
               {consultantMode ? "Consultant requested · Conversation saved" : escalating ? "Connecting…" : "Talk to a consultant"}
             </Text>
@@ -161,12 +161,12 @@ export function SupportScreen({ navigation }: NativeStackScreenProps<RootStackPa
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#F8F8FC" },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
   header: { minHeight: 76, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 11, backgroundColor: "white", borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#E5E2E8" },
   back: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "#F3F1F5" },
   avatarWrap: { position: "relative" },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFF2F5" },
-  verified: { position: "absolute", right: -1, bottom: -1, width: 17, height: 17, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: "#6C63FF", borderWidth: 2, borderColor: "white" },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#F4F4F5" },
+  verified: { position: "absolute", right: -1, bottom: -1, width: 17, height: 17, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: "#303034", borderWidth: 2, borderColor: "white" },
   headerCopy: { flex: 1 },
   name: { fontFamily: theme.typography.bold, color: "#221F26", fontSize: 15 },
   status: { fontFamily: theme.typography.regular, color: "#85818A", fontSize: 10.5, marginTop: 1 },
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
   bubbleWrapMe: { alignItems: "flex-end" },
   bubble: { maxWidth: "82%", paddingHorizontal: 13, paddingVertical: 10, borderRadius: 17 },
   bubbleSupport: { backgroundColor: "white", borderWidth: 1, borderColor: "#E8E5EB", borderBottomLeftRadius: 5 },
-  bubbleMe: { backgroundColor: "#8D46D8", borderBottomRightRadius: 5 },
+  bubbleMe: { backgroundColor: "#303034", borderBottomRightRadius: 5 },
   aiLabel: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 5 },
-  aiText: { fontFamily: theme.typography.bold, fontSize: 9, letterSpacing: 0.5, color: "#8D46D8" },
+  aiText: { fontFamily: theme.typography.bold, fontSize: 9, letterSpacing: 0.5, color: "#303034" },
   messageText: { fontFamily: theme.typography.regular, fontSize: 13, lineHeight: 19, color: "#342F38" },
   messageTextMe: { color: "white" },
   typing: { alignSelf: "flex-start", flexDirection: "row", gap: 5, paddingHorizontal: 15, paddingVertical: 13, borderRadius: 20, borderBottomLeftRadius: 6, backgroundColor: "white", borderWidth: 1, borderColor: "#E8E5EB" },
@@ -187,14 +187,14 @@ const styles = StyleSheet.create({
   timeMe: { color: "rgba(255,255,255,.68)", textAlign: "right" },
   bottom: { paddingTop: 9, paddingHorizontal: 12, paddingBottom: 9, backgroundColor: "white", borderTopWidth: StyleSheet.hairlineWidth, borderColor: "#E5E2E8" },
   topics: { gap: 7, paddingBottom: 9 },
-  topic: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 17, backgroundColor: "#F3EAFE", borderWidth: 1, borderColor: "#DFC8F7" },
-  topicText: { fontFamily: theme.typography.semibold, color: "#7B3CC0", fontSize: 10.5 },
-  consultant: { minHeight: 38, borderRadius: 12, marginBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: "#F8F5FB", borderWidth: 1, borderColor: "#E5D8F3" },
+  topic: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC" },
+  topicText: { fontFamily: theme.typography.semibold, color: "#303034", fontSize: 10.5 },
+  consultant: { minHeight: 38, borderRadius: 10, marginBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC" },
   consultantActive: { backgroundColor: "#EFFAF8", borderColor: "#B8E5DF" },
-  consultantText: { fontFamily: theme.typography.semibold, color: "#7B3CC0", fontSize: 11 },
+  consultantText: { fontFamily: theme.typography.semibold, color: "#303034", fontSize: 11 },
   consultantTextActive: { color: "#2A827A" },
-  composer: { minHeight: 48, flexDirection: "row", alignItems: "flex-end", gap: 8, paddingLeft: 13, paddingRight: 5, paddingVertical: 5, borderRadius: 24, backgroundColor: "#F3F1F5" },
+  composer: { minHeight: 48, flexDirection: "row", alignItems: "flex-end", gap: 8, paddingLeft: 13, paddingRight: 5, paddingVertical: 5, borderRadius: 10, backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#D7D7DC" },
   input: { flex: 1, maxHeight: 90, minHeight: 38, paddingTop: 9, fontFamily: theme.typography.regular, color: "#221F26", fontSize: 13 },
-  send: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "#FF6372" },
+  send: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#303034" },
   sendDisabled: { opacity: 0.45 },
 });

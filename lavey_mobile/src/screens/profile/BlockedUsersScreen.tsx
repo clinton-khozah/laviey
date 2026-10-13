@@ -83,8 +83,8 @@ export function BlockedUsersScreen(_props: NativeStackScreenProps<RootStackParam
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.background },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.background },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
   list: { padding: 16 },
   listEmpty: { flex: 1 },
   row: {
@@ -102,12 +102,12 @@ const styles = StyleSheet.create({
   unblockBtn: {
     height: 34,
     paddingHorizontal: 14,
-    borderRadius: 17,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.primarySoft,
+    backgroundColor: "#303034",
   },
-  unblockText: { fontFamily: theme.typography.semibold, fontSize: 12, color: theme.colors.primary },
+  unblockText: { fontFamily: theme.typography.semibold, fontSize: 12, color: "#FFFFFF" },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: {
     textAlign: "center",

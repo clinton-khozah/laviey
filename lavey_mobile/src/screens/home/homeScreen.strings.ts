@@ -13,4 +13,5 @@ export const HOME_SCREEN_STRINGS = [
   "Sent",
   "You matched",
   "Chat now",
+  "Message",
 ] as const;

@@ -52,7 +52,8 @@ export const discoverApi = {
 };
 
 export const onboardingApi = {
-  questions: async () => (await api.get<ApiResponse<OnboardingQuestion[]>>(endpoints.onboarding.questions)).data.data,
+  questions: async () =>
+    (await api.get<ApiResponse<OnboardingQuestion[]>>(endpoints.onboarding.questions, { timeout: 70_000 })).data.data,
   status: async () => (await api.get<ApiResponse<OnboardingStatus>>(endpoints.users.onboarding)).data.data,
   submit: async (payload: SubmitOnboardingPayload) => (await api.post<ApiResponse<OnboardingStatus>>(endpoints.users.onboarding, payload)).data.data,
 };
@@ -131,6 +132,8 @@ export const matchApi = {
 export const subscriptionApi = {
   platinum: async () => (await api.get<ApiResponse<PlatinumCatalog>>(endpoints.subscription.platinum)).data.data,
   checkout: async (planId: string) => (await api.post<ApiResponse<PayfastCheckoutResponse>>(endpoints.subscription.checkout, { planId })).data.data,
+  confirmPlay: async (productId: string, purchaseToken: string) =>
+    (await api.post<ApiResponse<PlatinumStatus>>(endpoints.subscription.play, { productId, purchaseToken })).data.data,
   status: async () => (await api.get<ApiResponse<PlatinumStatus>>(endpoints.subscription.status)).data.data,
   cancel: async () => (await api.post<ApiResponse<PlatinumStatus & { emailSent: boolean }>>(endpoints.subscription.cancel)).data.data,
 };
@@ -149,14 +152,284 @@ export const chatApi = {
   notifications: async () => (await api.get<ApiResponse<NotificationEvent[]>>(endpoints.messages.notifications)).data.data,
   markNotificationsRead: async () => { await api.post(endpoints.messages.notificationsRead); },
   officialInbox: async () => (await api.get<ApiResponse<unknown>>(endpoints.messages.officialInbox)).data.data,
-  assist: async (id: string, participantName: string, messages: ChatMessage[]) => (await api.post<ApiResponse<ChatAssistResult>>(endpoints.messages.chatAssist(id), { participantName, messages: messages.filter((m) => m.kind !== 'image' && m.text.trim()).map((m) => ({ sender: m.senderId, text: m.text.trim() })) })).data.data,
+  assist: async (id: string, participantName: string, messages: ChatMessage[]) => {
+    const transcript = messages
+      .filter((m) => m.kind !== "image" && m.kind !== "audio" && m.text?.trim())
+      .slice(-60)
+      .map((m) => ({
+        sender: m.senderId === "me" ? "me" as const : "them" as const,
+        text: m.text.trim().slice(0, 4000),
+      }));
+    if (transcript.length === 0) transcript.push({ sender: "them", text: "Hey" });
+    const name = participantName.trim().slice(0, 80) || "your match";
+    return (await api.post<ApiResponse<ChatAssistResult>>(endpoints.messages.chatAssist(id), { participantName: name, messages: transcript })).data.data;
+  },
   sendAudio: async (id: string, uri: string) => { const form = new FormData(); form.append('audio', { uri, name: `voice-${Date.now()}.m4a`, type: 'audio/mp4' } as unknown as Blob); return (await api.post<ApiResponse<ChatMessage>>(endpoints.messages.audio(id), form, { headers: { 'Content-Type': 'multipart/form-data' } })).data.data; },
   activeCall: async () => (await api.get<ApiResponse<ChatVideoCall | null>>(endpoints.messages.activeVideoCall)).data.data,
   startCall: async (id: string) => (await api.post<ApiResponse<ChatVideoCall>>(endpoints.messages.startVideoCall(id))).data.data,
   updateCall: async (id: string, action: 'answer' | 'decline' | 'end') => (await api.patch<ApiResponse<ChatVideoCall>>(endpoints.messages.updateVideoCall(id), { action })).data.data,
 };
+export type AudiencePerson = {
+  id: string;
+  name: string;
+  age: number;
+  avatar: string;
+  verified: boolean;
+  at: string;
+  lastActiveAt?: string | null;
+  isOnline?: boolean;
+  vibeScore?: number | null;
+};
+
+export type AudienceLists = {
+  viewed: AudiencePerson[];
+  crushes: AudiencePerson[];
+  likes: AudiencePerson[];
+};
+
+function audienceFromNotifications(events: NotificationEvent[]): AudienceLists {
+  const toPerson = (event: NotificationEvent): AudiencePerson | null => {
+    if (!event.actorUserId) return null;
+    return {
+      id: event.actorUserId,
+      name: event.actorName,
+      age: event.actorAge ?? 0,
+      avatar: event.actorAvatar,
+      verified: false,
+      at: event.sentAt,
+      vibeScore: event.actorVibeScore ?? null,
+    };
+  };
+  const unique = (items: Array<AudiencePerson | null>) => {
+    const seen = new Set<string>();
+    const people: AudiencePerson[] = [];
+    for (const item of items) {
+      if (!item || seen.has(item.id)) continue;
+      seen.add(item.id);
+      people.push(item);
+    }
+    return people;
+  };
+  const list = Array.isArray(events) ? events : [];
+  return {
+    viewed: unique(list.filter((event) => event.kind === "profile_view").map(toPerson)),
+    crushes: unique(list.filter((event) => event.kind === "crush").map(toPerson)),
+    likes: unique(list.filter((event) => event.kind === "like" || event.kind === "post_like").map(toPerson)),
+  };
+}
+
+function isAudienceLists(value: unknown): value is AudienceLists {
+  if (!value || typeof value !== "object") return false;
+  const row = value as AudienceLists;
+  return Array.isArray(row.viewed) && Array.isArray(row.crushes) && Array.isArray(row.likes);
+}
+
+function mergePeople(primary: AudiencePerson[], extra: AudiencePerson[]): AudiencePerson[] {
+  const seen = new Set<string>();
+  const people: AudiencePerson[] = [];
+  for (const person of [...primary, ...extra]) {
+    if (!person?.id || seen.has(person.id)) continue;
+    seen.add(person.id);
+    people.push(person);
+  }
+  return people;
+}
+
+function ageFromBirth(value: string | null | undefined): number {
+  if (!value) return 0;
+  const born = new Date(value);
+  if (Number.isNaN(born.getTime())) return 0;
+  const now = new Date();
+  let age = now.getFullYear() - born.getFullYear();
+  const month = now.getMonth() - born.getMonth();
+  if (month < 0 || (month === 0 && now.getDate() < born.getDate())) age -= 1;
+  return age > 0 ? age : 0;
+}
+
+async function supabaseRows<T>(pathAndQuery: string): Promise<T[]> {
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const publishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const session = await storage.getSession();
+  if (!supabaseUrl || !publishableKey || !session?.token) return [];
+  const response = await axios.get<T[]>(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/${pathAndQuery}`, {
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${session.token}`,
+      Accept: "application/json",
+    },
+    timeout: 12_000,
+  });
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+async function audienceFromStoredViews(): Promise<AudienceLists> {
+  const session = await storage.getSession();
+  const selfId = session?.user.id;
+  const notesPromise = chatApi.notifications().then(audienceFromNotifications).catch(() => EMPTY_AUDIENCE);
+  if (!selfId) return notesPromise;
+
+  const [viewRows, posts, notes] = await Promise.all([
+    supabaseRows<{ viewer_user_id: string; created_at: string }>(
+      `profile_views?viewed_user_id=eq.${selfId}&select=viewer_user_id,created_at&order=created_at.desc&limit=80`,
+    ).catch(() => []),
+    supabaseRows<{ id: string }>(`profile_posts?user_id=eq.${selfId}&select=id&limit=40`).catch(() => []),
+    notesPromise,
+  ]);
+
+  let postViewRows: Array<{ viewer_user_id: string; created_at: string }> = [];
+  const postIds = posts.map((post) => post.id).filter(Boolean);
+  if (postIds.length) {
+    postViewRows = await supabaseRows<{ viewer_user_id: string; created_at: string }>(
+      `profile_post_views?post_id=in.(${postIds.join(",")})&select=viewer_user_id,created_at&order=created_at.desc&limit=80`,
+    ).catch(() => []);
+  }
+
+  const seenAt = new Map<string, string>();
+  for (const row of [...viewRows, ...postViewRows]) {
+    if (!row.viewer_user_id || row.viewer_user_id === selfId) continue;
+    const previous = seenAt.get(row.viewer_user_id);
+    if (!previous || row.created_at > previous) seenAt.set(row.viewer_user_id, row.created_at);
+  }
+
+  const ids = [...seenAt.keys()];
+  const profiles = ids.length
+    ? await supabaseRows<{ user_id: string; display_name: string | null; avatar_url: string | null; date_of_birth: string | null; last_active_at: string | null }>(
+        `profiles?user_id=in.(${ids.join(",")})&select=user_id,display_name,avatar_url,date_of_birth,last_active_at`,
+      ).catch(() => [])
+    : [];
+  const byId = new Map(profiles.map((profile) => [profile.user_id, profile]));
+  const viewed: AudiencePerson[] = [...seenAt.entries()]
+    .map(([id, at]) => {
+      const profile = byId.get(id);
+      return {
+        id,
+        name: profile?.display_name?.trim() || "Member",
+        age: ageFromBirth(profile?.date_of_birth),
+        avatar: profile?.avatar_url ?? "",
+        verified: false,
+        at,
+        lastActiveAt: profile?.last_active_at ?? null,
+      };
+    })
+    .sort((a, b) => b.at.localeCompare(a.at));
+
+  return {
+    viewed: mergePeople(viewed, notes.viewed),
+    crushes: notes.crushes,
+    likes: notes.likes,
+  };
+}
+
+async function enrichAudience(lists: AudienceLists): Promise<AudienceLists> {
+  const ids = [...new Set([...lists.viewed, ...lists.crushes, ...lists.likes].map((person) => person.id))];
+  if (!ids.length) return lists;
+
+  const rows = await supabaseRows<{ user_id: string; last_active_at: string | null; display_name: string | null; date_of_birth: string | null }>(
+    `profiles?user_id=in.(${ids.join(",")})&select=user_id,last_active_at,display_name,date_of_birth`,
+  ).catch(() => []);
+  const byId = new Map(rows.map((row) => [row.user_id, row]));
+
+  const details = new Map<string, { vibeScore: number; lastActiveAt?: string; isOnline?: boolean; age: number; name: string }>();
+  await Promise.all(
+    ids.slice(0, 30).map(async (id) => {
+      try {
+        const profile = await discoverApi.profile(id);
+        details.set(id, {
+          vibeScore: profile.vibeScore,
+          lastActiveAt: profile.lastActiveAt,
+          isOnline: profile.isOnline,
+          age: profile.age,
+          name: profile.name,
+        });
+      } catch {
+        // Keep the row we already have when this profile cannot be opened.
+      }
+    }),
+  );
+
+  const apply = (person: AudiencePerson): AudiencePerson => {
+    const row = byId.get(person.id);
+    const extra = details.get(person.id);
+    return {
+      ...person,
+      name: extra?.name?.trim() || person.name?.trim() || row?.display_name?.trim() || "Member",
+      age: person.age > 0 ? person.age : extra?.age || ageFromBirth(row?.date_of_birth),
+      lastActiveAt: extra?.lastActiveAt ?? row?.last_active_at ?? person.lastActiveAt ?? null,
+      isOnline: extra?.isOnline ?? person.isOnline,
+      vibeScore: extra?.vibeScore ?? person.vibeScore ?? null,
+    };
+  };
+
+  return {
+    viewed: lists.viewed.map(apply),
+    crushes: lists.crushes.map(apply),
+    likes: lists.likes.map(apply),
+  };
+}
+
+const EMPTY_AUDIENCE: AudienceLists = { viewed: [], crushes: [], likes: [] };
+let audienceCache: AudienceLists | null = null;
+let audienceInflight: Promise<AudienceLists> | null = null;
+const audienceListeners = new Set<(lists: AudienceLists) => void>();
+
+function hasAudiencePeople(lists: AudienceLists): boolean {
+  return lists.viewed.length + lists.crushes.length + lists.likes.length > 0;
+}
+
+function publishAudience(lists: AudienceLists): AudienceLists {
+  audienceCache = lists;
+  audienceListeners.forEach((listener) => listener(lists));
+  return lists;
+}
+
+function mergeAudience(primary: AudienceLists, extra: AudienceLists): AudienceLists {
+  return {
+    viewed: mergePeople(primary.viewed, extra.viewed),
+    crushes: mergePeople(primary.crushes, extra.crushes),
+    likes: mergePeople(primary.likes, extra.likes),
+  };
+}
+
+async function loadAudienceLists(): Promise<AudienceLists> {
+  const stored = await audienceFromStoredViews().catch(() => EMPTY_AUDIENCE);
+  const fast = audienceCache ? mergeAudience(audienceCache, stored) : stored;
+  if (hasAudiencePeople(fast)) publishAudience(fast);
+  try {
+    const payload = (await api.get<ApiResponse<AudienceLists>>(endpoints.users.audience, { timeout: 8_000 })).data?.data;
+    if (isAudienceLists(payload)) return publishAudience(mergeAudience(payload, fast));
+  } catch {
+    // The activity endpoint can be slow to wake. The stored views are already on screen.
+  }
+  return publishAudience(fast);
+}
+
+export function peekAudienceLists(): AudienceLists | null {
+  return audienceCache;
+}
+
+export function subscribeAudience(listener: (lists: AudienceLists) => void): () => void {
+  audienceListeners.add(listener);
+  return () => audienceListeners.delete(listener);
+}
+
+/** Starts the activity fetch before the sheet opens so Views can paint immediately. */
+export function prefetchAudience(): Promise<AudienceLists> {
+  if (!audienceInflight) {
+    audienceInflight = loadAudienceLists().finally(() => {
+      audienceInflight = null;
+    });
+  }
+  return audienceCache ? Promise.resolve(audienceCache) : audienceInflight;
+}
+
 export const profileApi = {
   me: async () => (await api.get<ApiResponse<UserProfile>>(endpoints.users.me)).data.data,
+  audience: async (): Promise<AudienceLists> => prefetchAudience(),
+  audienceDetails: async (lists: AudienceLists): Promise<AudienceLists> => {
+    const enriched = await enrichAudience(lists);
+    audienceCache = enriched;
+    return enriched;
+  },
   update: async (payload: {
     displayName?: string; bio?: string; headline?: string; city?: string; pronouns?: string;
     school?: string; degree?: string; occupation?: string; company?: string; hometown?: string;
@@ -270,7 +543,9 @@ export const contentApi = {
   }),
 };
 
-export type AppLanguageCode = 'en' | 'es' | 'fr' | 'de' | 'pt' | 'ja' | 'ko' | 'zh' | 'af' | 'zu' | 'xh' | 'st';
+export type AppLanguageCode =
+  | 'en' | 'zh' | 'hi' | 'es' | 'fr' | 'ar' | 'bn' | 'pt' | 'ru' | 'ur'
+  | 'de' | 'ja' | 'ko' | 'af' | 'zu' | 'xh' | 'st';
 
 export interface UserSettings {
   theme: 'night' | 'light';

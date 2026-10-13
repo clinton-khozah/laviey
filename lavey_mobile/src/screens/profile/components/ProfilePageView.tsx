@@ -1,25 +1,29 @@
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { type ReactNode, useState } from "react";
+import { Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../../../constants/theme";
 import type { Profile } from "../../../types";
 import { ThemeSongDisc } from "../../../components/common/ThemeSongDisc";
+import { MatchProgressHeart } from "./MatchProgressHeart";
+import { NameInitialCircle } from "../../../components/common/NameInitialCircle";
+import { hasCustomProfileAvatar } from "../../../utils/discoverProfileReady";
 import {
   formatProfileActivityStatus,
   isProfileActivityOnline,
 } from "../../../utils/profileActivityStatus";
 import {
   profileDistanceDisplay,
-  profileFeedIdentityItems,
+  profileGenderLabel,
+  profileInterestedInLabel,
+  profileOrientationLabel,
+  profilePurposeLabel,
+  profileReligionLabel,
 } from "../../../utils/profileIdentityLabels";
 
 const H_PADDING = 20;
 const GRID_GAP = 4;
 const COLUMNS = 3;
-
-function profileLocationLabel(profile: Profile): string {
-  return profile.locationName?.trim() || "—";
-}
 
 function profileDistanceLabel(profile: Profile): string {
   const distance = profileDistanceDisplay(profile);
@@ -32,34 +36,68 @@ export function ProfilePageView({
   onPostPress,
   onThemeSongPress,
   themeSongPlaying = false,
+  actions,
 }: {
   profile: Profile;
   onAvatarPress?(): void;
   onPostPress(index: number): void;
   onThemeSongPress?(): void;
   themeSongPlaying?: boolean;
+  actions?: ReactNode;
 }) {
   const { width: screenWidth } = useWindowDimensions();
+  const [locationOpen, setLocationOpen] = useState(false);
+  const fullLocation = profile.locationName?.trim() || "";
   const avatarSize = Math.min(200, Math.round(screenWidth * 0.48));
   const ringSize = avatarSize + 6;
   const discSize = Math.round(avatarSize * 0.34);
   const discGap = 14;
   const contentWidth = screenWidth - H_PADDING * 2;
-  const statsWidth = Math.round(screenWidth * 0.72);
   const tileWidth = Math.floor((contentWidth - GRID_GAP * (COLUMNS - 1)) / COLUMNS);
   const tileHeight = Math.round(tileWidth / 0.75);
 
   const posts = profile.posts.filter((p) => Boolean(p.src || p.poster));
   const hasThemeSong = Boolean(profile.themeSong);
-  const identityItems = profileFeedIdentityItems(profile);
   const activityStatus = formatProfileActivityStatus(profile.lastActiveAt, profile.isOnline);
   const activityOnline = isProfileActivityOnline(profile.lastActiveAt, profile.isOnline);
-
-  const stats = [
-    { value: `${profile.vibeScore}%`, label: "Match", icon: "heart" as const, iconColor: theme.colors.coral },
-    { value: profileLocationLabel(profile), label: "Location", icon: "location-sharp" as const, iconColor: "#8B7FA8" },
-    { value: profileDistanceLabel(profile), label: "Distance", icon: "navigate-outline" as const, iconColor: "#6B8FAD" },
+  const occupation = profile.occupation?.trim() || "";
+  const company = profile.company?.trim() || "";
+  const work = occupation && company ? `${occupation} at ${company}` : occupation || company;
+  const education = [profile.degree?.trim(), profile.school?.trim()].filter(Boolean).join(", ");
+  const distanceLabel = profileDistanceLabel(profile);
+  const details: Array<{ key: string; label: string; value: string; icon: keyof typeof Ionicons.glyphMap; onPress?: () => void }> = [
+    { key: "match", label: "Match", value: `${profile.vibeScore}%`, icon: "heart-outline" },
   ];
+  if (fullLocation) {
+    details.push({
+      key: "location",
+      label: "Location",
+      value: fullLocation,
+      icon: "location-outline",
+      onPress: () => setLocationOpen(true),
+    });
+  }
+  if (distanceLabel && distanceLabel !== "—") {
+    details.push({ key: "distance", label: "Distance", value: distanceLabel, icon: "map-outline" });
+  }
+  if (work) details.push({ key: "work", label: "Work", value: work, icon: "briefcase-outline" });
+  if (education) details.push({ key: "education", label: "Education", value: education, icon: "school-outline" });
+  if (profile.hometown?.trim()) {
+    details.push({ key: "hometown", label: "Hometown", value: profile.hometown.trim(), icon: "home-outline" });
+  }
+  const gender = profileGenderLabel(profile.gender);
+  if (gender) details.push({ key: "gender", label: "Gender", value: gender, icon: "male-female-outline" });
+  const orientation = profileOrientationLabel(profile.orientation);
+  if (orientation) details.push({ key: "orientation", label: "Orientation", value: orientation, icon: "people-circle-outline" });
+  const interested = profileInterestedInLabel(profile.interestedIn);
+  if (interested) details.push({ key: "interested", label: "Interested in", value: interested, icon: "people-outline" });
+  const purpose = profilePurposeLabel(profile.purpose);
+  if (purpose) details.push({ key: "purpose", label: "Looking for", value: purpose, icon: "search-outline" });
+  const religion = profileReligionLabel(profile.religion);
+  if (religion) details.push({ key: "religion", label: "Religion", value: religion, icon: "book-outline" });
+  if (profile.languages?.length) {
+    details.push({ key: "languages", label: "Languages", value: profile.languages.join(", "), icon: "language-outline" });
+  }
 
   return (
     <View style={styles.page}>
@@ -78,14 +116,18 @@ export function ProfilePageView({
                 { width: ringSize, height: ringSize, borderRadius: ringSize / 2 },
               ]}
             >
-              <Image
-                source={{ uri: profile.avatar }}
-                style={[
-                  styles.avatar,
-                  { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 },
-                ]}
-                contentFit="cover"
-              />
+              {hasCustomProfileAvatar(profile.avatar) ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={[
+                    styles.avatar,
+                    { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 },
+                  ]}
+                  contentFit="cover"
+                />
+              ) : (
+                <NameInitialCircle name={profile.name} size={avatarSize} />
+              )}
             </View>
             {profile.verified ? (
               <View style={styles.verified}>
@@ -147,37 +189,12 @@ export function ProfilePageView({
         </View>
       ) : null}
 
-      {identityItems.length > 0 ? (
-        <View style={[styles.identityBar, { width: statsWidth }]}>
-          {identityItems.map((item, index) => (
-            <View
-              key={item.key}
-              style={[styles.identityCell, index < identityItems.length - 1 && styles.identityCellDivider]}
-            >
-              <Text style={styles.identityCellText} numberOfLines={2}>
-                {item.label}
-              </Text>
-            </View>
-          ))}
+      {actions ? (
+        <View style={[styles.actionsBlock, { width: screenWidth }]}>
+          {actions}
+          <View style={styles.actionsLine} />
         </View>
       ) : null}
-
-      <View style={[styles.statsBar, { width: statsWidth }]}>
-        {stats.map((stat, index) => (
-          <View
-            key={stat.label}
-            style={[styles.statCell, index < stats.length - 1 && styles.statCellDivider]}
-          >
-            <View style={styles.statIconWrap}>
-              <Ionicons name={stat.icon} size={15} color={stat.iconColor} />
-            </View>
-            <Text style={styles.statValue} numberOfLines={1}>
-              {stat.value}
-            </Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
-          </View>
-        ))}
-      </View>
 
       <View style={[styles.postsSection, { width: contentWidth }]}>
         <View style={styles.postsHeader}>
@@ -210,18 +227,56 @@ export function ProfilePageView({
         )}
       </View>
 
-      {(profile.languages?.length ?? 0) > 0 ? (
-        <View style={[styles.languagesSection, { width: contentWidth }]}>
-          <View style={styles.languagesRow}>
-            {profile.languages!.slice(0, 3).map((language, index) => (
-              <View key={language} style={styles.languageItemWrap}>
-                {index > 0 ? <View style={styles.languageDot} /> : null}
-                <Text style={styles.languageText}>{language}</Text>
-              </View>
-            ))}
-          </View>
+      <View style={[styles.detailsSection, { width: contentWidth }]}>
+        <Text style={styles.postsTitle}>Details</Text>
+        <View style={styles.detailsList}>
+          {details.map((item, index) => {
+            const row = (
+              <>
+                <View style={styles.detailIcon}>
+                  {item.key === "match" ? (
+                    <MatchProgressHeart percent={profile.vibeScore} />
+                  ) : (
+                    <Ionicons name={item.icon} size={18} color="#2C2C2C" />
+                  )}
+                </View>
+                <View style={styles.detailCopy}>
+                  <Text style={styles.detailLabel}>{item.label}</Text>
+                  <Text style={styles.detailValue}>{item.value}</Text>
+                </View>
+              </>
+            );
+            if (!item.onPress) {
+              return (
+                <View key={item.key} style={[styles.detailRow, index > 0 && styles.detailRowBorder]}>
+                  {row}
+                </View>
+              );
+            }
+            return (
+              <Pressable
+                key={item.key}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.label}, ${item.value}`}
+                onPress={item.onPress}
+                style={[styles.detailRow, index > 0 && styles.detailRowBorder]}
+              >
+                {row}
+              </Pressable>
+            );
+          })}
         </View>
-      ) : null}
+      </View>
+
+      <Modal visible={locationOpen} transparent animationType="fade" onRequestClose={() => setLocationOpen(false)}>
+        <Pressable style={styles.locationBackdrop} onPress={() => setLocationOpen(false)}>
+          <View style={styles.locationCard} onStartShouldSetResponder={() => true}>
+            <Text style={styles.locationCardLabel}>Location</Text>
+            <Text style={styles.locationCardValue}>{fullLocation}</Text>
+          </View>
+        </Pressable>
+      </Modal>
+
     </View>
   );
 }
@@ -342,75 +397,86 @@ const styles = StyleSheet.create({
     color: "#333333",
     textAlign: "center",
   },
-  identityBar: {
+  actionsBlock: {
+    marginTop: 16,
+  },
+  actionsLine: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E4E4E4",
     marginTop: 12,
-    minHeight: 34,
-    borderRadius: 10,
+  },
+  detailsSection: {
+    marginTop: 18,
+  },
+  detailsList: {
+    marginTop: 8,
     backgroundColor: "#FFFFFF",
-    flexDirection: "row",
-    alignItems: "stretch",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E4E4",
-  },
-  identityCell: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-    paddingVertical: 6,
-  },
-  identityCellDivider: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E4E4",
-  },
-  identityCellText: {
-    fontFamily: theme.typography.medium,
-    fontSize: 9.5,
-    lineHeight: 12,
-    color: "#333333",
-    textAlign: "center",
-  },
-  statsBar: {
-    marginTop: 12,
-    minHeight: 54,
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    flexDirection: "row",
-    alignItems: "stretch",
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "#E4E4E4",
+    overflow: "hidden",
   },
-  statCell: {
-    flex: 1,
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  detailRowBorder: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#ECECEC",
+  },
+  detailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 10,
-    gap: 3,
+    backgroundColor: "#F4F4F5",
   },
-  statIconWrap: {
-    height: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statCellDivider: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderColor: "#E4E4E4",
-  },
-  statValue: {
-    fontFamily: theme.typography.bold,
-    fontSize: 14,
-    color: "#111111",
-    textAlign: "center",
-  },
-  statLabel: {
-    marginTop: 2,
+  detailCopy: { flex: 1, minWidth: 0 },
+  detailLabel: {
     fontFamily: theme.typography.medium,
-    fontSize: 10,
+    fontSize: 12,
+    color: "#8A8A8A",
+  },
+  detailValue: {
+    marginTop: 2,
+    fontFamily: theme.typography.semibold,
+    fontSize: 15,
+    lineHeight: 20,
+    color: "#171717",
+  },
+  locationBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(16,16,24,.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  locationCard: {
+    width: "100%",
+    maxWidth: 320,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+  },
+  locationCardLabel: {
+    fontFamily: theme.typography.medium,
+    fontSize: 12,
     color: "#999999",
   },
+  locationCardValue: {
+    marginTop: 6,
+    fontFamily: theme.typography.bold,
+    fontSize: 18,
+    lineHeight: 24,
+    color: "#111111",
+  },
   postsSection: {
-    marginTop: 24,
+    marginTop: 14,
   },
   postsHeader: {
     flexDirection: "row",
@@ -447,35 +513,5 @@ const styles = StyleSheet.create({
     color: "#AAAAAA",
     textAlign: "center",
     paddingVertical: 24,
-  },
-  languagesSection: {
-    marginTop: 16,
-    alignItems: "center",
-    paddingTop: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#ECECEC",
-  },
-  languagesRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap",
-  },
-  languageItemWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  languageDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#888888",
-    marginHorizontal: 9,
-  },
-  languageText: {
-    fontFamily: theme.typography.medium,
-    fontSize: 11,
-    color: "#333333",
-    textAlign: "center",
   },
 });
