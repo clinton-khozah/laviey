@@ -1,3 +1,14 @@
+.landing a.landing__play,
+.landing a.landing__play:hover,
+.landing a.landing__download,
+.landing a.landing__download:hover {
+  text-decoration: none;
+}
+
+.landing a.landing__play {
+  color: #211921;
+}
+
 .landing .landing__legal-links button {
   border: 0;
   text-decoration: none;
@@ -8,5 +19,5 @@
 .landing .landing__legal-links a {
   color: #522363;
   font: 700 11px 'DM Sans';
-  text-decoration: underline;
+  text-decoration: none;
 }

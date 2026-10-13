@@ -9,6 +9,10 @@ type BrowserTab = 'posts' | 'profiles';
 
 const PROFILE_PAGE_SIZE = 24;
 
+type DeleteDialog =
+  | { step: 'confirm'; title: string; message: string; detail: string; confirmLabel: string; run: () => Promise<string> }
+  | { step: 'success' | 'error'; title: string; message: string };
+
 export function AdminContentBrowser() {
   const [tab, setTab] = useState<BrowserTab>('posts');
   const [search, setSearch] = useState('');
@@ -19,7 +23,8 @@ export function AdminContentBrowser() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<DeleteDialog | null>(null);
+  const [dialogBusy, setDialogBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error: boolean } | null>(null);
 
   useEffect(() => {
@@ -64,44 +69,59 @@ export function AdminContentBrowser() {
     void load();
   }, [load]);
 
-  const deletePost = async (post: AdminPostItem) => {
-    const ok = window.confirm(
-      `Permanently delete this post by ${post.userHandle}?\n\nThe media, likes and comments are erased from the app and cannot be restored.`,
-    );
-    if (!ok) return;
-    setBusyId(post.id);
+  const requestDeletePost = (post: AdminPostItem) =>
+    setDialog({
+      step: 'confirm',
+      title: 'Delete this post?',
+      message: `The post by ${post.userHandle} will be permanently removed.`,
+      detail: 'The media, likes and comments are erased from the app and cannot be restored.',
+      confirmLabel: 'Delete post',
+      run: async () => {
+        await adminModerationService.deletePost(post.id);
+        setPosts((current) => current.filter((item) => item.id !== post.id));
+        setTotal((count) => Math.max(0, count - 1));
+        return `The post by ${post.userHandle} was deleted successfully.`;
+      },
+    });
+
+  const requestDeleteProfile = (profile: AdminUserRecord) =>
+    setDialog({
+      step: 'confirm',
+      title: 'Delete this profile?',
+      message: `${profile.name} (${profile.handle}) will be permanently removed.`,
+      detail: 'Their account, profile, photos, posts and chats are erased from the app and cannot be restored.',
+      confirmLabel: 'Delete profile',
+      run: async () => {
+        await adminService.deleteUser(profile.id);
+        setProfiles((current) => current.filter((item) => item.id !== profile.id));
+        setTotal((count) => Math.max(0, count - 1));
+        return `${profile.name} was deleted successfully.`;
+      },
+    });
+
+  const confirmDialog = async () => {
+    if (!dialog || dialog.step !== 'confirm') return;
+    const { run } = dialog;
+    setDialogBusy(true);
     try {
-      await adminModerationService.deletePost(post.id);
-      setPosts((current) => current.filter((item) => item.id !== post.id));
-      setTotal((count) => Math.max(0, count - 1));
-      setNotice({ text: `Post by ${post.userHandle} deleted.`, error: false });
+      const text = await run();
+      setDialog({ step: 'success', title: 'Deleted successfully', message: text });
     } catch (err) {
-      setNotice({ text: err instanceof Error ? err.message : 'Could not delete post.', error: true });
+      setDialog({
+        step: 'error',
+        title: 'Could not delete',
+        message: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      });
     } finally {
-      setBusyId(null);
+      setDialogBusy(false);
     }
   };
 
-  const deleteProfile = async (profile: AdminUserRecord) => {
-    const ok = window.confirm(
-      `Permanently delete ${profile.name} (${profile.handle})?\n\nTheir account, profile, photos, posts and chats are erased from the app and cannot be restored.`,
-    );
-    if (!ok) return;
-    setBusyId(profile.id);
-    try {
-      await adminService.deleteUser(profile.id);
-      setProfiles((current) => current.filter((item) => item.id !== profile.id));
-      setTotal((count) => Math.max(0, count - 1));
-      setNotice({ text: `${profile.name} deleted.`, error: false });
-    } catch (err) {
-      setNotice({ text: err instanceof Error ? err.message : 'Could not delete profile.', error: true });
-    } finally {
-      setBusyId(null);
-    }
+  const closeDialog = () => {
+    if (!dialogBusy) setDialog(null);
   };
-
   return (
-    <article className="admin-content-browser">
+    <article className="admin-content-moderation__card admin-content-moderation__card--wide admin-content-browser">
       <header className="admin-content-browser__head">
         <div>
           <h4>All Posts &amp; Profiles</h4>
@@ -126,20 +146,20 @@ export function AdminContentBrowser() {
       />
 
       {notice && (
-        <p className={`admin-content-browser__notice${notice.error ? ' is-error' : ''}`} role="status">
+        <p className={`admin-content-moderation__notice${notice.error ? ' admin-content-moderation__notice--error' : ''}`} role="status">
           {notice.text}
         </p>
       )}
 
-      <p className="admin-content-browser__count">
+      <p className="admin-content-moderation__empty">
         {loading ? 'Loading…' : `${total} ${tab === 'posts' ? 'post' : 'profile'}${total === 1 ? '' : 's'}`}
       </p>
 
       {tab === 'posts' ? (
-        <div className="admin-content-browser__grid">
+        <div className="admin-content-moderation__queue-grid">
           {posts.map((post) => (
-            <div key={post.id} className="admin-content-browser__card">
-              <div className="admin-content-browser__media">
+            <div key={post.id} className="admin-content-moderation__queue-card">
+              <div className="admin-content-moderation__thumb">
                 {post.type === 'video' ? (
                   <video src={post.src} poster={post.poster ?? undefined} controls preload="metadata" />
                 ) : (
@@ -153,28 +173,28 @@ export function AdminContentBrowser() {
                     }}
                   />
                 )}
-                {!post.isVisible && <span className="admin-content-browser__badge">Hidden</span>}
+                {!post.isVisible && <span>Hidden</span>}
               </div>
-              <div className="admin-content-browser__body">
+              <div className="admin-content-moderation__queue-body">
                 <strong>
                   {post.userName} · {post.userHandle}
                 </strong>
                 <p>{post.caption || 'No caption'}</p>
                 <small>{new Date(post.createdAt).toLocaleString()}</small>
-                <button type="button" className="is-danger" disabled={busyId === post.id} onClick={() => void deletePost(post)}>
-                  {busyId === post.id ? 'Deleting…' : 'Delete post'}
-                </button>
+                <div className="admin-content-moderation__queue-actions"><button type="button" className="is-danger" onClick={() => requestDeletePost(post)}>
+                  Delete post
+                </button></div>
               </div>
             </div>
           ))}
-          {!loading && posts.length === 0 && <p className="admin-content-browser__empty">No posts found.</p>}
+          {!loading && posts.length === 0 && <p className="admin-content-moderation__empty">No posts found.</p>}
         </div>
       ) : (
         <>
-          <div className="admin-content-browser__grid">
+          <div className="admin-content-moderation__queue-grid">
             {profiles.map((profile) => (
-              <div key={profile.id} className="admin-content-browser__card">
-                <div className="admin-content-browser__media">
+              <div key={profile.id} className="admin-content-moderation__queue-card">
+                <div className="admin-content-moderation__thumb">
                   <img
                     src={profile.avatarUrl || APP_IMAGES.logo}
                     alt=""
@@ -185,22 +205,22 @@ export function AdminContentBrowser() {
                     }}
                   />
                   {profile.accountStatus !== 'active' && (
-                    <span className="admin-content-browser__badge">{profile.accountStatus}</span>
+                    <span>{profile.accountStatus}</span>
                   )}
                 </div>
-                <div className="admin-content-browser__body">
+                <div className="admin-content-moderation__queue-body">
                   <strong>
                     {profile.name} · {profile.handle}
                   </strong>
                   <p>{profile.bio || profile.email}</p>
                   <small>{profile.email}</small>
-                  <button type="button" className="is-danger" disabled={busyId === profile.id} onClick={() => void deleteProfile(profile)}>
-                    {busyId === profile.id ? 'Deleting…' : 'Delete profile'}
-                  </button>
+                  <div className="admin-content-moderation__queue-actions"><button type="button" className="is-danger" onClick={() => requestDeleteProfile(profile)}>
+                    Delete profile
+                  </button></div>
                 </div>
               </div>
             ))}
-            {!loading && profiles.length === 0 && <p className="admin-content-browser__empty">No profiles found.</p>}
+            {!loading && profiles.length === 0 && <p className="admin-content-moderation__empty">No profiles found.</p>}
           </div>
           {totalPages > 1 && (
             <div className="admin-content-browser__pager">
@@ -216,6 +236,40 @@ export function AdminContentBrowser() {
             </div>
           )}
         </>
+      )}
+      {dialog && (
+        <div className="admin-delete-modal" role="presentation" onClick={closeDialog}>
+          <div
+            className={`admin-delete-modal__panel is-${dialog.step}`}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="admin-delete-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span className="admin-delete-modal__icon" aria-hidden>
+              {dialog.step === 'success' ? '✓' : dialog.step === 'error' ? '!' : '🗑'}
+            </span>
+            <h5 id="admin-delete-modal-title">{dialog.title}</h5>
+            <p>{dialog.message}</p>
+            {dialog.step === 'confirm' && <p className="admin-delete-modal__detail">{dialog.detail}</p>}
+            <div className="admin-delete-modal__actions">
+              {dialog.step === 'confirm' ? (
+                <>
+                  <button type="button" onClick={closeDialog} disabled={dialogBusy}>
+                    Cancel
+                  </button>
+                  <button type="button" className="is-danger" onClick={() => void confirmDialog()} disabled={dialogBusy}>
+                    {dialogBusy ? 'Deleting…' : dialog.confirmLabel}
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="is-primary" onClick={closeDialog}>
+                  Done
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </article>
   );

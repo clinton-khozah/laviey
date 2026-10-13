@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import './LandingLegal.css';
 import './LandingLegalOverrides.css';
 import './LandingMarketing.css';
-import { marketingService, APK_DOWNLOAD_FILENAME, APK_DOWNLOAD_URL, startNativeApkDownload } from '@/services/marketing/marketingService';
+import { marketingService } from '@/services/marketing/marketingService';
 import { trackMarketingEvent } from '@/utils/analytics/googleAnalytics';
+
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=co.za.lavey';
 
 function compactDownloadCount(count: number): string {
   if (count < 1_000) return `${count}+`;
@@ -20,7 +22,6 @@ export function LandingPage() {
   const [showTerms, setShowTerms] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
-  const [downloadStarted, setDownloadStarted] = useState(false);
   useEffect(() => {
     document.documentElement.classList.add('landing-document');
     document.body.classList.add('landing-document');
@@ -37,37 +38,20 @@ export function LandingPage() {
     if (referralCode) trackMarketingEvent('referral_visit', { referral_code: referralCode });
   }, []);
 
-  const requestDownload = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    if (downloadStarted) return;
-
-    setDownloadStarted(true);
-    trackMarketingEvent('apk_download', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
+  const requestDownload = () => {
+    trackMarketingEvent('play_store_click', { source: 'landing_page', referred: Boolean(new URLSearchParams(location.search).get('ref')) });
     void marketingService.recordDownload()
       .then((result) => {
         if (result?.downloadCount !== undefined) setDownloadCount(result.downloadCount);
       })
       .catch(() => undefined);
-
-    startNativeApkDownload();
-    window.setTimeout(() => setDownloadStarted(false), 8000);
   };
-
-  const navDownloadLabel = downloadStarted ? 'Download started' : 'Get the App';
-  const heroDownloadLabel = downloadStarted ? 'Download started' : 'Download Lavey';
-  const stickyDownloadLabel = downloadStarted ? 'Started' : 'Download';
 
   return <main className="landing">
     <nav className="landing__nav">
       <a className="landing__brand" href="#top" aria-label="Lavey home"><img src="/images/logo.png" alt=""/><span>Lavey</span></a>
-      <a
-        className={`landing__nav-download${downloadStarted ? ' landing__nav-download--busy' : ''}`}
-        href={APK_DOWNLOAD_URL}
-        download={APK_DOWNLOAD_FILENAME}
-        onClick={requestDownload}
-        aria-busy={downloadStarted}
-      >
-        {navDownloadLabel}
+      <a className="landing__nav-download" href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={requestDownload}>
+        Get the App
       </a>
     </nav>
 
@@ -77,17 +61,11 @@ export function LandingPage() {
         <h1>Feel the vibe<br/>before you match.</h1>
         <p>Lavey is a free dating social app for meeting people nearby or connecting with someone anywhere in the world. Share your music, express your vibe and start conversations that feel easy from the first hello—no subscription needed.</p>
         <div className="landing__actions">
-          <a
-            className={`landing__download${downloadStarted ? ' landing__download--busy' : ''}`}
-            href={APK_DOWNLOAD_URL}
-            download={APK_DOWNLOAD_FILENAME}
-            onClick={requestDownload}
-            aria-busy={downloadStarted}
-          >
-            <span>{heroDownloadLabel}</span>
-            <small>{downloadStarted ? 'Safe to close this tab — check your browser downloads' : 'Android APK · Free'}</small>
+          <a className="landing__download" href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={requestDownload}>
+            <span>Download Lavey</span>
+            <small>Google Play · Free</small>
           </a>
-          <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
+          <a className="landing__play" href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer"><PlayMark/><span><small>Get it on</small><strong>Google Play</strong></span></a>
           <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
         </div>
         {downloadCount !== null ? <div className="landing__download-count"><strong>{compactDownloadCount(downloadCount)}</strong><span className="landing__download-trend" aria-label="Growing">↗</span> app downloads</div> : null}
@@ -99,39 +77,22 @@ export function LandingPage() {
         <img className="landing__device-image" src="/images/wesite-profile.png" alt="Lavey app shown on two mobile phones" />
       </div>
       <div className="landing__mobile-stores">
-        <div className="landing__play"><PlayMark/><span><small>Coming soon on</small><strong>Google Play</strong></span></div>
+        <a className="landing__play" href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer"><PlayMark/><span><small>Get it on</small><strong>Google Play</strong></span></a>
         <div className="landing__ios"><img className="landing__apple-mark" src="/images/apple-logo.svg" alt="Apple"/><span><small>Coming soon on the</small><strong>App Store</strong></span></div>
       </div>
     </section>
 
     <footer className="landing__how">
-      <p>Made for better first conversations</p>
-      <div><article><figure className="landing__couple-visual"><img src="/images/couple.png" alt="Two people holding phones with the Lavey app open" /></figure><b>01</b><h2>Show your vibe</h2><span>Add your interests, photos and the song that says something about you.</span></article><article><b>02</b><h2>Meet near or far</h2><span>Find people close to you or explore connections from around the world.</span></article><article><figure className="landing__single-visual"><img src="/images/single123.png" alt="A Lavey member holding a phone with the messages screen open" /></figure><b>03</b><h2>Talk naturally</h2><span>Match, say hello and see where a good conversation takes you.</span></article></div>
       <div className="landing__footer-meta"><span className="landing__footer-brand"><img src="/images/logo.png" alt=""/>© {new Date().getFullYear()} Lavey. All rights reserved.</span><span className="landing__legal-links"><button type="button" onClick={() => setShowTerms(true)}>Terms & Conditions</button><a href="/privacy-policy">Privacy Policy</a><a href="/delete-account">Delete account</a><a href="mailto:support@lavey.co.za">support@lavey.co.za</a><button type="button" onClick={() => { trackMarketingEvent('referral_opened'); setShowReferral(true); }}>Refer a friend &amp; earn</button></span><span>Powered and developed by <strong>Brainstak</strong> · Registration no. 2026/492377/07</span></div>
     </footer>
 
     <aside className="landing__sticky-download" aria-label="Download Lavey for Android">
       <img src="/images/logo.png" alt=""/>
-      <div><strong>Get Lavey</strong><small>Free Android download</small></div>
-      <a
-        className={downloadStarted ? 'landing__sticky-download-btn--busy' : undefined}
-        href={APK_DOWNLOAD_URL}
-        download={APK_DOWNLOAD_FILENAME}
-        onClick={requestDownload}
-        aria-busy={downloadStarted}
-      >
-        {stickyDownloadLabel}
+      <div><strong>Get Lavey</strong><small>Free on Google Play</small></div>
+      <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={requestDownload}>
+        Get it
       </a>
     </aside>
-    {downloadStarted ? (
-      <div className="landing-apk-download" role="status" aria-live="polite">
-        <div className="landing-apk-download__spinner" aria-hidden />
-        <div className="landing-apk-download__copy">
-          <strong>{APK_DOWNLOAD_FILENAME} is downloading</strong>
-          <small>Track progress in your browser&apos;s downloads. You can close this tab anytime.</small>
-        </div>
-      </div>
-    ) : null}
     {showReferral ? <ReferralDialog onClose={() => setShowReferral(false)} /> : null}
     {showTerms ? <TermsDialog onClose={() => setShowTerms(false)} /> : null}
   </main>;

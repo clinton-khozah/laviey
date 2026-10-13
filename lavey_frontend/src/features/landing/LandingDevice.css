@@ -17,6 +17,10 @@
 
 .landing__mobile-stores { display: none; }
 
+@media (min-width: 641px) {
+  .landing__actions > .landing__download { display: none; }
+}
+
 @media (max-width: 640px) {
   .landing__device-image {
     width: 135%;
@@ -169,7 +173,7 @@ body.landing-document #root {
   text-decoration: none;
 }
 
-.landing__legal-links a:hover { text-decoration: underline; }
+.landing__legal-links a:hover { text-decoration: none; }
 
 @media (max-width: 640px) {
   .landing__ios { align-self: center; }
